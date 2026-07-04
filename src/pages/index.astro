@@ -1,0 +1,187 @@
+---
+import { getCollection } from "astro:content";
+import BaseLayout from "../layouts/BaseLayout.astro";
+import SignalCanvas from "../components/SignalCanvas.astro";
+import ContentCard from "../components/ContentCard.astro";
+
+const posts = (await getCollection("posts")).sort(
+  (a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf(),
+);
+
+const feed = posts;
+const latestPost = posts[0];
+
+const typeLabels = {
+  all: "全部",
+  note: "笔记",
+  video: "影像",
+  work: "作品",
+};
+
+const typeSummaries = {
+  note: "想法、判断和阶段记录",
+  video: "影像、视频和观看记录",
+  work: "作品、实验和项目结果",
+};
+
+const typeCounts = posts.reduce(
+  (counts, post) => {
+    counts[post.data.contentType] += 1;
+    return counts;
+  },
+  { note: 0, video: 0, work: 0 },
+);
+
+const tagCounts = posts.reduce((counts, post) => {
+  post.data.tags.forEach((tag) => {
+    counts.set(tag, (counts.get(tag) ?? 0) + 1);
+  });
+  return counts;
+}, new Map<string, number>());
+
+const topTags = Array.from(tagCounts.entries())
+  .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+  .slice(0, 5);
+
+---
+
+<BaseLayout title="xgwnje.cn | Signal Index">
+  <SignalCanvas />
+
+  <main class="site-shell">
+    <header class="site-header">
+      <a class="brand" href="/" aria-label="xgwnje.cn 首页">
+        <img class="brand__wordmark" src="/images/brand-wordmark.png" alt="xgwnje.cn" width="365" height="106" />
+      </a>
+      <div class="theme-switcher" data-theme-switcher aria-label="主题切换">
+        <button type="button" class="is-active" data-theme-target="mortal">凡人修仙传</button>
+        <button type="button" data-theme-target="signal">个人信号</button>
+      </div>
+      <nav class="site-nav" aria-label="主导航">
+        <a href="/" aria-current="page">首页</a>
+        <a href="#index">索引</a>
+        <a href="/about">关于</a>
+      </nav>
+    </header>
+
+    <section class="hero-grid focus-hero" data-theme-root data-theme="mortal" aria-labelledby="hero-title">
+      <article class="focus-visual">
+        <img
+          data-theme-visual
+          src="/images/mortal-cultivation-hero.png"
+          alt="修仙题材角色掐诀施法的最近关注主视觉"
+          loading="eager"
+        />
+        <div class="focus-visual__energy" aria-hidden="true"></div>
+        <div class="focus-visual__particles" aria-hidden="true"></div>
+        <div class="focus-visual__artifact focus-visual__artifact--front" aria-hidden="true"></div>
+          <div class="focus-visual__copy">
+          <p class="eyebrow" data-theme-kicker>recent focus / animation</p>
+          <h1 id="hero-title" class="title-art" data-theme-title aria-label="凡人修仙传">
+            <img
+              data-theme-title-art
+              src="/images/title-mortal-wordmark.png"
+              alt="凡人修仙传"
+              width="930"
+              height="206"
+            />
+            <span class="sr-only" data-theme-title-text>凡人修仙传</span>
+          </h1>
+          <p data-theme-remark>
+            最近在追的修仙动画。最吸引我的是克制、谨慎和一步步积累出来的力量感。
+          </p>
+        </div>
+      </article>
+
+      <aside class="music-player" data-music-player aria-label="背景音乐播放器">
+        <p class="panel-label">theme audio</p>
+        <div class="music-player__body">
+          <div class="music-player__cover">
+            <img data-track-cover src="/images/mortal-cultivation-hero.png" alt="" loading="eager" />
+            <div class="music-player__aura" aria-hidden="true"></div>
+            <div class="music-player__grooves" aria-hidden="true"></div>
+            <div class="music-player__sheen" aria-hidden="true"></div>
+            <div class="music-player__meter" aria-hidden="true">
+              <span></span>
+              <span></span>
+              <span></span>
+              <span></span>
+              <span></span>
+            </div>
+            <div class="music-player__overlay">
+              <div class="music-player__info">
+                <span data-track-kicker>theme song</span>
+                <h2 data-track-title>凡人修仙传</h2>
+                <p data-track-state>等待播放</p>
+              </div>
+              <div class="music-player__controls">
+                <button type="button" data-audio-prev aria-label="上一段">⏮</button>
+                <button type="button" class="music-player__play" data-audio-toggle aria-label="播放背景音乐">▶</button>
+                <button type="button" data-audio-next aria-label="下一段">⏭</button>
+                <button type="button" class="music-player__auto" data-audio-auto aria-label="自动播放开关" aria-pressed="false">A</button>
+              </div>
+              <label class="music-player__volume">
+                <span>音量</span>
+                <input data-audio-volume type="range" min="0" max="100" value="32" />
+              </label>
+            </div>
+          </div>
+        </div>
+      </aside>
+    </section>
+
+    <section class="index-section" id="index" aria-labelledby="index-title">
+      <div class="index-toolbar">
+        <div>
+          <p class="panel-label">browse</p>
+          <h2 id="index-title" class="sr-only">内容索引</h2>
+        </div>
+        <label class="search-box" aria-label="搜索内容">
+          <span class="sr-only">搜索</span>
+          <input data-search-input type="search" placeholder="标题、摘要、标签" aria-label="搜索内容" />
+        </label>
+      </div>
+
+      <div class="index-pulse" aria-label="最近更新">
+        <span>最近更新</span>
+        {latestPost ? (
+          <a href={`/posts/${latestPost.id}/`}>
+            {latestPost.data.title}
+            <time datetime={latestPost.data.pubDate.toISOString()}>
+              {latestPost.data.pubDate.toLocaleDateString("zh-CN")}
+            </time>
+          </a>
+        ) : (
+          <p>暂无内容</p>
+        )}
+      </div>
+
+      <div class="channel-grid" aria-label="内容类型">
+        {(["note", "video", "work"] as const).map((type) => (
+          <button type="button" class="channel-card" data-filter={type}>
+            <span>{typeLabels[type]}</span>
+            <strong>{typeCounts[type].toString().padStart(2, "0")}</strong>
+            <small>{typeSummaries[type]}</small>
+          </button>
+        ))}
+      </div>
+
+      <div class="content-list" data-content-list>
+        {feed.map((post) => (
+          <ContentCard
+            href={`/posts/${post.id}/`}
+            title={post.data.title}
+            summary={post.data.summary}
+            date={post.data.pubDate}
+            type={post.data.contentType}
+            tags={post.data.tags}
+          />
+        ))}
+      </div>
+    </section>
+  </main>
+
+  <script src="/scripts/content-index.js" is:inline></script>
+  <script src="/scripts/background-player.js" is:inline></script>
+  <script src="/scripts/theme-switcher.js" is:inline></script>
+</BaseLayout>

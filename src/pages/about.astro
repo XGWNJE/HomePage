@@ -1,0 +1,35 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+---
+
+<BaseLayout title="关于 | xgwnje.cn">
+  <main class="site-shell detail-shell">
+    <header class="site-header">
+      <a class="brand" href="/" aria-label="返回首页">
+        <img class="brand__wordmark" src="/images/brand-wordmark.png" alt="xgwnje.cn" width="365" height="106" />
+      </a>
+      <nav class="site-nav" aria-label="主导航">
+        <a href="/">首页</a>
+        <a href="/?type=note">笔记</a>
+        <a href="/?type=video">影像</a>
+        <a href="/?type=work">作品</a>
+      </nav>
+    </header>
+
+    <article class="post-detail">
+      <a class="back-link" href="/">返回索引</a>
+      <div class="post-detail__meta">
+        <span>about</span>
+      </div>
+      <h1>关于这个站点</h1>
+      <p class="post-detail__summary">
+        这里是一个新的个人站起点。它会先作为内容索引运行，再逐步增加更完整的作品展示、影像记录和发布流程。
+      </p>
+      <div class="post-detail__content">
+        <p>
+          当前版本只保留最小结构：首页、内容详情、关于页、内容集合、搜索筛选和抽象信号动效。
+        </p>
+      </div>
+    </article>
+  </main>
+</BaseLayout>

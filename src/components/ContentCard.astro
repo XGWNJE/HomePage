@@ -1,0 +1,40 @@
+---
+interface Props {
+  href: string;
+  title: string;
+  summary: string;
+  date: Date;
+  type: "note" | "video" | "work";
+  tags?: string[];
+  featured?: boolean;
+}
+
+const { href, title, summary, date, type, tags = [], featured = false } = Astro.props;
+
+const typeLabels = {
+  note: "笔记",
+  video: "影像",
+  work: "作品",
+};
+---
+
+<article class:list={["content-card", { "content-card--featured": featured }]} data-content-card data-type={type}>
+  <a href={href}>
+    <div class="content-card__rail">
+      <span class="content-card__type">{typeLabels[type]}</span>
+      <time datetime={date.toISOString()}>{date.toLocaleDateString("zh-CN")}</time>
+    </div>
+    <div class="content-card__body">
+      <h3>{title}</h3>
+      <p>{summary}</p>
+    </div>
+    <div class="content-card__trail">
+      {tags.length > 0 && (
+        <div class="content-card__tags" aria-label="标签">
+          {tags.slice(0, 3).map((tag) => <span>{tag}</span>)}
+        </div>
+      )}
+      <span class="content-card__arrow" aria-hidden="true"></span>
+    </div>
+  </a>
+</article>

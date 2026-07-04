@@ -1,0 +1,52 @@
+---
+import { getCollection, render } from "astro:content";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+
+export async function getStaticPaths() {
+  const posts = await getCollection("posts");
+  return posts.map((post) => ({
+    params: { id: post.id },
+    props: { post },
+  }));
+}
+
+const { post } = Astro.props;
+const { Content } = await render(post);
+
+const typeLabels = {
+  note: "笔记",
+  video: "影像",
+  work: "作品",
+};
+---
+
+<BaseLayout title={`${post.data.title} | xgwnje.cn`} description={post.data.summary}>
+  <main class="site-shell detail-shell">
+    <header class="site-header">
+      <a class="brand" href="/" aria-label="返回首页">
+        <img class="brand__wordmark" src="/images/brand-wordmark.png" alt="xgwnje.cn" width="365" height="106" />
+      </a>
+      <nav class="site-nav" aria-label="主导航">
+        <a href="/">首页</a>
+        <a href="/?type=note">笔记</a>
+        <a href="/?type=video">影像</a>
+        <a href="/?type=work">作品</a>
+      </nav>
+    </header>
+
+    <article class="post-detail">
+      <a class="back-link" href="/">返回索引</a>
+      <div class="post-detail__meta">
+        <span>{typeLabels[post.data.contentType]}</span>
+        <time datetime={post.data.pubDate.toISOString()}>
+          {post.data.pubDate.toLocaleDateString("zh-CN")}
+        </time>
+      </div>
+      <h1>{post.data.title}</h1>
+      <p class="post-detail__summary">{post.data.summary}</p>
+      <div class="post-detail__content">
+        <Content />
+      </div>
+    </article>
+  </main>
+</BaseLayout>
