@@ -1,0 +1,355 @@
+---
+import { API_BASE } from '../lib/config';
+import { DEFAULT_UI_LANG, getUiText } from '../data/i18n';
+
+interface Props {
+	postSlug: string;
+}
+
+const { postSlug } = Astro.props;
+const T = getUiText(DEFAULT_UI_LANG);
+---
+
+<section class="comments-section mt-12 border-t border-zinc-200 pt-8 dark:border-zinc-700">
+	<div class="mb-6 flex items-center gap-3">
+		<span class="h-px w-7 bg-gradient-to-r from-[rgb(180,126,36)] to-transparent dark:from-[rgb(226,190,110)]"></span>
+		<h2 class="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100" data-i18n="comments.title">{T['comments.title']}</h2>
+		<span
+			data-comment-count
+			class="hidden rounded-full border border-zinc-200/80 bg-zinc-50/90 px-2.5 py-0.5 text-xs font-semibold text-zinc-500 dark:border-zinc-700/80 dark:bg-zinc-900/80 dark:text-zinc-400"
+		></span>
+	</div>
+
+	<div id="comment-form-container" class="mt-6">
+		<!-- Show login prompt when not logged in -->
+		<div id="login-prompt" class="hidden">
+			<div class="flex flex-col items-start gap-3 rounded-2xl border border-zinc-200/80 bg-white/70 p-5 backdrop-blur-sm sm:flex-row sm:items-center sm:justify-between dark:border-zinc-800/80 dark:bg-zinc-950/50">
+				<p class="m-0 text-sm text-zinc-600 dark:text-zinc-300" data-i18n="comments.loginPrompt">{T['comments.loginPrompt']}</p>
+				<a
+					href={`${API_BASE}/api/auth/github/start?returnTo=https%3A%2F%2Fxgwnje.cn%2F`}
+					data-github-login
+					class="inline-flex items-center gap-2 rounded-xl bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white no-underline shadow-[0_10px_24px_rgba(24,24,27,0.18)] transition-all duration-200 ease-out hover:-translate-y-0.5 hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
+				>
+					<svg viewBox="0 0 24 24" class="h-4 w-4 fill-current" aria-hidden="true">
+						<path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.523 2 12 2z" />
+					</svg>
+					<span data-i18n="comments.loginWithGitHub">{T['comments.loginWithGitHub']}</span>
+				</a>
+			</div>
+		</div>
+
+		<!-- Comment form - visible when logged in -->
+		<form id="comment-form" class="hidden space-y-3 rounded-2xl border border-zinc-200/80 bg-white/65 p-5 backdrop-blur-sm dark:border-zinc-800/80 dark:bg-zinc-950/45">
+			<div id="reply-to-indicator" class="hidden [&:not(.hidden)]:flex items-center gap-2 rounded-lg border border-[rgba(180,126,36,0.3)] bg-[rgba(180,126,36,0.07)] px-3 py-1.5 text-sm text-zinc-600 dark:border-[rgba(226,190,110,0.3)] dark:bg-[rgba(226,190,110,0.09)] dark:text-zinc-300">
+				<svg viewBox="0 0 20 20" class="h-3.5 w-3.5 text-[rgb(180,126,36)] dark:text-[rgb(226,190,110)]" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M9 4 4 9l5 5M4 9h8a4 4 0 0 1 4 4v3" stroke-linecap="round" stroke-linejoin="round" /></svg>
+				<span data-i18n="comments.replyingTo">{T['comments.replyingTo']}</span> <span id="reply-to-name" class="font-semibold text-zinc-800 dark:text-zinc-100"></span>
+				<button type="button" id="cancel-reply" class="ml-1 text-zinc-400 transition-colors hover:text-zinc-700 dark:hover:text-zinc-200" data-i18n="actions.cancel">{T['actions.cancel']}</button>
+			</div>
+			<textarea
+				id="comment-content"
+				name="content"
+				rows="4"
+				required
+				placeholder={T['comments.placeholder']}
+				data-i18n-placeholder="comments.placeholder"
+				class="field-input resize-y leading-6"
+			></textarea>
+			<div class="flex items-center justify-between gap-3">
+				<p class="m-0 text-xs text-zinc-400 dark:text-zinc-500" data-i18n="comments.note">{T['comments.note']}</p>
+				<button
+					type="submit"
+					class="shrink-0 rounded-xl bg-zinc-900 px-4 py-2 text-sm font-semibold text-white shadow-[0_10px_22px_rgba(24,24,27,0.16)] transition-all duration-200 ease-out hover:-translate-y-0.5 hover:bg-zinc-700 active:translate-y-0 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
+				>
+					<span data-i18n="comments.post">{T['comments.post']}</span>
+				</button>
+			</div>
+			<span id="daily-limit-msg" class="hidden text-sm text-rose-500 dark:text-rose-400"></span>
+		</form>
+	</div>
+
+	<!-- Comments list -->
+	<div id="comments-container" class="mt-8 space-y-5" data-comments-container data-post-slug={postSlug}></div>
+</section>
+
+<script>
+	const API_BASE = (window as any).__API_BASE || 'https://api.xgwnje.cn';
+	const i18nText = (key: string, fallback: string) => (window as any).__xgwnjeI18n?.text?.(key) ?? fallback;
+
+	const { storeTokenFromHash, getAuthToken, getCurrentUser } = (window as any).__auth || {};
+
+	const escapeHtml = (str: string): string => {
+		return str
+			.replace(/&/g, '&amp;')
+			.replace(/</g, '&lt;')
+			.replace(/>/g, '&gt;')
+			.replace(/"/g, '&quot;')
+			.replace(/'/g, '&#39;');
+	};
+
+	interface CommentUser {
+		id?: string;
+		login?: string;
+		name?: string | null;
+		avatarUrl?: string | null;
+		profileUrl?: string | null;
+	}
+
+	interface CommentData {
+		id: string;
+		parentId?: string | null;
+		postSlug?: string;
+		body?: string;
+		content?: string;
+		status?: string;
+		createdAt?: string;
+		created_at?: string;
+		user?: CommentUser;
+		replies?: CommentData[];
+	}
+
+	const formatRelativeTime = (dateString: string) => {
+		const date = new Date(dateString);
+		const now = new Date();
+		const diff = now.getTime() - date.getTime();
+		const seconds = Math.floor(diff / 1000);
+		const minutes = Math.floor(seconds / 60);
+		const hours = Math.floor(minutes / 60);
+		const days = Math.floor(hours / 24);
+
+		if (days > 7) {
+			return date.toLocaleDateString();
+		} else if (days > 0) {
+			return `${days} day${days > 1 ? 's' : ''} ago`;
+		} else if (hours > 0) {
+			return `${hours} hour${hours > 1 ? 's' : ''} ago`;
+		} else if (minutes > 0) {
+			return `${minutes} minute${minutes > 1 ? 's' : ''} ago`;
+		} else {
+			return 'Just now';
+		}
+	};
+
+	let currentUser: CommentUser | null = null;
+	let replyingTo: { id: string; name: string } | null = null;
+
+	const renderComment = (comment: CommentData, isReply = false): string => {
+		const userName = escapeHtml(comment.user?.name || comment.user?.login || 'Anonymous');
+		const avatarUrl = escapeHtml(comment.user?.avatarUrl || '/image/favicon-192.png');
+		const commentId = escapeHtml(comment.id);
+		const commentBody = escapeHtml(comment.content || comment.body || '');
+		const replyCount = comment.replies?.length || 0;
+		const replyLabel = escapeHtml(i18nText('comments.reply', 'Reply'));
+		const pendingLabel = escapeHtml(i18nText('comments.pending', 'Pending'));
+		const replyCountLabel = escapeHtml(
+			i18nText(replyCount === 1 ? 'comments.replySingular' : 'comments.replyPlural', replyCount === 1 ? 'reply' : 'replies')
+		);
+		const replyButton = !isReply && currentUser
+			? `<button class="reply-btn inline-flex items-center gap-1 text-xs font-medium text-zinc-400 transition-colors hover:text-[rgb(180,126,36)] dark:text-zinc-500 dark:hover:text-[rgb(226,190,110)]" data-comment-id="${commentId}" data-user-name="${userName}"><svg viewBox="0 0 20 20" class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M9 4 4 9l5 5M4 9h8a4 4 0 0 1 4 4v3" stroke-linecap="round" stroke-linejoin="round"/></svg>${replyLabel}</button>`
+			: '';
+
+		return `
+			<div class="flex gap-3.5">
+				<img
+					src="${avatarUrl}"
+					alt="${userName} avatar"
+					class="h-9 w-9 shrink-0 rounded-full border border-zinc-200 object-cover dark:border-zinc-700"
+				/>
+				<div class="min-w-0 flex-1">
+					<div class="flex items-center gap-2 flex-wrap">
+						<span class="text-sm font-semibold text-zinc-900 dark:text-zinc-100">${userName}</span>
+						<span class="text-xs text-zinc-400 dark:text-zinc-500">${formatRelativeTime(comment.createdAt || comment.created_at || '')}</span>
+						${comment.status === 'pending' ? `<span class="rounded-full bg-amber-100/80 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700 dark:bg-amber-400/15 dark:text-amber-300">${pendingLabel}</span>` : ''}
+					</div>
+					<p class="mt-1 text-[15px] leading-7 text-zinc-700 dark:text-zinc-300 [overflow-wrap:anywhere]">${commentBody}</p>
+					<div class="mt-1.5 flex items-center gap-3">
+						${replyButton}
+						${replyCount > 0 ? `<span class="text-xs text-zinc-400 dark:text-zinc-500">${replyCount} ${replyCountLabel}</span>` : ''}
+					</div>
+				</div>
+			</div>
+			${comment.replies?.length ? `<div class="replies-container mt-3.5 ml-4 space-y-3.5 border-l border-zinc-200 pl-4 dark:border-zinc-800">${comment.replies.map((reply) => renderComment(reply, true)).join('')}</div>` : ''}
+		`;
+	};
+
+	const countAll = (comments: CommentData[]): number =>
+		comments.reduce((sum, c) => sum + 1 + (c.replies ? countAll(c.replies) : 0), 0);
+
+	const renderComments = (comments: CommentData[]) => {
+		const container = document.getElementById('comments-container');
+		if (!container) return;
+
+		const countBadge = document.querySelector('[data-comment-count]');
+		const total = comments ? countAll(comments) : 0;
+		if (countBadge) {
+			if (total > 0) {
+				countBadge.textContent = String(total);
+				countBadge.classList.remove('hidden');
+			} else {
+				countBadge.classList.add('hidden');
+			}
+		}
+
+		if (!comments || comments.length === 0) {
+			container.innerHTML = `
+				<div class="flex flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-zinc-200 py-10 text-center dark:border-zinc-800">
+					<svg viewBox="0 0 24 24" class="h-8 w-8 text-zinc-300 dark:text-zinc-600" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" stroke-linecap="round" stroke-linejoin="round"/></svg>
+					<p class="m-0 text-sm text-zinc-500 dark:text-zinc-400">${escapeHtml(i18nText('comments.noComments', 'No comments yet - be the first to share a thought.'))}</p>
+				</div>`;
+			return;
+		}
+
+		container.innerHTML = comments
+			.map(
+				(c) =>
+					`<div class="card-spotlight group relative rounded-2xl border border-zinc-200/70 bg-white/55 p-4 transition-colors duration-200 hover:border-zinc-300/80 dark:border-zinc-800/70 dark:bg-zinc-950/40 dark:hover:border-zinc-700/80">${renderComment(c)}</div>`
+			)
+			.join('');
+		attachReplyHandlers();
+	};
+
+	// Attach reply button handlers
+	const attachReplyHandlers = () => {
+		document.querySelectorAll('.reply-btn').forEach(btn => {
+			btn.addEventListener('click', (e) => {
+				const target = e.target as HTMLElement;
+				const commentId = target.dataset.commentId;
+				const userName = target.dataset.userName;
+				if (commentId && userName) {
+					replyingTo = { id: commentId, name: userName };
+					document.getElementById('reply-to-indicator')?.classList.remove('hidden');
+					document.getElementById('reply-to-name')!.textContent = userName;
+					document.getElementById('comment-content')?.focus();
+				}
+			});
+		});
+	};
+
+	// Load comments
+	async function loadComments(postSlug: string) {
+		const container = document.getElementById('comments-container');
+		if (!container) return;
+
+		try {
+			const response = await fetch(`${API_BASE}/api/comments?post_id=${encodeURIComponent(postSlug)}`);
+			if (response.ok) {
+				const data = await response.json();
+				const comments = data?.comments ?? [];
+				renderComments(comments);
+			}
+		} catch (error) {
+			console.error('Failed to load comments:', error);
+		}
+	}
+
+	// Submit comment
+	async function submitComment(postSlug: string, content: string, parentId?: string) {
+		const token = getAuthToken();
+		if (!token) return { ok: false, error: i18nText('comments.notLoggedIn', 'Not logged in') };
+
+		const body: Record<string, string> = {
+			post_id: postSlug,
+			content: content,
+		};
+		if (parentId) {
+			body.parent_id = parentId;
+		}
+
+		const response = await fetch(`${API_BASE}/api/comments`, {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json',
+				Authorization: `Bearer ${token}`,
+			},
+			body: JSON.stringify(body),
+		});
+
+		const data = await response.json();
+		return { ok: response.ok, error: data.error, status: data.comment?.status as string | undefined };
+	}
+
+	// Initialize comments
+	const initComments = async () => {
+		const container = document.getElementById('comments-container');
+		if (!container) return;
+
+		const postSlug = container.dataset.postSlug;
+		if (!postSlug) return;
+
+		storeTokenFromHash();
+		currentUser = await getCurrentUser();
+
+		const loginPrompt = document.getElementById('login-prompt');
+		const commentForm = document.getElementById('comment-form');
+
+		// Show comment form if logged in
+		if (currentUser) {
+			if (loginPrompt) loginPrompt.classList.add('hidden');
+			if (commentForm) commentForm.classList.remove('hidden');
+		} else {
+			if (loginPrompt) loginPrompt.classList.remove('hidden');
+			if (commentForm) commentForm.classList.add('hidden');
+		}
+
+		// Load comments
+		loadComments(postSlug);
+		if (container.dataset.langBound !== 'true') {
+			container.dataset.langBound = 'true';
+			window.addEventListener('xgwnje:ui-language', () => loadComments(postSlug));
+		}
+
+		// Bind form submit
+		const form = document.getElementById('comment-form');
+		if (form && form.dataset.bound !== 'true') {
+			form.dataset.bound = 'true';
+
+			// Cancel reply handler
+			document.getElementById('cancel-reply')?.addEventListener('click', () => {
+				replyingTo = null;
+				document.getElementById('reply-to-indicator')?.classList.add('hidden');
+			});
+
+			form.addEventListener('submit', async (e) => {
+				e.preventDefault();
+				const textarea = document.getElementById('comment-content') as HTMLTextAreaElement;
+				const content = textarea?.value?.trim();
+				if (!content) return;
+
+				const button = form.querySelector('button[type="submit"]') as HTMLButtonElement;
+				const dailyMsg = document.getElementById('daily-limit-msg');
+				if (button) {
+					button.disabled = true;
+					button.textContent = i18nText('comments.submitting', 'Submitting...');
+				}
+
+				const result = await submitComment(postSlug, content, replyingTo?.id);
+
+				if (result.ok) {
+					textarea.value = '';
+					replyingTo = null;
+					document.getElementById('reply-to-indicator')?.classList.add('hidden');
+					loadComments(postSlug);
+					if (result.status === 'pending') {
+						alert('Your comment is awaiting review and will appear once approved. / 评论已提交，待博主审核通过后显示。');
+					}
+				} else {
+					alert(result.error || i18nText('comments.failed', 'Failed to submit comment.'));
+					if (result.error?.includes('Daily comment limit')) {
+						if (dailyMsg) {
+							dailyMsg.textContent = result.error;
+							dailyMsg.classList.remove('hidden');
+						}
+					}
+				}
+
+				if (button) {
+					button.disabled = false;
+					button.textContent = i18nText('comments.submit', 'Submit Comment');
+				}
+			});
+		}
+	};
+
+	initComments();
+	document.addEventListener('astro:page-load', initComments);
+	document.addEventListener('astro:after-swap', initComments);
+</script>

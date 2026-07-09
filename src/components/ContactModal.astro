@@ -1,0 +1,276 @@
+---
+// ContactModal.astro - Apple-style contact form modal
+import { DEFAULT_UI_LANG, getUiText } from '../data/i18n';
+
+const TURNSTILE_SITE_KEY = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
+const T = getUiText(DEFAULT_UI_LANG);
+---
+
+<div
+	id="contact-modal"
+	class="fixed inset-0 z-[100] invisible opacity-0 flex items-center justify-center bg-black/40 backdrop-blur-sm transition-opacity duration-200 ease-out"
+	aria-hidden="true"
+>
+	<div
+		class="modal-content mx-4 w-[380px] rounded-[1.4rem] border border-zinc-200/85 bg-white/94 p-6 shadow-[0_28px_70px_rgba(15,23,42,0.18)] backdrop-blur-xl transition-all duration-200 ease-out dark:border-zinc-800/85 dark:bg-zinc-900/94 scale-95 opacity-0"
+		role="dialog"
+		aria-modal="true"
+		aria-labelledby="contact-modal-title"
+	>
+		<div class="mb-6 text-center">
+			<h2 id="contact-modal-title" class="text-xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
+				<span data-i18n="contact.title">{T['contact.title']}</span>
+			</h2>
+			<span class="mx-auto mt-2 block h-px w-10 bg-gradient-to-r from-transparent via-[rgb(180,126,36)] to-transparent dark:via-[rgb(226,190,110)]"></span>
+		</div>
+
+		<form id="contact-form" class="space-y-3" method="post" data-turnstile-required={TURNSTILE_SITE_KEY ? 'true' : 'false'}>
+			<input
+				type="text"
+				id="contact-name-input"
+				name="name"
+				placeholder={T['contact.namePlaceholder']}
+				data-i18n-placeholder="contact.namePlaceholder"
+				autocomplete="name"
+				required
+				class="field-input"
+			/>
+			<input
+				type="email"
+				id="contact-email-input"
+				name="email"
+				placeholder={T['contact.emailPlaceholder']}
+				data-i18n-placeholder="contact.emailPlaceholder"
+				autocomplete="email"
+				required
+				class="field-input"
+			/>
+			<textarea
+				id="contact-message-input"
+				name="message"
+				placeholder={T['contact.messagePlaceholder']}
+				data-i18n-placeholder="contact.messagePlaceholder"
+				required
+				rows="4"
+				class="field-input resize-none leading-6"
+			></textarea>
+			<p class="text-xs text-zinc-400 dark:text-zinc-500" data-i18n="contact.note">{T['contact.note']}</p>
+			{TURNSTILE_SITE_KEY && <div id="contact-turnstile-container" data-sitekey={TURNSTILE_SITE_KEY}></div>}
+			<button
+				type="submit"
+				id="contact-submit"
+				class="apple-float-chip flex w-full items-center justify-center gap-2 rounded-xl border border-zinc-200/90 bg-white/80 px-4 py-3 text-base font-medium text-zinc-700 shadow-[0_12px_24px_rgba(15,23,42,0.05)] transition dark:border-zinc-700/90 dark:bg-zinc-900/70 dark:text-zinc-300"
+			>
+				<span class="apple-float-label">
+					<svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+						<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+					</svg>
+					<span data-i18n="contact.send">{T['contact.send']}</span>
+				</span>
+			</button>
+		</form>
+
+		<div id="contact-success" class="hidden text-center">
+			<div class="mb-2 flex justify-center">
+				<svg class="h-12 w-12 text-green-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+					<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+					<polyline points="22 4 12 14.01 9 11.01" />
+				</svg>
+			</div>
+			<p class="text-zinc-700 dark:text-zinc-300" data-i18n="contact.success">{T['contact.success']}</p>
+		</div>
+
+		<button
+			type="button"
+			id="contact-modal-close"
+			class="apple-float-chip mt-4 w-full rounded-xl border border-zinc-200/85 bg-white/72 px-4 py-2.5 text-zinc-600 shadow-[0_10px_20px_rgba(15,23,42,0.04)] transition dark:border-zinc-700/85 dark:bg-zinc-900/62 dark:text-zinc-300"
+		>
+			<span class="apple-float-label justify-center" data-i18n="actions.cancel">{T['actions.cancel']}</span>
+		</button>
+	</div>
+</div>
+
+<script>
+	import { sendContactMessage } from '../lib/auth';
+
+	const form = document.getElementById('contact-form') as HTMLFormElement;
+	const successDiv = document.getElementById('contact-success');
+	const nameInput = document.getElementById('contact-name-input') as HTMLInputElement;
+	const emailInput = document.getElementById('contact-email-input') as HTMLInputElement;
+	const messageInput = document.getElementById('contact-message-input') as HTMLTextAreaElement;
+	const submitBtn = document.getElementById('contact-submit') as HTMLButtonElement;
+	const turnstileContainer = document.getElementById('contact-turnstile-container');
+	const turnstileRequired = form?.dataset.turnstileRequired === 'true';
+	const i18nText = (key: string, fallback: string) => (window as any).__xgwnjeI18n?.text?.(key) ?? fallback;
+
+	let turnstileWidgetId: string | null = null;
+
+	// Load Turnstile script and render widget
+	function initTurnstile() {
+		if (!turnstileRequired) return;
+		if (typeof (window as any).turnstile !== 'undefined' && turnstileContainer && !turnstileWidgetId) {
+			const sitekey = turnstileContainer.getAttribute('data-sitekey');
+			if (sitekey) {
+				turnstileWidgetId = (window as any).turnstile.render(turnstileContainer, {
+					sitekey: sitekey,
+					callback: function(token: string) {
+						console.log('Contact Turnstile token obtained');
+					},
+					'error-callback': function() {
+						console.log('Contact Turnstile error');
+					},
+				});
+			}
+		}
+	}
+
+	// Get token from specific widget
+	function getTurnstileToken(): string {
+		if (!turnstileRequired) return '';
+		if (typeof (window as any).turnstile !== 'undefined' && turnstileWidgetId) {
+			return (window as any).turnstile.getResponse(turnstileWidgetId) || '';
+		}
+		return '';
+	}
+
+	// Load Turnstile script
+	function loadTurnstileScript(): Promise<void> {
+		return new Promise((resolve) => {
+			if (!turnstileRequired) {
+				resolve();
+				return;
+			}
+			if (typeof (window as any).turnstile !== 'undefined') {
+				resolve();
+				return;
+			}
+			const script = document.createElement('script');
+			script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js';
+			script.async = true;
+			script.defer = true;
+			script.onload = () => resolve();
+			document.head.appendChild(script);
+		});
+	}
+
+	if (form) {
+		form.addEventListener('submit', async (e) => {
+			e.preventDefault();
+			const name = nameInput.value.trim();
+			const email = emailInput.value.trim();
+			const message = messageInput.value.trim();
+
+			if (!name || !email || !message) {
+				alert(i18nText('contact.fillAll', 'Please fill in all fields'));
+				return;
+			}
+
+			if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+				alert(i18nText('contact.invalidEmail', 'Please enter a valid email address'));
+				return;
+			}
+
+			submitBtn.disabled = true;
+			submitBtn.textContent = i18nText('contact.sending', 'Sending...');
+
+			if (turnstileRequired) {
+				let attempts = 0;
+				while (attempts < 20) {
+					const token = getTurnstileToken();
+					if (token) break;
+					await new Promise(resolve => setTimeout(resolve, 250));
+					attempts++;
+				}
+			}
+
+			const turnstileToken = getTurnstileToken();
+
+			if (turnstileRequired && !turnstileToken) {
+				alert(i18nText('contact.captcha', 'Please complete the captcha verification'));
+				submitBtn.disabled = false;
+				submitBtn.textContent = i18nText('contact.send', 'Send Message');
+				return;
+			}
+
+			const result = await sendContactMessage(name, email, message, turnstileToken);
+
+			if (result.ok) {
+				form.classList.add('hidden');
+				successDiv?.classList.remove('hidden');
+			} else {
+				alert(result.error ?? i18nText('contact.failed', 'Failed to send message'));
+				submitBtn.disabled = false;
+				submitBtn.textContent = i18nText('contact.send', 'Send Message');
+			}
+		});
+	}
+
+	const initContactModal = () => {
+		const modal = document.getElementById('contact-modal');
+		const modalClose = document.getElementById('contact-modal-close');
+
+		if (!modal || !modalClose) return;
+
+		const openModal = async () => {
+			// Load Turnstile if not loaded
+			await loadTurnstileScript();
+			initTurnstile();
+
+			requestAnimationFrame(() => {
+				modal.classList.remove('opacity-0', 'invisible');
+				modal.classList.add('opacity-100');
+				const content = modal.querySelector('.modal-content');
+				if (content) {
+					content.classList.remove('scale-95', 'opacity-0');
+					content.classList.add('scale-100', 'opacity-100');
+				}
+			});
+		};
+
+		const closeModal = () => {
+			modal.classList.add('opacity-0');
+			modal.classList.remove('opacity-100');
+			const content = modal.querySelector('.modal-content');
+			if (content) {
+				content.classList.add('scale-95', 'opacity-0');
+				content.classList.remove('scale-100', 'opacity-100');
+			}
+			// Reset form state
+			form?.classList.remove('hidden');
+			successDiv?.classList.add('hidden');
+			const submitBtn = document.getElementById('contact-submit') as HTMLButtonElement;
+			if (submitBtn) {
+				submitBtn.disabled = false;
+				const sendLabel = i18nText('contact.send', 'Send Message');
+				submitBtn.innerHTML = `<span class="apple-float-label">
+					<svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+						<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+					</svg>
+					<span data-i18n="contact.send">${sendLabel}</span>
+				</span>`;
+			}
+			setTimeout(() => {
+				modal.classList.add('invisible');
+			}, 200);
+		};
+
+		modalClose.addEventListener('click', closeModal);
+
+		modal.addEventListener('click', (e) => {
+			if (e.target === modal) closeModal();
+		});
+
+		document.addEventListener('keydown', (e) => {
+			if (e.key === 'Escape' && !modal.classList.contains('invisible')) {
+				closeModal();
+			}
+		});
+
+		// Expose open function globally
+		(window as any).openContactModal = openModal;
+	};
+
+	// Initialize
+	initContactModal();
+	document.addEventListener('astro:page-load', initContactModal);
+</script>

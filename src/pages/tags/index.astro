@@ -1,0 +1,103 @@
+---
+import { getCollection } from 'astro:content';
+import BaseHead from '../../components/BaseHead.astro';
+import Footer from '../../components/Footer.astro';
+import Header from '../../components/Header.astro';
+import MeteorShower from '../../components/MeteorShower.astro';
+import MobileDrawer from '../../components/MobileDrawer.astro';
+import PageHeading from '../../components/PageHeading.astro';
+import { SITE_TITLE } from '../../consts';
+import { DEFAULT_UI_LANG, getUiText } from '../../data/i18n';
+import { getTagSlug, normalizeTagLabel } from '../../utils/tags';
+
+const BASE = import.meta.env.BASE_URL;
+const T = getUiText(DEFAULT_UI_LANG);
+const posts = await getCollection('blog');
+
+const tagCount = new Map<string, { label: string; groups: Set<string> }>();
+for (const post of posts) {
+	const tags = post.data.tags ?? [];
+	const group = post.data.group ?? post.id.replace(/-(cn|en)$/, '');
+	for (const tag of tags) {
+		const label = normalizeTagLabel(tag);
+		if (!label) continue;
+		const slug = getTagSlug(label);
+		const existing = tagCount.get(slug);
+		const groups = existing?.groups ?? new Set<string>();
+		groups.add(group);
+		tagCount.set(slug, {
+			label: existing?.label ?? label,
+			groups,
+		});
+	}
+}
+
+const sortedTags = [...tagCount.entries()]
+	.map(([slug, meta]) => [slug, { label: meta.label, count: meta.groups.size }] as const)
+	.sort((a, b) => {
+	if (b[1].count !== a[1].count) return b[1].count - a[1].count;
+	return a[1].label.localeCompare(b[1].label, 'en', { sensitivity: 'base' });
+});
+
+// Tag-cloud sizing: chip scale tracks how often each tag is used.
+const counts = sortedTags.map(([, meta]) => meta.count);
+const maxCount = counts.length ? Math.max(...counts) : 1;
+const minCount = counts.length ? Math.min(...counts) : 1;
+const scaleFor = (count: number) => {
+	if (maxCount === minCount) return 1;
+	const t = (count - minCount) / (maxCount - minCount);
+	return Number((0.86 + t * 0.62).toFixed(3));
+};
+const totalTagged = counts.reduce((sum, c) => sum + c, 0);
+---
+
+<!doctype html>
+<html lang="zh-CN">
+	<head>
+		<BaseHead title={`Browse All Tags | ${SITE_TITLE} - Find Articles by Topic`} description="Browse all topics covered in this blog. Find articles by tags including programming, Cloudflare, SEO, and technical guides." />
+	</head>
+	<body>
+		<MeteorShower density={0.5} heightVh={42} />
+		<Header />
+		<MobileDrawer />
+		<main class="mx-auto max-w-3xl px-4 py-12" transition:name="page-main" transition:animate="fade">
+			<PageHeading
+				eyebrow={T['tags.eyebrow']}
+				eyebrowKey="tags.eyebrow"
+				title={T['tags.title']}
+				titleKey="tags.title"
+				accent={T['tags.accent']}
+				accentKey="tags.accent"
+				subtitle={T['tags.subtitle']}
+				subtitleKey="tags.subtitle"
+			/>
+			<div class="mt-9 flex flex-wrap items-center gap-2.5 text-[15px]">
+				{
+					sortedTags.map(([slug, meta], idx) => {
+						const scale = scaleFor(meta.count);
+						const hot = meta.count >= maxCount * 0.7;
+						return (
+							<a
+								href={`${BASE}tags/${encodeURIComponent(slug)}/`}
+								data-reveal
+								style={`--reveal-delay: ${Math.min(idx * 22, 380)}ms; font-size: ${scale}rem`}
+								class:list={[
+									'apple-float-chip inline-flex items-center rounded-2xl border px-[0.9em] py-[0.45em] font-medium no-underline',
+									hot
+										? 'border-[rgba(180,126,36,0.42)] bg-[rgba(180,126,36,0.09)] text-zinc-800 dark:border-[rgba(226,190,110,0.4)] dark:bg-[rgba(226,190,110,0.11)] dark:text-zinc-50'
+										: 'border-zinc-300/80 bg-zinc-50/96 text-zinc-700 dark:border-zinc-700/80 dark:bg-zinc-900/96 dark:text-zinc-200',
+								]}
+							>
+								<span class="apple-float-label">
+									<span>{meta.label}</span>
+									<span class="ml-1.5 text-[0.72em] font-semibold text-zinc-400 dark:text-zinc-500">{meta.count}</span>
+								</span>
+							</a>
+						);
+					})
+				}
+			</div>
+		</main>
+		<Footer />
+	</body>
+</html>

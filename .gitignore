@@ -11,18 +11,29 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
-dev-server.log
-
-# local verification artifacts
+dev-server*.log
 output/
 
 
 # environment variables
 .env
 .env.production
+server-data/
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
 
 # macOS-specific files
 .DS_Store
 
 # jetbrains setting folder
 .idea/
+
+# VSCode settings
+.vscode/
+
+# Claude Code settings
+.claude/
+
+# git protection
+.git_disable/

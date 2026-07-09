@@ -1,0 +1,222 @@
+---
+/*
+ * Pop-art meteor layer: dotted streaks of light falling from the top edge.
+ * Each meteor is a short trail of halftone dots (bright head, fading tail)
+ * with randomized spawn point, speed, angle, length and per-dot jitter, so
+ * nothing ever lines up. Renders behind content (z-index -1), never captures
+ * pointer events, pauses in hidden tabs, and skips entirely for reduced motion.
+ */
+interface Props {
+	// Spawn-rate multiplier: 1 = full shower (about), ~0.45 = light drizzle (home).
+	density?: number;
+	// Height of the fall zone as a percentage of the viewport.
+	heightVh?: number;
+}
+
+const { density = 1, heightVh = 58 } = Astro.props as Props;
+---
+
+<div
+	class="meteor-layer"
+	data-meteor-layer
+	data-density={String(density)}
+	style={`height: ${heightVh}vh`}
+	aria-hidden="true"
+>
+	<canvas></canvas>
+</div>
+
+<style>
+	.meteor-layer {
+		position: fixed;
+		top: 0;
+		left: 0;
+		right: 0;
+		z-index: -1;
+		pointer-events: none;
+		/* Soft bottom fade so meteors dissolve instead of hitting a hard edge. */
+		-webkit-mask-image: linear-gradient(180deg, #000 70%, transparent);
+		mask-image: linear-gradient(180deg, #000 70%, transparent);
+	}
+
+	.meteor-layer canvas {
+		display: block;
+		width: 100%;
+		height: 100%;
+	}
+</style>
+
+<script is:inline>
+	(() => {
+		const initMeteors = () => {
+			const layer = document.querySelector('[data-meteor-layer]');
+			if (!layer || layer.dataset.bound === 'true') return;
+			layer.dataset.bound = 'true';
+
+			if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+			const canvas = layer.querySelector('canvas');
+			const ctx = canvas?.getContext('2d');
+			if (!ctx) return;
+
+			const density = Math.max(0.1, Number(layer.dataset.density) || 1);
+			// Concurrent cap scales with density so dense showers feel genuinely busy.
+			const maxMeteors = Math.max(4, Math.round(8 * density));
+
+			let width = 0;
+			let height = 0;
+
+			const resize = () => {
+				const dpr = Math.min(window.devicePixelRatio || 1, 2);
+				const rect = layer.getBoundingClientRect();
+				width = rect.width;
+				height = rect.height;
+				canvas.width = Math.max(1, Math.round(width * dpr));
+				canvas.height = Math.max(1, Math.round(height * dpr));
+				ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+			};
+
+			const meteors = [];
+
+			const spawn = () => {
+				const angle = Math.PI / 2 + (Math.random() * 0.5 - 0.1); // mostly downward, leaning left
+				const trail = 5 + Math.floor(Math.random() * 4);
+				const jitter = [];
+				for (let i = 0; i < trail; i++) {
+					jitter.push({ x: (Math.random() - 0.5) * 3.2, y: (Math.random() - 0.5) * 3.2 });
+				}
+				meteors.push({
+					x: width * (0.04 + Math.random() * 0.92),
+					y: -24,
+					dx: Math.cos(angle),
+					dy: Math.sin(angle),
+					speed: 150 + Math.random() * 210, // px per second
+					trail,
+					jitter,
+					spacing: 9 + Math.random() * 5,
+					size: 1.7 + Math.random() * 1.2,
+					blue: Math.random() < 0.12,
+					fadeAt: height * (0.45 + Math.random() * 0.45),
+					alpha: 1,
+				});
+			};
+
+			let lastTime = 0;
+			let spawnTimer = 0;
+			let nextSpawn = 400;
+			let rafId = 0;
+			let running = false;
+
+			const step = (now) => {
+				const dt = Math.min((now - lastTime) / 1000, 0.05);
+				lastTime = now;
+
+				spawnTimer += dt * 1000;
+				if (spawnTimer >= nextSpawn) {
+					spawnTimer = 0;
+					nextSpawn = (380 + Math.random() * 1100) / density;
+					if (meteors.length < maxMeteors) spawn();
+				}
+
+				const dark = document.documentElement.classList.contains('dark');
+				const goldRgb = dark ? '226, 190, 110' : '170, 118, 32';
+				const blueRgb = dark ? '147, 197, 253' : '59, 130, 246';
+
+				ctx.clearRect(0, 0, width, height);
+
+				for (let m = meteors.length - 1; m >= 0; m--) {
+					const meteor = meteors[m];
+					meteor.x += meteor.dx * meteor.speed * dt;
+					meteor.y += meteor.dy * meteor.speed * dt;
+					if (meteor.y > meteor.fadeAt) meteor.alpha -= dt * 2.4;
+					if (meteor.alpha <= 0 || meteor.y - meteor.trail * meteor.spacing > height + 30) {
+						meteors.splice(m, 1);
+						continue;
+					}
+
+					const rgb = meteor.blue ? blueRgb : goldRgb;
+					for (let i = 0; i < meteor.trail; i++) {
+						const px = meteor.x - meteor.dx * meteor.spacing * i + meteor.jitter[i].x;
+						const py = meteor.y - meteor.dy * meteor.spacing * i + meteor.jitter[i].y;
+						const falloff = Math.pow(0.74, i);
+						const alpha = meteor.alpha * 0.62 * falloff;
+						const radius = meteor.size * (i === 0 ? 1.18 : Math.pow(0.88, i));
+						if (alpha < 0.015 || py < -10) continue;
+						ctx.fillStyle = `rgba(${rgb}, ${alpha})`;
+						ctx.beginPath();
+						ctx.arc(px, py, radius, 0, Math.PI * 2);
+						ctx.fill();
+						// Soft halo on the head dot only.
+						if (i === 0) {
+							ctx.fillStyle = `rgba(${rgb}, ${alpha * 0.22})`;
+							ctx.beginPath();
+							ctx.arc(px, py, radius * 2.6, 0, Math.PI * 2);
+							ctx.fill();
+						}
+					}
+				}
+
+				rafId = requestAnimationFrame(step);
+			};
+
+			let destroyed = false;
+			const start = () => {
+				if (running || destroyed) return;
+				running = true;
+				lastTime = performance.now();
+				rafId = requestAnimationFrame(step);
+			};
+			const stop = () => {
+				running = false;
+				if (rafId) cancelAnimationFrame(rafId);
+				rafId = 0;
+			};
+
+			let resizeRaf = 0;
+			const onVisibility = () => {
+				if (document.hidden) stop();
+				else start();
+			};
+			const onResize = () => {
+				if (resizeRaf) return;
+				resizeRaf = requestAnimationFrame(() => {
+					resizeRaf = 0;
+					resize();
+				});
+			};
+
+			// Full teardown so route swaps and tab switches can never revive a
+			// loop that draws to a detached canvas.
+			const destroy = () => {
+				destroyed = true;
+				stop();
+				if (resizeRaf) cancelAnimationFrame(resizeRaf);
+				resizeRaf = 0;
+				document.removeEventListener('visibilitychange', onVisibility);
+				window.removeEventListener('resize', onResize);
+				document.removeEventListener('astro:before-swap', destroy);
+			};
+
+			// Replace any instance left over from a previous route.
+			if (typeof window.__meteorDestroy === 'function') window.__meteorDestroy();
+			window.__meteorDestroy = destroy;
+
+			resize();
+			start();
+			document.addEventListener('visibilitychange', onVisibility);
+			window.addEventListener('resize', onResize);
+			document.addEventListener('astro:before-swap', destroy);
+		};
+
+		// Keep exactly one document-level page-load hook no matter how many times
+		// this inline script re-executes across View Transition navigations.
+		window.__meteorInit = initMeteors;
+		if (!window.__meteorPageLoadBound) {
+			window.__meteorPageLoadBound = true;
+			document.addEventListener('astro:page-load', () => {
+				if (typeof window.__meteorInit === 'function') window.__meteorInit();
+			});
+		}
+		initMeteors();
+	})();
+</script>

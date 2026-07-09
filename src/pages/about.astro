@@ -1,35 +1,109 @@
 ---
-import BaseLayout from "../layouts/BaseLayout.astro";
+import Layout from '../layouts/BlogPost.astro';
+import GoldenSpiral from '../components/GoldenSpiral.astro';
+import MeteorShower from '../components/MeteorShower.astro';
+import TerminalQuote from '../components/TerminalQuote.astro';
+
+const nowText =
+	'Now: turning a personal blog, GitHub projects, and daily engineering notes into a long-term, verifiable knowledge index.';
 ---
 
-<BaseLayout title="关于 | xgwnje.cn">
-  <main class="site-shell detail-shell">
-    <header class="site-header">
-      <a class="brand" href="/" aria-label="返回首页">
-        <img class="brand__wordmark" src="/images/brand-wordmark.png" alt="xgwnje.cn" width="365" height="106" />
-      </a>
-      <nav class="site-nav" aria-label="主导航">
-        <a href="/">首页</a>
-        <a href="/?type=note">笔记</a>
-        <a href="/?type=video">影像</a>
-        <a href="/?type=work">作品</a>
-      </nav>
-    </header>
+<Layout
+	title="关于 XGWNJE / 邢文杰"
+	description="XGWNJE / 邢文杰的个人介绍：一个关注 AI 工具、自托管服务、Android/Windows 应用、知识索引和可验证工程实践的个人技术博客。"
+	pubDate={new Date('Feb 10 2026')}
+	metaMode="page"
+	heroImage="/image/about/image.png"
+	profileImage="/image/favicon-192.png"
+	relatedPostsLang="cn"
+>
+	<Fragment slot="background">
+		<GoldenSpiral />
+		<MeteorShower density={1.8} heightVh={60} />
+	</Fragment>
+	<div class="mx-auto max-w-3xl">
+		<p>
+			我是 <strong>XGWNJE / 邢文杰</strong>，目前公开 GitHub 资料显示我在 Shanghai。
+			这个站点是我的个人技术索引：用来整理我做过的工具、部署过的服务、踩过的坑，以及那些值得反复验证的工程判断。
+			我更关心一个东西能不能长期运行、能不能复现、能不能交给未来的自己继续维护，而不只是第一次做出来时看起来足够漂亮。
+		</p>
 
-    <article class="post-detail">
-      <a class="back-link" href="/">返回索引</a>
-      <div class="post-detail__meta">
-        <span>about</span>
-      </div>
-      <h1>关于这个站点</h1>
-      <p class="post-detail__summary">
-        这里是一个新的个人站起点。它会先作为内容索引运行，再逐步增加更完整的作品展示、影像记录和发布流程。
-      </p>
-      <div class="post-detail__content">
-        <p>
-          当前版本只保留最小结构：首页、内容详情、关于页、内容集合、搜索筛选和抽象信号动效。
-        </p>
-      </div>
-    </article>
-  </main>
-</BaseLayout>
+		<h2>我在做什么</h2>
+		<p>
+			我的项目大多围绕实际工作流展开：AI 辅助开发、自托管服务、Android 与 Windows 端工具、浏览器与桌面效率工具、
+			个人知识资产整理，以及面向真实设备和真实网络环境的验证。相比把项目写成一次性演示，我更倾向于把它们做成可部署、
+			可回滚、可测试、可记录的系统。
+		</p>
+
+		<ul>
+			<li>
+				<a href="https://github.com/XGWNJE/VisionGuard" target="_blank" rel="noreferrer">VisionGuard</a>：
+				基于 AI 的实时监控与报警系统，包含 Windows、Android 和自建服务器链路。
+			</li>
+			<li>
+				<a href="https://github.com/XGWNJE/Vigil" target="_blank" rel="noreferrer">Vigil</a>：
+				Android 通知关键词监控工具，面向静音勿扰场景下的强提醒需求。
+			</li>
+			<li>
+				<a href="https://github.com/XGWNJE/MarkPad" target="_blank" rel="noreferrer">MarkPad</a>：
+				面向触控操作的新标签页书签面板，关注卡片式书签、图标系统和日常使用手感。
+			</li>
+			<li>
+				<a href="https://github.com/XGWNJE/CmdPaster" target="_blank" rel="noreferrer">CmdPaster</a>：
+				通过拼音搜索快速粘贴命令片段的 VS Code 插件。
+			</li>
+			<li>
+				<a href="https://github.com/XGWNJE/visual-rules-collection" target="_blank" rel="noreferrer">visual-rules-collection</a>
+				和 <a href="https://github.com/XGWNJE/readme-polish" target="_blank" rel="noreferrer">readme-polish</a>：
+				把视觉规范、README 表达和 Agent 工作流沉淀成可复用材料。
+			</li>
+		</ul>
+
+		<h2>我的工作方式</h2>
+		<p>
+			从 Codex 协作过程看，我的工程偏好很明确：先确认真实路径、真实运行状态和真实远端，再下结论。
+			遇到问题时，我通常会要求保留证据链：本地命令输出、浏览器实际点击、服务器状态、回滚路径、部署备份和维护说明。
+			我不太喜欢“看起来应该可以”的答案，更愿意把复杂流程拆成可验证的小步骤。
+		</p>
+		<p>
+			这个博客也延续这种习惯。这里不会只放整理好的结论，也会记录工具选择、迁移过程、失败原因、替代方案和后续维护方式。
+			如果一篇文章能让几年后的我更快恢复上下文，或者让另一个遇到同类问题的人少走一点弯路，它就有价值。
+		</p>
+
+		<h2>关于这个博客</h2>
+		<p>
+			本站前端基于
+			<a href="https://github.com/Dancncn/DansBlog" target="_blank" rel="noreferrer">Dancncn/DansBlog</a>
+			改造而来。原项目作者是 <a href="https://github.com/Dancncn" target="_blank" rel="noreferrer">Dan_Arnoux / Dancncn</a>，
+			原站点为 <a href="https://danarnoux.com/" target="_blank" rel="noreferrer">danarnoux.com</a>。
+			感谢 Dan_Arnoux 开源了这个 Astro + Tailwind 的博客基础，以及配套的
+			<a href="https://github.com/Dancncn/DansBlogs_worker" target="_blank" rel="noreferrer">DansBlogs_worker</a>
+			后端参考实现。
+		</p>
+		<p>
+			当前的 xgwnje.cn 已经替换成我的内容、身份、域名、部署方式和自托管后端。它保留了原项目优秀的阅读体验和文章组织方式，
+			同时改造成适合我长期维护的个人技术档案。
+		</p>
+
+		<h2>现在</h2>
+		<div class="mx-auto max-w-2xl text-left">
+			<TerminalQuote text={nowText} once={true} fixedHeight={false} />
+		</div>
+
+		<h2>联系</h2>
+		<p>
+			可以通过本站的
+			<button type="button" class="contact-link" data-modal-toggle="contact">联系表单</button>
+			给我留言，也可以从页面导航进入我的 GitHub 和其他公开主页。
+		</p>
+	</div>
+</Layout>
+
+<script>
+	document.querySelectorAll('.contact-link').forEach(btn => {
+		btn.addEventListener('click', () => {
+			const event = new CustomEvent('open-contact-modal');
+			window.dispatchEvent(event);
+		});
+	});
+</script>

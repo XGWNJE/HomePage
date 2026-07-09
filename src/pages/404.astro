@@ -1,0 +1,132 @@
+---
+import BaseHead from '../components/BaseHead.astro';
+import Footer from '../components/Footer.astro';
+import Header from '../components/Header.astro';
+import MobileDrawer from '../components/MobileDrawer.astro';
+import { DEFAULT_UI_LANG, getUiText } from '../data/i18n';
+
+/*
+ * Terminal-styled 404 page.
+ * Mirrors the TerminalQuote visual language: the missing path is "typed"
+ * into a shell prompt and answered with a bash-style error. Reduced motion
+ * and no-JS environments render the full output instantly.
+ */
+const BASE = import.meta.env.BASE_URL;
+const T = getUiText(DEFAULT_UI_LANG);
+---
+
+<!doctype html>
+<html lang="zh-CN">
+	<head>
+		<BaseHead title="404 - Page Not Found | XGWNJE" description="The page you are looking for does not exist. Please check the URL or browse other articles on this blog." />
+	</head>
+	<body>
+		<Header />
+		<MobileDrawer />
+		<main class="grid min-h-[calc(100vh-4rem)] place-items-center px-6 py-20 sm:py-24" transition:animate="fade">
+			<div class="w-full max-w-2xl">
+				<div class="text-center">
+					<p class="hero-enter font-mono text-[12px] font-semibold uppercase tracking-[0.3em] text-zinc-400 dark:text-zinc-500">
+						<span data-i18n="notFound.error">{T['notFound.error']}</span>
+					</p>
+					<h1 class="hero-enter hero-enter-delay mt-3 text-5xl font-semibold tracking-tight text-balance text-zinc-900 sm:text-6xl dark:text-zinc-100">
+						<span data-i18n="notFound.titlePrefix">{T['notFound.titlePrefix']}</span> <span class="font-serif italic text-zinc-600 dark:text-zinc-300" data-i18n="notFound.titleAccent">{T['notFound.titleAccent']}</span>
+					</h1>
+				</div>
+
+				<div class="hero-enter hero-enter-delay-2 mx-auto mt-10 w-full overflow-hidden rounded-[1.6rem] border border-zinc-200/75 bg-white/72 shadow-[0_18px_48px_rgba(15,23,42,0.06)] backdrop-blur-xl transition-colors duration-200 dark:border-zinc-800/80 dark:bg-zinc-950/54 dark:shadow-[0_20px_48px_rgba(0,0,0,0.22)]">
+					<div class="flex items-center justify-between border-b border-zinc-200/65 bg-[linear-gradient(180deg,rgba(255,255,255,0.68),rgba(255,250,240,0.42))] px-4 py-2.5 backdrop-blur-md dark:border-zinc-800/80 dark:bg-[linear-gradient(180deg,rgba(39,39,42,0.42),rgba(24,24,27,0.16))]">
+						<div class="flex items-center gap-1.5">
+							<span class="h-2.5 w-2.5 rounded-full bg-[linear-gradient(180deg,rgba(244,63,94,0.95),rgba(251,113,133,0.76))] shadow-[0_0_0_1px_rgba(255,255,255,0.35)_inset]"></span>
+							<span class="h-2.5 w-2.5 rounded-full bg-[linear-gradient(180deg,rgba(251,191,36,0.95),rgba(252,211,77,0.76))] shadow-[0_0_0_1px_rgba(255,255,255,0.35)_inset]"></span>
+							<span class="h-2.5 w-2.5 rounded-full bg-[linear-gradient(180deg,rgba(52,211,153,0.95),rgba(110,231,183,0.76))] shadow-[0_0_0_1px_rgba(255,255,255,0.35)_inset]"></span>
+						</div>
+						<p class="m-0 font-mono text-[11px] tracking-[0.08em] text-zinc-400 dark:text-zinc-500">~/xgwnje/index - bash</p>
+					</div>
+
+					<div class="flex flex-col gap-1 px-4 pb-5 pt-4 font-mono text-[13px] leading-7 text-zinc-600 dark:text-zinc-300">
+						<p class="m-0 break-all">
+							<span class="bg-[linear-gradient(135deg,rgba(180,126,36,1),rgba(226,190,110,0.96),rgba(150,102,22,1))] bg-clip-text text-transparent dark:bg-[linear-gradient(135deg,rgba(250,214,140,0.96),rgba(205,160,72,0.92),rgba(255,232,179,0.96))]">xgwnje@index</span>
+							<span class="ml-[1px] text-zinc-400 dark:text-zinc-500">:~$</span>
+							<span class="ml-1 text-zinc-700 dark:text-zinc-200">cd <span data-404-path></span></span><span data-404-typing-cursor class="ml-0.5 inline-block h-[0.95em] w-[0.36em] animate-pulse rounded-[1px] bg-zinc-700/85 align-[-0.08em] dark:bg-zinc-200/85" aria-hidden="true"></span>
+						</p>
+						<p data-404-error class="m-0 break-all text-rose-500/90 opacity-0 transition-opacity duration-300 dark:text-rose-400/90">
+							bash: cd: <span data-404-path-echo></span>: No such file or directory
+						</p>
+						<p data-404-prompt class="m-0 opacity-0 transition-opacity duration-300">
+							<span class="bg-[linear-gradient(135deg,rgba(180,126,36,1),rgba(226,190,110,0.96),rgba(150,102,22,1))] bg-clip-text text-transparent dark:bg-[linear-gradient(135deg,rgba(250,214,140,0.96),rgba(205,160,72,0.92),rgba(255,232,179,0.96))]">xgwnje@index</span>
+							<span class="ml-[1px] text-zinc-400 dark:text-zinc-500">:~$</span>
+							<span class="ml-0.5 inline-block h-[0.95em] w-[0.36em] animate-pulse rounded-[1px] bg-zinc-700/85 align-[-0.08em] dark:bg-zinc-200/85" aria-hidden="true"></span>
+						</p>
+					</div>
+				</div>
+
+				<div class="hero-enter hero-enter-delay-2 mt-8 flex flex-wrap items-center justify-center gap-3">
+					<a
+						href={BASE}
+						class="inline-flex items-center gap-2 rounded-xl bg-zinc-900 px-4 py-2.5 font-mono text-sm font-semibold text-zinc-50 no-underline shadow-[0_10px_26px_rgba(24,24,27,0.22)] transition-all duration-200 ease-out hover:-translate-y-0.5 hover:bg-zinc-700 hover:shadow-[0_14px_30px_rgba(24,24,27,0.26)] active:translate-y-0 active:scale-[0.98] dark:bg-zinc-100 dark:text-zinc-900 dark:shadow-[0_10px_26px_rgba(255,255,255,0.08)] dark:hover:bg-zinc-200"
+					>
+						cd ~/home
+					</a>
+					<a
+						href={`${BASE}blog/`}
+						class="apple-float-chip inline-flex items-center gap-2 rounded-xl border border-zinc-300/90 bg-zinc-50/96 px-4 py-2.5 font-mono text-sm font-medium text-zinc-700 no-underline dark:border-zinc-700/90 dark:bg-zinc-900/96 dark:text-zinc-300"
+					>
+						<span class="apple-float-label">ls ./blog</span>
+					</a>
+				</div>
+			</div>
+		</main>
+		<Footer />
+
+		<script is:inline>
+			(() => {
+				const init = () => {
+					const pathEl = document.querySelector('[data-404-path]');
+					const echoEl = document.querySelector('[data-404-path-echo]');
+					const errorEl = document.querySelector('[data-404-error]');
+					const promptEl = document.querySelector('[data-404-prompt]');
+					const typingCursor = document.querySelector('[data-404-typing-cursor]');
+					if (!pathEl || !errorEl || !promptEl) return;
+					if (pathEl.dataset.typed === 'true') return;
+					pathEl.dataset.typed = 'true';
+
+					let path = window.location.pathname || '/unknown';
+					try {
+						path = decodeURIComponent(path);
+					} catch {}
+					if (path.length > 42) path = `${path.slice(0, 41)}…`;
+					if (echoEl) echoEl.textContent = path;
+
+					const showRest = () => {
+						errorEl.classList.remove('opacity-0');
+						promptEl.classList.remove('opacity-0');
+						if (typingCursor) typingCursor.classList.add('hidden');
+					};
+
+					const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+					if (reducedMotion) {
+						pathEl.textContent = path;
+						showRest();
+						return;
+					}
+
+					let i = 0;
+					const type = () => {
+						i += 1;
+						pathEl.textContent = path.slice(0, i);
+						if (i < path.length) {
+							window.setTimeout(type, 24 + Math.floor(Math.random() * 26));
+						} else {
+							window.setTimeout(showRest, 260);
+						}
+					};
+					window.setTimeout(type, 350);
+				};
+
+				init();
+				document.addEventListener('astro:page-load', init);
+			})();
+		</script>
+	</body>
+</html>

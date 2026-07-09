@@ -1,0 +1,55 @@
+---
+/*
+ * Editorial page heading shared by list/index routes (Blog, Tags, Links).
+ * Echoes the homepage hero's voice — a gold eyebrow tick, a large sans title
+ * paired with a serif-italic accent word, and a calm subtitle — so secondary
+ * pages feel designed rather than bare. An `actions` slot keeps room for page
+ * controls (e.g. the Blog view switcher); the default slot drops in below.
+ */
+interface Props {
+	// Small uppercase kicker above the title.
+	eyebrow?: string;
+	eyebrowKey?: string;
+	// Plain sans portion of the title.
+	title: string;
+	titleKey?: string;
+	// Optional serif-italic accent word rendered after the title.
+	accent?: string;
+	accentKey?: string;
+	// Calm one-line description under the title.
+	subtitle?: string;
+	subtitleKey?: string;
+}
+
+const { eyebrow, eyebrowKey, title, titleKey, accent, accentKey, subtitle, subtitleKey } = Astro.props as Props;
+---
+
+<header class="section-enter">
+	<div class="flex flex-wrap items-end justify-between gap-x-6 gap-y-4">
+		<div class="min-w-0">
+			{eyebrow && (
+				<p class="mb-2.5 flex items-center gap-2.5 text-[11px] font-semibold uppercase tracking-[0.24em] text-zinc-400 dark:text-zinc-500">
+					<span class="h-px w-8 bg-gradient-to-r from-[rgb(180,126,36)] to-transparent dark:from-[rgb(226,190,110)]"></span>
+					<span data-i18n={eyebrowKey}>{eyebrow}</span>
+				</p>
+			)}
+			<h1
+				class="flex flex-wrap items-baseline gap-x-2.5 gap-y-1 text-[2.1rem] font-semibold leading-none tracking-tight text-zinc-900 dark:text-zinc-100 md:text-[2.85rem]"
+				transition:name="page-title"
+				transition:animate="fade"
+			>
+				<span class="font-sans" data-i18n={titleKey}>{title}</span>
+				{accent && (
+					<span class="font-serif text-[0.96em] italic font-medium text-zinc-500 dark:text-zinc-400" data-i18n={accentKey}>{accent}</span>
+				)}
+			</h1>
+			{subtitle && (
+				<p class="mt-3 max-w-xl font-sans text-[15px] leading-7 text-zinc-500 dark:text-zinc-400" data-i18n={subtitleKey}>{subtitle}</p>
+			)}
+		</div>
+		<div class="shrink-0">
+			<slot name="actions" />
+		</div>
+	</div>
+	<slot />
+</header>

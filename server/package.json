@@ -1,0 +1,16 @@
+{
+  "name": "homepage-api",
+  "private": true,
+  "type": "module",
+  "version": "0.1.0",
+  "scripts": {
+    "start": "node src/server.js",
+    "test": "node --test test/*.test.js"
+  },
+  "dependencies": {
+    "better-sqlite3": "^12.11.1",
+    "busboy": "^1.6.0",
+    "cookie": "^1.0.2",
+    "express": "^5.2.1"
+  }
+}

@@ -1,187 +1,343 @@
 ---
-import { getCollection } from "astro:content";
-import BaseLayout from "../layouts/BaseLayout.astro";
-import SignalCanvas from "../components/SignalCanvas.astro";
-import ContentCard from "../components/ContentCard.astro";
+import { getCollection } from 'astro:content';
+import BaseHead from '../components/BaseHead.astro';
+import BrandMark from '../components/BrandMark.astro';
+import Footer from '../components/Footer.astro';
+import Header from '../components/Header.astro';
+import MeteorShower from '../components/MeteorShower.astro';
+import MobileDrawer from '../components/MobileDrawer.astro';
+import ParthenonColumns from '../components/ParthenonColumns.astro';
+import PostCard from '../components/PostCard.astro';
+import TerminalQuote from '../components/TerminalQuote.astro';
+import { BILIBILI_URL, CREATINF_URL, GITHUB_URL, SITE_DESCRIPTION, SITE_TITLE } from '../consts';
+import { DEFAULT_UI_LANG, getUiText } from '../data/i18n';
+import { getPostLang } from '../utils/postAnalytics';
 
-const posts = (await getCollection("posts")).sort(
-  (a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf(),
-);
+const BASE = import.meta.env.BASE_URL;
+const T = getUiText(DEFAULT_UI_LANG);
+// Keep home preview aligned with list pagination size for consistent editorial cadence.
+const posts = (await getCollection('blog'))
+	.sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf())
+	.slice(0, 6);
 
-const feed = posts;
-const latestPost = posts[0];
-
-const typeLabels = {
-  all: "全部",
-  note: "笔记",
-  video: "影像",
-  work: "作品",
-};
-
-const typeSummaries = {
-  note: "想法、判断和阶段记录",
-  video: "影像、视频和观看记录",
-  work: "作品、实验和项目结果",
-};
-
-const typeCounts = posts.reduce(
-  (counts, post) => {
-    counts[post.data.contentType] += 1;
-    return counts;
-  },
-  { note: 0, video: 0, work: 0 },
-);
-
-const tagCounts = posts.reduce((counts, post) => {
-  post.data.tags.forEach((tag) => {
-    counts.set(tag, (counts.get(tag) ?? 0) + 1);
-  });
-  return counts;
-}, new Map<string, number>());
-
-const topTags = Array.from(tagCounts.entries())
-  .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
-  .slice(0, 5);
-
+const HOME_WALLPAPER = `${BASE}image/home/2rd1yuubn4hc1.png`;
 ---
 
-<BaseLayout title="xgwnje.cn | Signal Index">
-  <SignalCanvas />
+<!doctype html>
+<html lang="zh-CN">
+	<head>
+		<BaseHead title={`${SITE_TITLE} - Research, Engineering & Technical Notes`} description="A personal blog about research, engineering workflows, and reproducible long-form writing.涵盖编程、技术笔记和工程实践。" />
+	</head>
+	<body>
+		<ParthenonColumns />
+		<MeteorShower density={0.45} heightVh={46} />
+		<Header />
+		<MobileDrawer />
+		<main class="page-shell page-fade-in py-10 md:py-14" transition:name="page-main" transition:animate="fade">
+			<div class="space-y-6">
+				<section class="hero-enter overflow-hidden rounded-2xl border border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-900">
+					<div class="relative h-[44vh] min-h-[300px] w-full">
+						<img
+							src={HOME_WALLPAPER}
+							alt="Homepage wallpaper"
+							class="hero-kenburns h-full w-full object-cover object-[77%_center] md:object-center"
+						/>
+						<div class="absolute inset-0 bg-zinc-900/10 dark:bg-zinc-950/25"></div>
+						<div class="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-zinc-950/35 to-transparent"></div>
+					</div>
+				</section>
 
-  <main class="site-shell">
-    <header class="site-header">
-      <a class="brand" href="/" aria-label="xgwnje.cn 首页">
-        <img class="brand__wordmark" src="/images/brand-wordmark.png" alt="xgwnje.cn" width="365" height="106" />
-      </a>
-      <div class="theme-switcher" data-theme-switcher aria-label="主题切换">
-        <button type="button" class="is-active" data-theme-target="mortal">凡人修仙传</button>
-        <button type="button" data-theme-target="signal">个人信号</button>
-      </div>
-      <nav class="site-nav" aria-label="主导航">
-        <a href="/" aria-current="page">首页</a>
-        <a href="#index">索引</a>
-        <a href="/about">关于</a>
-      </nav>
-    </header>
+				<section class="section-enter section-enter-delay-1 grid grid-cols-1 gap-6 items-start md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
+					<div class="hero-enter hero-enter-delay-2 max-w-[40rem]">
+						<h1 class="brand-wordmark flex flex-wrap items-center gap-x-2.5 gap-y-1" transition:name="page-title" transition:animate="fade">
+							<BrandMark class="h-[2.3rem] -ml-1 self-center md:h-[3.05rem]" />
+							<span class="text-[2.55rem] leading-none text-zinc-900 dark:text-zinc-100 md:text-[3.4rem]">
+								XGWNJE
+							</span>
+							<span class="text-[2.55rem] italic leading-none text-zinc-600 dark:text-zinc-300 md:text-[3.4rem]">
+								Index
+							</span>
+						</h1>
+						<p class="mt-3 max-w-xl font-sans text-[15px] leading-7 text-zinc-500 dark:text-zinc-400">
+							<span data-i18n="home.subtitle">{T['home.subtitle']}</span>
+						</p>
+						<div class="mt-3 flex flex-wrap items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-400 dark:text-zinc-500">
+							<span class="apple-meta-pill">
+								<span class="apple-meta-pill-label" data-i18n="home.pill.research">{T['home.pill.research']}</span>
+							</span>
+							<span class="apple-meta-pill">
+								<span class="apple-meta-pill-label" data-i18n="home.pill.engineering">{T['home.pill.engineering']}</span>
+							</span>
+							<span class="apple-meta-pill">
+								<span class="apple-meta-pill-label" data-i18n="home.pill.notes">{T['home.pill.notes']}</span>
+							</span>
+						</div>
+						<div class="mt-3.5 flex flex-wrap gap-2.5">
+							<span class="inline-flex items-center rounded-full border border-zinc-200/85 bg-white/78 px-3 py-1.5 text-[11px] font-medium tracking-[0.01em] text-zinc-600 shadow-[0_8px_20px_rgba(15,23,42,0.04)] backdrop-blur-sm dark:border-zinc-700/80 dark:bg-zinc-900/72 dark:text-zinc-300">
+								<span data-i18n="home.ui">{T['home.ui']}</span>
+							</span>
+							<span class="inline-flex items-center rounded-full border border-zinc-200/85 bg-white/78 px-3 py-1.5 text-[11px] font-medium tracking-[0.01em] text-zinc-600 shadow-[0_8px_20px_rgba(15,23,42,0.04)] backdrop-blur-sm dark:border-zinc-700/80 dark:bg-zinc-900/72 dark:text-zinc-300">
+								<span data-i18n="home.content">{T['home.content']}</span>
+							</span>
+						</div>
+						<div class="mt-3.5 flex items-center gap-2">
+							<a
+								href={GITHUB_URL}
+								target="_blank"
+								rel="noreferrer"
+								class="icon-button inline-flex h-10 w-10 items-center justify-center rounded-xl border border-zinc-200 text-zinc-600 transition-colors hover:border-zinc-400 hover:text-zinc-900 dark:border-zinc-700 dark:text-zinc-300 dark:hover:border-zinc-500 dark:hover:text-zinc-100"
+								aria-label="GitHub"
+							>
+								<svg viewBox="0 0 24 24" class="h-5 w-5 fill-current" aria-hidden="true">
+									<path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.523 2 12 2z" />
+								</svg>
+								<span class="sr-only">GitHub</span>
+							</a>
+							<a
+								href={BILIBILI_URL}
+								target="_blank"
+								rel="noreferrer"
+								class="icon-button inline-flex h-10 w-10 items-center justify-center rounded-xl border border-zinc-200 text-zinc-600 transition-colors hover:border-zinc-400 hover:text-zinc-900 dark:border-zinc-700 dark:text-zinc-300 dark:hover:border-zinc-500 dark:hover:text-zinc-100"
+								aria-label="Bilibili"
+							>
+								<svg viewBox="0 0 24 24" class="h-5 w-5 fill-current" aria-hidden="true">
+									<path d="M7.4 2.8a1 1 0 0 1 1.4 0L12 6l3.2-3.2a1 1 0 1 1 1.4 1.4L14.5 6.3h3.8A3.7 3.7 0 0 1 22 10v8.3A3.7 3.7 0 0 1 18.3 22H5.7A3.7 3.7 0 0 1 2 18.3V10a3.7 3.7 0 0 1 3.7-3.7h3.8L7.4 4.2a1 1 0 0 1 0-1.4ZM5.7 8.3A1.7 1.7 0 0 0 4 10v8.3c0 .9.8 1.7 1.7 1.7h12.6c.9 0 1.7-.8 1.7-1.7V10c0-.9-.8-1.7-1.7-1.7H5.7Zm1.8 3a1 1 0 0 1 1 1v3.4a1 1 0 1 1-2 0v-3.4a1 1 0 0 1 1-1Zm9 0a1 1 0 0 1 1 1v3.4a1 1 0 1 1-2 0v-3.4a1 1 0 0 1 1-1Z" />
+								</svg>
+								<span class="sr-only">Bilibili</span>
+							</a>
+							<a
+								href={CREATINF_URL}
+								target="_blank"
+								rel="noreferrer"
+								class="icon-button inline-flex h-10 w-10 items-center justify-center rounded-xl border border-zinc-200 text-zinc-600 transition-colors hover:border-zinc-400 hover:text-zinc-900 dark:border-zinc-700 dark:text-zinc-300 dark:hover:border-zinc-500 dark:hover:text-zinc-100"
+								aria-label="CreatInf"
+							>
+								<span class="text-lg font-semibold leading-none">∞</span>
+								<span class="sr-only">CreatInf</span>
+							</a>
+						</div>
+					</div>
 
-    <section class="hero-grid focus-hero" data-theme-root data-theme="mortal" aria-labelledby="hero-title">
-      <article class="focus-visual">
-        <img
-          data-theme-visual
-          src="/images/mortal-cultivation-hero.png"
-          alt="修仙题材角色掐诀施法的最近关注主视觉"
-          loading="eager"
-        />
-        <div class="focus-visual__energy" aria-hidden="true"></div>
-        <div class="focus-visual__particles" aria-hidden="true"></div>
-        <div class="focus-visual__artifact focus-visual__artifact--front" aria-hidden="true"></div>
-          <div class="focus-visual__copy">
-          <p class="eyebrow" data-theme-kicker>recent focus / animation</p>
-          <h1 id="hero-title" class="title-art" data-theme-title aria-label="凡人修仙传">
-            <img
-              data-theme-title-art
-              src="/images/title-mortal-wordmark.png"
-              alt="凡人修仙传"
-              width="930"
-              height="206"
-            />
-            <span class="sr-only" data-theme-title-text>凡人修仙传</span>
-          </h1>
-          <p data-theme-remark>
-            最近在追的修仙动画。最吸引我的是克制、谨慎和一步步积累出来的力量感。
-          </p>
-        </div>
-      </article>
+					<div class="hero-enter hero-enter-delay-2 w-full max-w-sm justify-self-end md:self-start">
+						<TerminalQuote />
+					</div>
+				</section>
 
-      <aside class="music-player" data-music-player aria-label="背景音乐播放器">
-        <p class="panel-label">theme audio</p>
-        <div class="music-player__body">
-          <div class="music-player__cover">
-            <img data-track-cover src="/images/mortal-cultivation-hero.png" alt="" loading="eager" />
-            <div class="music-player__aura" aria-hidden="true"></div>
-            <div class="music-player__grooves" aria-hidden="true"></div>
-            <div class="music-player__sheen" aria-hidden="true"></div>
-            <div class="music-player__meter" aria-hidden="true">
-              <span></span>
-              <span></span>
-              <span></span>
-              <span></span>
-              <span></span>
-            </div>
-            <div class="music-player__overlay">
-              <div class="music-player__info">
-                <span data-track-kicker>theme song</span>
-                <h2 data-track-title>凡人修仙传</h2>
-                <p data-track-state>等待播放</p>
-              </div>
-              <div class="music-player__controls">
-                <button type="button" data-audio-prev aria-label="上一段">⏮</button>
-                <button type="button" class="music-player__play" data-audio-toggle aria-label="播放背景音乐">▶</button>
-                <button type="button" data-audio-next aria-label="下一段">⏭</button>
-                <button type="button" class="music-player__auto" data-audio-auto aria-label="自动播放开关" aria-pressed="false">A</button>
-              </div>
-              <label class="music-player__volume">
-                <span>音量</span>
-                <input data-audio-volume type="range" min="0" max="100" value="32" />
-              </label>
-            </div>
-          </div>
-        </div>
-      </aside>
-    </section>
+				<!-- Decorative pop-art ribbon spanning the full hero row width. -->
+				<section class="hero-enter hero-enter-delay-2 -mt-1" aria-hidden="true">
+					<div class="dots-band" data-dots-band>
+						<canvas></canvas>
+					</div>
+				</section>
+			</div>
 
-    <section class="index-section" id="index" aria-labelledby="index-title">
-      <div class="index-toolbar">
-        <div>
-          <p class="panel-label">browse</p>
-          <h2 id="index-title" class="sr-only">内容索引</h2>
-        </div>
-        <label class="search-box" aria-label="搜索内容">
-          <span class="sr-only">搜索</span>
-          <input data-search-input type="search" placeholder="标题、摘要、标签" aria-label="搜索内容" />
-        </label>
-      </div>
+			<section class="mt-10">
+				<div class="mb-4 flex items-center justify-between" data-reveal>
+					<h2 class="text-xl font-semibold tracking-tight" data-i18n="home.latestPosts">{T['home.latestPosts']}</h2>
+					<a
+						href={`${BASE}blog/`}
+						class="apple-float-chip inline-flex items-center gap-1.5 rounded-xl border border-zinc-300/90 bg-zinc-50/96 px-3 py-1.5 text-sm font-medium text-zinc-700 no-underline dark:border-zinc-700/90 dark:bg-zinc-900/96 dark:text-zinc-300"
+					>
+						<span class="apple-float-label">
+							<span data-i18n="home.viewAll">{T['home.viewAll']}</span>
+							<svg viewBox="0 0 20 20" class="h-4 w-4 opacity-75" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+								<path d="M4.75 10h10.5" stroke-linecap="round" />
+								<path d="M10.75 5.5 15.25 10l-4.5 4.5" stroke-linecap="round" stroke-linejoin="round" />
+							</svg>
+						</span>
+					</a>
+				</div>
+				<ul class="grid gap-4 md:grid-cols-2">
+					{
+						posts.map((post, idx) => (
+							<li class="relative" data-reveal data-i18n-content-lang={getPostLang(post)} style={`--reveal-delay: ${(idx % 2) * 80}ms`}>
+								<PostCard
+									post={post}
+									base={BASE}
+									titleTag="h3"
+									titleClass="mt-2 text-lg font-semibold tracking-tight text-zinc-900 dark:text-zinc-100"
+									descriptionClass="mt-2 font-serif text-sm leading-7 text-zinc-600 dark:text-zinc-300"
+									maxMobile={3}
+									maxDesktop={3}
+									reloadOnNavigate={true}
+								/>
+							</li>
+						))
+					}
+				</ul>
+			</section>
+		</main>
+		<Footer />
 
-      <div class="index-pulse" aria-label="最近更新">
-        <span>最近更新</span>
-        {latestPost ? (
-          <a href={`/posts/${latestPost.id}/`}>
-            {latestPost.data.title}
-            <time datetime={latestPost.data.pubDate.toISOString()}>
-              {latestPost.data.pubDate.toLocaleDateString("zh-CN")}
-            </time>
-          </a>
-        ) : (
-          <p>暂无内容</p>
-        )}
-      </div>
+		<script is:inline>
+			(() => {
+				/*
+				 * Pop-art dot ribbon: a drifting halftone wave on <canvas>.
+				 * Gold dots with sparse blue accents and hollow rings; brightness and
+				 * size follow two layered sine waves so the band reads as a slow,
+				 * left-to-right current with twinkling crests.
+				 * Pauses off-screen / in hidden tabs; reduced motion gets one static frame.
+				 */
+				const initDotsBand = () => {
+					const wrap = document.querySelector('[data-dots-band]');
+					if (!wrap || wrap.dataset.bound === 'true') return;
+					wrap.dataset.bound = 'true';
 
-      <div class="channel-grid" aria-label="内容类型">
-        {(["note", "video", "work"] as const).map((type) => (
-          <button type="button" class="channel-card" data-filter={type}>
-            <span>{typeLabels[type]}</span>
-            <strong>{typeCounts[type].toString().padStart(2, "0")}</strong>
-            <small>{typeSummaries[type]}</small>
-          </button>
-        ))}
-      </div>
+					const canvas = wrap.querySelector('canvas');
+					const ctx = canvas?.getContext('2d');
+					if (!ctx) return;
 
-      <div class="content-list" data-content-list>
-        {feed.map((post) => (
-          <ContentCard
-            href={`/posts/${post.id}/`}
-            title={post.data.title}
-            summary={post.data.summary}
-            date={post.data.pubDate}
-            type={post.data.contentType}
-            tags={post.data.tags}
-          />
-        ))}
-      </div>
-    </section>
-  </main>
+					const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+					const SPACING = 17;
+					const ROWS = 3;
 
-  <script src="/scripts/content-index.js" is:inline></script>
-  <script src="/scripts/background-player.js" is:inline></script>
-  <script src="/scripts/theme-switcher.js" is:inline></script>
-</BaseLayout>
+					let width = 0;
+					let height = 0;
+					let dots = [];
+
+					const build = () => {
+						const dpr = Math.min(window.devicePixelRatio || 1, 2);
+						const rect = wrap.getBoundingClientRect();
+						width = rect.width;
+						height = rect.height;
+						canvas.width = Math.max(1, Math.round(width * dpr));
+						canvas.height = Math.max(1, Math.round(height * dpr));
+						ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+						dots = [];
+						const cols = Math.ceil(width / SPACING) + 1;
+						for (let c = 0; c < cols; c++) {
+							for (let r = 0; r < ROWS; r++) {
+								dots.push({
+									x: c * SPACING,
+									row: r,
+									phase: Math.random() * Math.PI * 2,
+									twinkle: 0.6 + Math.random() * 0.9,
+									accent: Math.random() < 0.055,
+									ring: Math.random() < 0.075,
+								});
+							}
+						}
+					};
+
+					let t = Math.random() * 100;
+					let rafId = 0;
+					let running = false;
+
+					const draw = () => {
+						ctx.clearRect(0, 0, width, height);
+						const dark = document.documentElement.classList.contains('dark');
+						const base = dark ? '226, 190, 110' : '170, 118, 32';
+						const accent = dark ? '96, 165, 250' : '37, 99, 235';
+						const rowGap = height / (ROWS + 1);
+
+						for (const d of dots) {
+							// Primary wave travels right; the slower secondary wave breaks uniformity.
+							const wave = Math.sin(d.x * 0.018 - t * 1.55 + d.row * 0.85);
+							const drift = Math.sin(d.x * 0.0065 + t * 0.6 + d.phase);
+							const y = rowGap * (d.row + 1) + wave * 7 + drift * 3;
+							const crest = (wave + 1) / 2;
+							const pulse = (Math.sin(t * d.twinkle * 2 + d.phase) + 1) / 2;
+							const alpha = 0.07 + crest * 0.3 + pulse * 0.22 * crest;
+							const radius = 1.05 + crest * 1.25 + pulse * 0.65;
+							const rgb = d.accent ? accent : base;
+
+							if (d.ring) {
+								ctx.strokeStyle = `rgba(${rgb}, ${Math.min(alpha * 1.15, 0.6)})`;
+								ctx.lineWidth = 1;
+								ctx.beginPath();
+								ctx.arc(d.x, y, radius + 1.4, 0, Math.PI * 2);
+								ctx.stroke();
+							} else {
+								ctx.fillStyle = `rgba(${rgb}, ${alpha})`;
+								ctx.beginPath();
+								ctx.arc(d.x, y, radius, 0, Math.PI * 2);
+								ctx.fill();
+							}
+						}
+					};
+
+					const tick = () => {
+						t += 0.016;
+						draw();
+						rafId = requestAnimationFrame(tick);
+					};
+
+					let destroyed = false;
+					let inView = true;
+					const start = () => {
+						if (running || destroyed || reducedMotion) return;
+						running = true;
+						rafId = requestAnimationFrame(tick);
+					};
+					const stop = () => {
+						running = false;
+						if (rafId) cancelAnimationFrame(rafId);
+						rafId = 0;
+					};
+
+					let resizeRaf = 0;
+					let io = null;
+					const onVisibility = () => {
+						if (document.hidden || !inView) stop();
+						else start();
+					};
+					const onResize = () => {
+						if (resizeRaf) return;
+						resizeRaf = requestAnimationFrame(() => {
+							resizeRaf = 0;
+							build();
+							draw();
+						});
+					};
+
+					// Full teardown so route swaps and tab switches can never revive a
+					// loop that draws to a detached canvas.
+					const destroy = () => {
+						destroyed = true;
+						stop();
+						if (resizeRaf) cancelAnimationFrame(resizeRaf);
+						resizeRaf = 0;
+						if (io) io.disconnect();
+						document.removeEventListener('visibilitychange', onVisibility);
+						window.removeEventListener('resize', onResize);
+						document.removeEventListener('astro:before-swap', destroy);
+					};
+
+					// Replace any instance left over from a previous route.
+					if (typeof window.__dotsBandDestroy === 'function') window.__dotsBandDestroy();
+					window.__dotsBandDestroy = destroy;
+
+					build();
+					draw();
+
+					if (!reducedMotion) {
+						io = new IntersectionObserver((entries) => {
+							for (const entry of entries) {
+								inView = entry.isIntersecting;
+								if (inView && !document.hidden) start();
+								else stop();
+							}
+						});
+						io.observe(wrap);
+						document.addEventListener('visibilitychange', onVisibility);
+					}
+
+					window.addEventListener('resize', onResize);
+					document.addEventListener('astro:before-swap', destroy);
+				};
+
+				// Keep exactly one document-level page-load hook no matter how many times
+				// this inline script re-executes across View Transition navigations.
+				window.__dotsBandInit = initDotsBand;
+				if (!window.__dotsBandPageLoadBound) {
+					window.__dotsBandPageLoadBound = true;
+					document.addEventListener('astro:page-load', () => {
+						if (typeof window.__dotsBandInit === 'function') window.__dotsBandInit();
+					});
+				}
+				initDotsBand();
+			})();
+		</script>
+	</body>
+</html>

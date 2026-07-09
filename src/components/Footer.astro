@@ -1,0 +1,47 @@
+---
+/*
+ * Global footer shared by every page.
+ * Keeps ownership/legal text centralized so layout-level pages stay content-focused.
+ */
+import ContactModal from './ContactModal.astro';
+import { DEFAULT_UI_LANG, getUiText } from '../data/i18n';
+
+const today = new Date();
+const T = getUiText(DEFAULT_UI_LANG);
+---
+
+<footer class="mt-16 border-t border-zinc-200 py-8 transition-colors duration-200 dark:border-zinc-800">
+	<div class="page-shell flex flex-col items-center justify-between gap-4 text-sm text-zinc-500 dark:text-zinc-400 md:flex-row">
+		<p class="m-0">&copy; {today.getFullYear()} XGWNJE. <span data-i18n="footer.rights">{T['footer.rights']}</span></p>
+		<button
+			type="button"
+			id="contact-button"
+			class="apple-float-chip inline-flex items-center rounded-full border border-zinc-200/80 bg-white/70 px-3.5 py-1.5 text-sm font-medium text-zinc-600 shadow-[0_10px_24px_rgba(15,23,42,0.04)] backdrop-blur-sm transition dark:border-zinc-700/80 dark:bg-zinc-950/55 dark:text-zinc-300"
+		>
+			<span class="apple-float-label">
+				<span data-i18n="footer.contact">{T['footer.contact']}</span>
+				<svg viewBox="0 0 20 20" class="h-4 w-4 opacity-70" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true">
+					<path d="M3.75 6.75h12.5" stroke-linecap="round" />
+					<path d="M3.75 10h12.5" stroke-linecap="round" />
+					<path d="M3.75 13.25h8.5" stroke-linecap="round" />
+				</svg>
+			</span>
+		</button>
+	</div>
+</footer>
+
+<ContactModal />
+
+<script>
+	const initContactButton = () => {
+		const contactButton = document.getElementById('contact-button');
+		if (contactButton) {
+			contactButton.addEventListener('click', () => {
+				(window as any).openContactModal?.();
+			});
+		}
+	};
+
+	initContactButton();
+	document.addEventListener('astro:page-load', initContactButton);
+</script>

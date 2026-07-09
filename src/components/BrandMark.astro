@@ -1,0 +1,37 @@
+---
+/*
+ * One-stroke signature "D" — the site's brand mark.
+ * A single continuous path (down-stroke, return loop, belly, S-curve flourish)
+ * drawn on with a stroke-dash animation at load and replayed on hover.
+ * Designed iteratively at 120x100; path length ≈ 321.4 (see brand-draw keyframes).
+ */
+interface Props {
+	class?: string;
+}
+const { class: className } = Astro.props as Props;
+---
+
+<svg
+	class:list={['brand-mark', className]}
+	viewBox="0 0 120 100"
+	fill="none"
+	xmlns="http://www.w3.org/2000/svg"
+	aria-hidden="true"
+>
+	<defs>
+		<linearGradient id="brand-mark-gold" x1="0" y1="0" x2="1" y2="1">
+			<stop offset="0" stop-color="#b47e24"></stop>
+			<stop offset="0.55" stop-color="#e2be6e"></stop>
+			<stop offset="1" stop-color="#966616"></stop>
+		</linearGradient>
+		<linearGradient id="brand-mark-gold-dark" x1="0" y1="0" x2="1" y2="1">
+			<stop offset="0" stop-color="#fad68c"></stop>
+			<stop offset="0.55" stop-color="#cda048"></stop>
+			<stop offset="1" stop-color="#ffe8b3"></stop>
+		</linearGradient>
+	</defs>
+	<path
+		class="brand-mark-path"
+		d="M 40 12 C 33 32, 31 56, 33 74 C 34 80, 39 81.5, 41.5 76 C 46 57, 46 32, 44 16 C 43.5 11, 48 9, 54 11.5 C 76 19, 90 42, 81 63 C 74 77, 58 83, 47 79 C 52 82, 62 84, 74 80 C 88 75, 100 74, 110 70"
+		stroke="url(#brand-mark-gold)"></path>
+</svg>

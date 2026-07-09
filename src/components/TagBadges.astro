@@ -1,0 +1,78 @@
+---
+/*
+ * Responsive tag badge renderer shared by list cards.
+ * Encodes small-screen truncation rules so each page does not duplicate logic.
+ */
+import { getTagSlug } from '../utils/tags';
+
+interface Props {
+	// Raw tag list from frontmatter.
+	tags?: string[];
+	// Mobile cap includes the "+N" badge slot.
+	maxMobile?: number;
+	// `null` means show all tags on desktop.
+	maxDesktop?: number | null;
+	// Base path prefix for tags routes.
+	base?: string;
+}
+
+const {
+	tags = [],
+	maxMobile = 3,
+	maxDesktop = null,
+	base = import.meta.env.BASE_URL,
+} = Astro.props as Props;
+
+const cleanTags = tags.filter((tag) => typeof tag === 'string' && tag.trim().length > 0);
+// Reserve one badge slot for +N when mobile tag count exceeds the cap.
+const mobileVisibleCount = cleanTags.length > maxMobile ? Math.max(maxMobile - 1, 0) : maxMobile;
+const mobileTags = cleanTags.slice(0, mobileVisibleCount);
+const mobileRemaining = cleanTags.length > maxMobile ? Math.max(cleanTags.length - mobileVisibleCount, 0) : 0;
+const desktopTags = maxDesktop == null ? cleanTags : cleanTags.slice(0, maxDesktop);
+const desktopRemaining = maxDesktop == null ? 0 : Math.max(cleanTags.length - desktopTags.length, 0);
+---
+
+{
+	cleanTags.length > 0 && (
+		<>
+			<div class="flex flex-wrap gap-2 md:hidden">
+				{
+					mobileTags.map((tag) => (
+						<a
+							href={`${base}tags/${encodeURIComponent(getTagSlug(tag))}/`}
+							class="apple-float-chip inline-flex min-w-0 max-w-[8.5rem] items-center truncate rounded-lg border border-zinc-300/90 bg-zinc-50/96 px-2.5 py-1 text-xs font-medium text-zinc-700 no-underline dark:border-zinc-700/90 dark:bg-zinc-900/96 dark:text-zinc-300"
+						>
+							<span class="apple-float-label truncate">{tag}</span>
+						</a>
+					))
+				}
+				{
+					mobileRemaining > 0 && (
+						<span class="inline-flex shrink-0 items-center rounded-md border border-dashed border-zinc-300/90 bg-zinc-50/92 px-2.5 py-1 text-xs font-medium text-zinc-500 dark:border-zinc-700/90 dark:bg-zinc-900/92 dark:text-zinc-400">
+							+{mobileRemaining}
+						</span>
+					)
+				}
+			</div>
+			<div class="hidden gap-2 md:flex md:flex-wrap md:justify-end">
+				{
+					desktopTags.map((tag) => (
+						<a
+							href={`${base}tags/${encodeURIComponent(getTagSlug(tag))}/`}
+							class="apple-float-chip inline-flex min-w-0 max-w-[8.5rem] items-center truncate rounded-lg border border-zinc-300/90 bg-zinc-50/96 px-2.5 py-1 text-xs font-medium text-zinc-700 no-underline dark:border-zinc-700/90 dark:bg-zinc-900/96 dark:text-zinc-300"
+						>
+							<span class="apple-float-label truncate">{tag}</span>
+						</a>
+					))
+				}
+				{
+					desktopRemaining > 0 && (
+						<span class="inline-flex shrink-0 items-center rounded-md border border-dashed border-zinc-300/90 bg-zinc-50/92 px-2.5 py-1 text-xs font-medium text-zinc-500 dark:border-zinc-700/90 dark:bg-zinc-900/92 dark:text-zinc-400">
+							+{desktopRemaining}
+						</span>
+					)
+				}
+			</div>
+		</>
+	)
+}

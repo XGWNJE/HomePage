@@ -1,0 +1,127 @@
+---
+import type { CollectionEntry } from 'astro:content';
+import FormattedDate from './FormattedDate.astro';
+import TagBadges from './TagBadges.astro';
+import { getPostAnalyticsKey } from '../utils/postAnalytics';
+
+/*
+ * Reusable post preview card used across all list surfaces.
+ * Centralizing this component keeps spacing, typography, and tag behavior consistent.
+ */
+interface Props {
+	// Content entry rendered as a preview card.
+	post: CollectionEntry<'blog'>;
+	// Deployment-aware base path injected by parent pages.
+	base?: string;
+	// Allows cards to fit contexts that need different heading hierarchy.
+	titleTag?: 'h2' | 'h3';
+	titleClass?: string;
+	descriptionClass?: string;
+	// Per-breakpoint tag display limits to avoid title overlap on small cards.
+	maxMobile?: number;
+	maxDesktop?: number | null;
+	// Optional hard navigation switch to bypass View Transition for specific routes.
+	reloadOnNavigate?: boolean;
+}
+
+const {
+	post,
+	base = import.meta.env.BASE_URL,
+	titleTag = 'h2',
+	titleClass = 'mt-2 text-xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100',
+	descriptionClass = 'mt-2 font-serif leading-8 text-zinc-600 dark:text-zinc-300',
+	maxMobile = 3,
+	maxDesktop = 3,
+	reloadOnNavigate = false,
+} = Astro.props as Props;
+
+const tags = (post.data.tags ?? []).filter((tag) => tag.trim().length > 0);
+const analyticsKey = getPostAnalyticsKey(post);
+const Heading = titleTag;
+---
+
+<div class="card-surface card-interactive card-spotlight relative h-full">
+	{
+		tags.length > 0 && (
+			// Mobile keeps tags in normal flow to prevent overlap; desktop pins them to the corner.
+			<div class="pointer-events-auto px-5 pt-5 md:absolute md:right-3 md:top-3 md:z-10 md:mt-0 md:flex md:max-w-[55%] md:flex-wrap md:justify-end md:gap-2 md:max-w-none md:flex-nowrap md:px-0 md:pt-0">
+				<TagBadges tags={tags} base={base} maxMobile={maxMobile} maxDesktop={maxDesktop} />
+			</div>
+		)
+	}
+
+	<a
+		href={`${base}blog/${post.id}/`}
+		data-astro-reload={reloadOnNavigate ? '' : undefined}
+		class:list={['block h-full p-5 no-underline', tags.length > 0 && 'pt-3 md:pt-5']}
+	>
+		<p class="m-0 flex items-center gap-1.5 text-xs text-zinc-500 dark:text-zinc-400">
+			<FormattedDate date={post.data.pubDate} />
+			<span aria-hidden="true">&middot;</span>
+			<span class="inline-flex items-center gap-1" data-post-card-views-root={analyticsKey}>
+				<svg viewBox="0 0 24 24" class="h-3.5 w-3.5 opacity-70" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+					<path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6Z" stroke-linecap="round" stroke-linejoin="round" />
+					<circle cx="12" cy="12" r="3" stroke-linecap="round" stroke-linejoin="round" />
+				</svg>
+				<span data-post-card-views>...</span>
+			</span>
+		</p>
+		<Heading class:list={[titleClass, tags.length > 0 && 'md:pr-24 lg:pr-28']}>{post.data.title}</Heading>
+		<p class={descriptionClass}>{post.data.description}</p>
+	</a>
+</div>
+
+<script is:inline>
+	(() => {
+		const fmt = window.__formatCompactViewCount || function(c) { return String(Number(c) || 0); };
+
+		const loadPostCardViews = async () => {
+			const roots = Array.from(document.querySelectorAll('[data-post-card-views-root]'));
+			if (!roots.length) return;
+
+			const apiBase = window.__API_BASE || 'https://api.xgwnje.cn';
+			const uniqueKeys = [...new Set(
+				roots
+					.map((root) => root.getAttribute('data-post-card-views-root') || '')
+					.filter(Boolean)
+			)];
+
+			try {
+				const response = await fetch(apiBase + '/api/views/batch?posts=' + encodeURIComponent(uniqueKeys.join(',')));
+				if (response.ok) {
+					const data = await response.json();
+					var viewsMap = data.views || {};
+					uniqueKeys.forEach(function(key) {
+						var text = fmt(viewsMap[key] ?? 0);
+						document
+							.querySelectorAll('[data-post-card-views-root="' + key + '"] [data-post-card-views]')
+							.forEach(function(node) { node.textContent = text; });
+					});
+					return;
+				}
+			} catch {}
+
+			await Promise.all(uniqueKeys.map(async (key) => {
+				let text = '0';
+				try {
+					const response = await fetch(apiBase + '/api/views?post=' + encodeURIComponent(key));
+					if (response.ok) {
+						const data = await response.json();
+						text = fmt(data?.views ?? 0);
+					}
+				} catch {}
+				document
+					.querySelectorAll('[data-post-card-views-root="' + key + '"] [data-post-card-views]')
+					.forEach(function(node) { node.textContent = text; });
+			}));
+		};
+
+		if (!window.__postCardViewsBound) {
+			document.addEventListener('astro:page-load', loadPostCardViews);
+			document.addEventListener('astro:after-swap', loadPostCardViews);
+			window.__postCardViewsBound = true;
+		}
+
+		loadPostCardViews();
+	})();
+</script>
