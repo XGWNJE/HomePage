@@ -7,6 +7,7 @@ import '../styles/global.css';
 import { ClientRouter } from 'astro:transitions';
 import type { ImageMetadata } from 'astro';
 import { SITE_TITLE } from '../consts';
+import { API_BASE, TOKEN_KEY } from '../lib/config';
 
 interface Props {
 	// Human-readable page title used by document title and social metadata.
@@ -51,24 +52,6 @@ const cfWebAnalyticsToken = import.meta.env.PUBLIC_CF_WEB_ANALYTICS_TOKEN;
 <!-- Font preconnect -->
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<style is:inline>
-	{`
-		@font-face {
-			font-family: "Alibaba PuHuiTi";
-			src: url('${BASE}fonts/AlibabaPuHuiTi-3-55-RegularL3.woff2') format('woff2');
-			font-weight: 400;
-			font-style: normal;
-			font-display: swap;
-		}
-		@font-face {
-			font-family: "Alibaba PuHuiTi";
-			src: url('${BASE}fonts/AlibabaPuHuiTi-3-75-SemiBold.woff2') format('woff2');
-			font-weight: 600;
-			font-style: normal;
-			font-display: swap;
-		}
-	`}
-</style>
 <!-- UI/body fonts prioritize immediate paint to reduce perceived loading delay. -->
 <link
 	rel="stylesheet"
@@ -102,7 +85,7 @@ const cfWebAnalyticsToken = import.meta.env.PUBLIC_CF_WEB_ANALYTICS_TOKEN;
 <meta property="og:image" content={ogImageURL} />
 {usesDefaultOgImage && <meta property="og:image:width" content="1200" />}
 {usesDefaultOgImage && <meta property="og:image:height" content="630" />}
-{usesDefaultOgImage && <meta property="og:image:alt" content="XGWNJE — Notes · Images · Works" />}
+{usesDefaultOgImage && <meta property="og:image:alt" content="XGWNJE — Research · Engineering · Notes" />}
 
 <!-- Twitter -->
 <meta property="twitter:card" content="summary_large_image" />
@@ -134,13 +117,9 @@ const cfWebAnalyticsToken = import.meta.env.PUBLIC_CF_WEB_ANALYTICS_TOKEN;
 		window.__syncThemeColor(theme === 'dark');
 	})();
 </script>
-<script is:inline>
+<script is:inline define:vars={{ API_BASE, TOKEN_KEY }}>
 	// Token handling and auth functions - expose to window for global access
 	(function() {
-		const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-		const API_BASE = isLocalhost ? 'http://localhost:8787' : 'https://api.xgwnje.cn';
-		const TOKEN_KEY = 'blog_token';
-
 		// Store on window
 		window.__API_BASE = API_BASE;
 		window.__TOKEN_KEY = TOKEN_KEY;
@@ -397,18 +376,18 @@ const cfWebAnalyticsToken = import.meta.env.PUBLIC_CF_WEB_ANALYTICS_TOKEN;
 			const textElement = target.closest(TEXT_SELECTOR);
 			if (!textElement) return false;
 
-			const caretRange = document.caretRangeFromPoint?.(x, y);
-			if (caretRange?.startContainer) {
-				const node = caretRange.startContainer;
+			const caretPosition = document.caretPositionFromPoint?.(x, y);
+			if (caretPosition?.offsetNode) {
+				const node = caretPosition.offsetNode;
 				const parentElement = node.nodeType === Node.TEXT_NODE ? node.parentElement : node;
 				if (parentElement instanceof Element && parentElement.closest(TEXT_SELECTOR)) {
 					return true;
 				}
 			}
 
-			if (document.caretPositionFromPoint) {
-				const caretPosition = document.caretPositionFromPoint(x, y);
-				const node = caretPosition?.offsetNode;
+			const legacyCaretRangeFromPoint = Reflect.get(document, 'caretRangeFromPoint');
+			if (typeof legacyCaretRangeFromPoint === 'function') {
+				const node = legacyCaretRangeFromPoint.call(document, x, y)?.startContainer;
 				const parentElement = node?.nodeType === Node.TEXT_NODE ? node.parentElement : node;
 				if (parentElement instanceof Element && parentElement.closest(TEXT_SELECTOR)) {
 					return true;

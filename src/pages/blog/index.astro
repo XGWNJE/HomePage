@@ -1,5 +1,4 @@
 ---
-import { getCollection } from 'astro:content';
 import BaseHead from '../../components/BaseHead.astro';
 import Footer from '../../components/Footer.astro';
 import Header from '../../components/Header.astro';
@@ -11,6 +10,7 @@ import PostCard from '../../components/PostCard.astro';
 import { SITE_TITLE } from '../../consts';
 import { DEFAULT_UI_LANG, getUiText } from '../../data/i18n';
 import { getPostLang } from '../../utils/postAnalytics';
+import { getPublishedPosts } from '../../utils/publishedPosts';
 
 const BASE = import.meta.env.BASE_URL;
 const T = getUiText(DEFAULT_UI_LANG);
@@ -21,7 +21,7 @@ const isImportant = pathname.endsWith('/important') || pathname === `${BASE}blog
 const isArchive = pathname.endsWith('/archive') || pathname === `${BASE}blog/archive`;
 
 // Get all posts
-const allPosts = await getCollection('blog');
+const allPosts = await getPublishedPosts();
 const posts = allPosts.sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf());
 
 // Filter important posts (where important === true), sorted by importantOrder

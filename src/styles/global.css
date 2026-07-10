@@ -1461,7 +1461,7 @@ html.dark .field-input:focus {
 
 .markdown-prose,
 article {
-	font-family: "Alibaba PuHuiTi", Inter, system-ui, -apple-system, "Segoe UI", sans-serif !important;
+	font-family: Inter, system-ui, -apple-system, "Segoe UI", sans-serif !important;
 }
 
 .markdown-prose :where(p, li, blockquote, table, span, h1, h2, h3, h4),

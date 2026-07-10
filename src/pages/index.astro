@@ -1,5 +1,6 @@
 ---
-import { getCollection } from 'astro:content';
+import { Image } from 'astro:assets';
+import homeWallpaper from '../assets/xgwnje-home.webp';
 import BaseHead from '../components/BaseHead.astro';
 import BrandMark from '../components/BrandMark.astro';
 import Footer from '../components/Footer.astro';
@@ -9,18 +10,18 @@ import MobileDrawer from '../components/MobileDrawer.astro';
 import ParthenonColumns from '../components/ParthenonColumns.astro';
 import PostCard from '../components/PostCard.astro';
 import TerminalQuote from '../components/TerminalQuote.astro';
-import { BILIBILI_URL, CREATINF_URL, GITHUB_URL, SITE_DESCRIPTION, SITE_TITLE } from '../consts';
+import { BILIBILI_URL, CREATINF_URL, GITHUB_URL, SITE_TITLE } from '../consts';
 import { DEFAULT_UI_LANG, getUiText } from '../data/i18n';
 import { getPostLang } from '../utils/postAnalytics';
+import { getPublishedPosts } from '../utils/publishedPosts';
 
 const BASE = import.meta.env.BASE_URL;
 const T = getUiText(DEFAULT_UI_LANG);
 // Keep home preview aligned with list pagination size for consistent editorial cadence.
-const posts = (await getCollection('blog'))
+const posts = (await getPublishedPosts())
 	.sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf())
 	.slice(0, 6);
 
-const HOME_WALLPAPER = `${BASE}image/home/2rd1yuubn4hc1.png`;
 ---
 
 <!doctype html>
@@ -37,9 +38,15 @@ const HOME_WALLPAPER = `${BASE}image/home/2rd1yuubn4hc1.png`;
 			<div class="space-y-6">
 				<section class="hero-enter overflow-hidden rounded-2xl border border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-900">
 					<div class="relative h-[44vh] min-h-[300px] w-full">
-						<img
-							src={HOME_WALLPAPER}
+						<Image
+							src={homeWallpaper}
 							alt="Homepage wallpaper"
+							widths={[640, 960, 1280, 1920]}
+							sizes="(max-width: 1536px) calc(100vw - 2rem), 1536px"
+							format="webp"
+							quality={82}
+							loading="eager"
+							fetchpriority="high"
 							class="hero-kenburns h-full w-full object-cover object-[77%_center] md:object-center"
 						/>
 						<div class="absolute inset-0 bg-zinc-900/10 dark:bg-zinc-950/25"></div>

@@ -1,0 +1,4 @@
+interface:
+  display_name: "HomePage 发布"
+  short_description: "安全发布 HomePage 前端与 API 到生产环境"
+  default_prompt: "Use $deploy-homepage to safely release the HomePage frontend and API to production."

@@ -1,22 +1,27 @@
-# XGWNJE 博客日常维护说明
+# XGWNJE 站点维护
 
-更新时间：2026-07-10
+本文负责内容、本地前端验证和静态站发布。架构边界见 [架构说明](./architecture.md)，后端生产操作见 [后端维护](./backend-maintenance.zh-CN.md)。
 
-## 当前线上状态
+## 本地准备
 
-- 前端站点：`https://xgwnje.cn/`
-- API：`https://api.xgwnje.cn/`
-- 前端静态目录：`/var/www/xgwnje-home`
-- 当前部署备份：`/var/www/xgwnje-home.backup-20260710-025105`
-- 后端服务：`homepage-api.service`
-- 后端代码：`/opt/homepage-api/current`
-- 后端数据：`/opt/homepage-api/data`
+使用 lockfile 安装依赖：
 
-## 日常发文章
+```powershell
+npm ci
+npm ci --prefix server
+```
 
-文章放在 `src/content/blog/`。
+启动前端：
 
-中英文文章必须成对维护：
+```powershell
+npm run dev -- --host 127.0.0.1
+```
+
+需要联调登录、评论、浏览量或联系表单时，再按 [后端开发](./backend-development.md) 启动本地 API。
+
+## 发布文章
+
+文章位于 `src/content/blog/`。同一主题的中文和英文版本分别使用 `-cn`、`-en` 文件名，并共享同一个 `group`：
 
 ```yaml
 ---
@@ -27,170 +32,67 @@ updatedDate: 2026-07-10
 lang: "cn"
 author: "XGWNJE"
 group: "same-article-group"
-tags: ["XGWNJE", "Blog"]
+tags: ["Engineering", "Notes"]
 important: false
 importantOrder: 0
+draft: false
 ---
 ```
 
-规则：
+维护规则：
 
-- 中文文件建议命名为 `slug-cn.md`。
-- 英文文件建议命名为 `slug-en.md`。
-- 同一篇文章的中英文版本使用相同 `group`。
-- 标签尽量两种语言共用同一组英文/中性标签，避免标签页重复分裂。
-- 要置顶到 Important 视图时，设置 `important: true`，并用 `importantOrder` 控制顺序。
+- 两种语言的 `group`、标签语义和发布日期保持一致。
+- `important: true` 的文章用 `importantOrder` 控制顺序。
+- 图片使用已提交的 `public/image/` 资产或已验证的稳定 URL。
+- 外部图片迁移前先验证目标域名、对象完整性和回滚；不得批量猜测替换。
+- 发布前检查构建产物没有草稿文章。
 
-当前只有一组示例文章：
+## UI 与导航
 
-- `src/content/blog/hello-xgwnje-index-cn.md`
-- `src/content/blog/hello-xgwnje-index-en.md`
+- UI 双语字典：`src/data/i18n.ts`。
+- 导航：`src/data/navLinks.ts`。
+- 链接与项目数据：`src/data/links.ts`。
 
-新增正式文章后，可以删除或改写这组示例文章。
+新增用户可见文案时同时提供中英文 key，并保留 `data-i18n`、`data-i18n-placeholder` 或 `data-i18n-aria-label` 接线。
 
-## 中英 UI 文案
-
-整站 UI 字典在：
-
-- `src/data/i18n.ts`
-
-导航项在：
-
-- `src/data/navLinks.ts`
-
-如果新增按钮、页面标题、弹窗、列表控件，优先给元素加 `data-i18n`、`data-i18n-placeholder` 或 `data-i18n-aria-label`，并在 `src/data/i18n.ts` 同时补中文和英文 key。
-
-文章正文语言不是运行时机器翻译。正文仍按 `-cn.md` / `-en.md` 两份内容维护。
-
-## 本地开发
-
-安装依赖：
+## 统一验证
 
 ```powershell
-npm install
+npm run verify
 ```
 
-前端开发：
+统一入口应覆盖构建、内容配对、品牌资产、Header、Links、UI i18n 和 API 测试。单项失败时再运行对应 `npm run test:*` 命令定位。
 
-```powershell
-npm run dev -- --host 127.0.0.1
-```
+浏览器验证至少覆盖：
 
-本地 API：
+- 首页、`/blog/`、`/tags/`。
+- 一篇中文文章和对应英文文章。
+- 桌面端与移动端视口。
+- 登录、评论、浏览量等受本次修改影响的交互。
+- Console、Network 中没有新增错误和资源 404。
 
-```powershell
-$env:ALLOWED_ORIGINS='http://127.0.0.1:4321,http://localhost:4321,http://127.0.0.1:4322,http://localhost:4322,https://xgwnje.cn'
-npm run api:dev
-```
+## 静态站发布
 
-本地预览构建产物：
+生产前端是 `xgwnje.cn` 上的 Nginx 静态站。共享服务器路径、权限和 Nginx 配置以本机 `D:\ObjectCode\Server-infra` 为准。
 
-```powershell
-npm run build
-npm run preview -- --host 127.0.0.1 --port 4322
-```
+发布标准：
 
-## 验证命令
+1. 本地运行 `npm ci` 和 `npm run verify`。
+2. 将 `dist/` 上传到新的版本化 release 目录，release ID 使用可追溯的 Git commit。
+3. 校验 `index.html`、文章页面、文件数量和总字节数。
+4. 保留稳定的 `current` 与 `previous` 指针，再原子切换 `current`。
+5. 访问首页、博客、标签、文章详情和 API health。
 
-日常发布前至少运行：
+仅切换静态 release 不需要修改或 reload Nginx。必须修改 Nginx 时，先在 `Server-infra` 核对真实配置、备份目标文件、运行 `nginx -t`，通过后再 reload。
 
-```powershell
-npm run build
-npm run test:content
-npm run test:i18n
-npm run test:api
-```
+## 前端回滚
 
-说明：
+1. 将 `current` 切回已经验证的 `previous`。
+2. 再次检查首页、博客、标签和静态资源。
+3. 记录失败 release，不要覆盖或删除，以便复盘。
 
-- `npm run test:content` 检查中英文文章配对。
-- `npm run test:i18n` 检查核心 UI 双语入口。
-- `npm run test:api` 检查后端核心功能。
-- `npm run test:content-reset` 只用于确认本次“清空旧文章后只剩示例文章”的状态。新增正式文章后，应同步更新 `scripts/check-content-reset.mjs` 的 `expectedPosts`，或不再把它作为日常发布门禁。
+前端回滚不应触碰后端 SQLite、上传文件或环境配置。
 
-## 生产部署
+## SEO
 
-部署前：
-
-```powershell
-npm run build
-```
-
-部署策略：
-
-1. 上传 `dist/` 到服务器的新临时目录，例如 `/var/www/xgwnje-home.next-YYYYMMDD-HHMMSS`。
-2. 校验新目录至少包含：
-   - `index.html`
-   - `blog/hello-xgwnje-index-cn/index.html`
-   - `blog/hello-xgwnje-index-en/index.html`
-3. 校验文件数量和总字节数。
-4. 将旧 `/var/www/xgwnje-home` 移动为 `/var/www/xgwnje-home.backup-YYYYMMDD-HHMMSS`。
-5. 将新目录移动为 `/var/www/xgwnje-home`。
-6. 静态文件替换不需要 reload Nginx。
-
-发布后检查：
-
-```powershell
-Invoke-WebRequest https://xgwnje.cn/ -UseBasicParsing
-Invoke-WebRequest https://xgwnje.cn/blog/ -UseBasicParsing
-Invoke-WebRequest https://api.xgwnje.cn/health -UseBasicParsing
-```
-
-浏览器里至少检查：
-
-- 首页中英 UI 切换。
-- `/blog/` 中英文章卡片过滤。
-- `/tags/` 标签计数。
-- 一篇文章详情页的正文语言切换。
-- 登录弹窗能打开，GitHub 登录按钮存在。
-- DevTools Console 没有 error/warn/issue。
-
-## 回滚
-
-如果前端上线后发现问题，在服务器上执行：
-
-```bash
-mv /var/www/xgwnje-home /var/www/xgwnje-home.bad-$(date +%Y%m%d-%H%M%S)
-mv /var/www/xgwnje-home.backup-YYYYMMDD-HHMMSS /var/www/xgwnje-home
-```
-
-然后重新访问：
-
-```bash
-curl -I https://xgwnje.cn/
-```
-
-## 密钥和敏感配置位置
-
-不要把任何密钥写入仓库。
-
-本地服务器连接信息：
-
-- `D:\ObjectCode\Server-infra\server.local.env`
-
-生产 API 环境变量：
-
-- `/etc/homepage-api/homepage-api.env`
-
-生产 API 数据：
-
-- SQLite、上传文件、outbox：`/opt/homepage-api/data`
-
-常见密钥类别：
-
-- SSH 登录信息：只在 `Server-infra` 本地私有资料里。
-- GitHub OAuth client id / client secret：生产 API env。
-- Session secret / admin token：生产 API env。
-- Turnstile site key / secret key：前端公开 site key 和后端 secret 分开管理。
-
-当前项目没有接入付费邮件服务。邮箱登录链接会写入后端 outbox，等邮件基础设施准备好后再启用真实发信。
-
-## 常见维护动作
-
-- 修改 UI 文案：改 `src/data/i18n.ts`。
-- 修改导航：改 `src/data/navLinks.ts`。
-- 修改友链/项目：改 `src/data/links.ts`。
-- 写文章：改 `src/content/blog/`。
-- 查后端状态：`systemctl status homepage-api`。
-- 查后端日志：`journalctl -u homepage-api -n 100 --no-pager`。
-- 查 API 健康：`curl https://api.xgwnje.cn/health`。
+文章发布后确认 Sitemap 包含新 URL；需要主动通知 Bing 时按 [SEO 指南](./seo-guide-zh-CN.md) 执行 IndexNow。站长平台验证值和 IndexNow key 不写入仓库。

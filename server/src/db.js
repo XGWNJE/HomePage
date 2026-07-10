@@ -7,13 +7,21 @@ const DatabaseSync = await loadDatabaseSync();
 export function createDatabase(filename) {
 	mkdirSync(dirname(filename), { recursive: true });
 	const db = new DatabaseSync(filename);
-	db.exec('PRAGMA journal_mode = WAL');
-	db.exec('PRAGMA foreign_keys = ON');
-	db.exec(schema);
-	return db;
+	try {
+		db.exec('PRAGMA journal_mode = WAL');
+		db.exec('PRAGMA foreign_keys = ON');
+		runMigrations(db);
+		return db;
+	} catch (error) {
+		db.close();
+		throw error;
+	}
 }
 
-const schema = `
+const migrations = [
+	{
+		version: 1,
+		sql: `
 CREATE TABLE IF NOT EXISTS users (
 	id TEXT PRIMARY KEY,
 	github_id INTEGER UNIQUE,
@@ -110,7 +118,32 @@ CREATE TABLE IF NOT EXISTS outbox (
 	status TEXT NOT NULL DEFAULT 'stored',
 	created_at INTEGER NOT NULL
 );
-`;
+`,
+	},
+];
+
+export const CURRENT_SCHEMA_VERSION = migrations.at(-1)?.version || 0;
+
+function runMigrations(db) {
+	const currentVersion = Number(db.prepare('PRAGMA user_version').get()?.user_version || 0);
+	if (currentVersion > CURRENT_SCHEMA_VERSION) {
+		throw new Error(
+			`Unsupported database schema version ${currentVersion}; this service supports up to ${CURRENT_SCHEMA_VERSION}`,
+		);
+	}
+	for (const migration of migrations) {
+		if (migration.version <= currentVersion) continue;
+		db.exec('BEGIN IMMEDIATE');
+		try {
+			db.exec(migration.sql);
+			db.exec(`PRAGMA user_version = ${migration.version}`);
+			db.exec('COMMIT');
+		} catch (error) {
+			db.exec('ROLLBACK');
+			throw error;
+		}
+	}
+}
 
 async function loadDatabaseSync() {
 	try {

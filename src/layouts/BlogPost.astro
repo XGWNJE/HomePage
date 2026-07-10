@@ -1,5 +1,6 @@
 ---
 import { Image } from 'astro:assets';
+import type { ImageMetadata } from 'astro';
 import type { CollectionEntry } from 'astro:content';
 import BaseHead from '../components/BaseHead.astro';
 import Comment from '../components/Comment.astro';
@@ -14,7 +15,10 @@ import { getPostAnalyticsKey } from '../utils/postAnalytics';
 import { getTagSlug } from '../utils/tags';
 
 /* Blog post layout coordinates desktop TOC, mobile drawer TOC, and route-transition-safe scripts. */
-type Props = CollectionEntry<'blog'>['data'] & {
+type BlogData = CollectionEntry<'blog'>['data'];
+type Props = Pick<BlogData, 'title' | 'description' | 'pubDate'> &
+	Partial<Omit<BlogData, 'title' | 'description' | 'pubDate' | 'heroImage'>> & {
+	heroImage?: ImageMetadata | string;
 	profileImage?: string;
 	headings?: { depth: number; slug: string; text: string }[];
 	rawBody?: string;
@@ -45,7 +49,7 @@ const {
 	languageSwitch,
 	relatedPosts = [],
 	relatedPostsLang = 'en',
-} = Astro.props;
+} = Astro.props as Props;
 
 const BASE = import.meta.env.BASE_URL;
 const T = getUiText(DEFAULT_UI_LANG);
@@ -57,7 +61,9 @@ const withBase = (path: string) => {
 	return `${BASE}${path.replace(/^\/+/, '')}`;
 };
 
-const tocItems = headings.filter((h) => h.depth === 2 || h.depth === 3 || h.depth === 4);
+const tocItems = headings.filter((h: { depth: number }) => h.depth === 2 || h.depth === 3 || h.depth === 4);
+const articleTags = tags as string[];
+const articleRelatedPosts = relatedPosts as CollectionEntry<'blog'>[];
 const hasToc = tocItems.length > 0;
 // Reading time is character-based to stay language-neutral for mixed CN/EN content.
 const chars = rawBody.replace(/\s+/g, '').length;
@@ -192,9 +198,9 @@ const charsLabel = chars.toLocaleString('en-US');
 								</div>
 							)}
 
-							{tags.length > 0 && (
+							{articleTags.length > 0 && (
 								<div class="mt-4 flex flex-wrap gap-2">
-									{tags.map((tag) => (
+									{articleTags.map((tag) => (
 										<a
 											href={`${BASE}tags/${encodeURIComponent(getTagSlug(tag))}/`}
 										class="inline-flex items-center rounded-md border border-zinc-300/90 bg-zinc-50/96 px-2.5 py-1 text-xs font-medium text-zinc-700 no-underline transition-colors duration-150 ease-out hover:border-zinc-400 hover:bg-white hover:text-zinc-900 dark:border-zinc-700/90 dark:bg-zinc-900/96 dark:text-zinc-300 dark:hover:border-zinc-500 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
@@ -227,15 +233,15 @@ const charsLabel = chars.toLocaleString('en-US');
 
 						<!-- Related Posts Section -->
 						{
-							relatedPosts.length > 0 && (
+							articleRelatedPosts.length > 0 && (
 								<section class="mt-12 border-t border-zinc-200 pt-10 dark:border-zinc-700">
 									<h2 class="mb-6 font-sans text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
 										<span data-i18n="article.related">{T['article.related']}</span>
 									</h2>
 									<div class="grid gap-4 sm:grid-cols-2">
-										{relatedPosts.map((relatedPost, relatedIdx) => {
+									{articleRelatedPosts.map((relatedPost, relatedIdx) => {
 											const postUrl = `${BASE}blog/${relatedPost.id}/`;
-											const postTags = (relatedPost.data.tags ?? []).slice(0, 3);
+											const postTags = ((relatedPost.data.tags ?? []) as string[]).slice(0, 3);
 											const relatedAnalyticsKey = getPostAnalyticsKey(relatedPost);
 											return (
 												<div data-reveal style={`--reveal-delay: ${(relatedIdx % 2) * 80}ms`}>
@@ -319,7 +325,6 @@ const charsLabel = chars.toLocaleString('en-US');
 			<figure class="m-0 flex max-w-full flex-col items-center gap-3">
 				<img
 					id="img-lightbox-target"
-					src=""
 					alt=""
 					class="mx-auto block h-auto max-h-[88dvh] max-w-[92vw] rounded-xl object-contain shadow-2xl"
 				/>

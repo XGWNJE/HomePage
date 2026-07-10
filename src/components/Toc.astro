@@ -26,7 +26,6 @@ const tocItems = headings.filter((h) => h.depth === 2 || h.depth === 3 || h.dept
 					<li class:list={['m-0', item.depth === 3 && 'pl-3', item.depth === 4 && 'pl-4']}>
 						<a
 							href={`#${encodeURIComponent(item.slug)}`}
-							// Stable key consumed by BlogPost observer logic for active section highlighting.
 							data-toc-link={item.slug}
 							class="block rounded-md border-l-2 border-transparent px-2 py-1 text-[13px] leading-5 font-medium text-zinc-500 no-underline transition-colors hover:bg-zinc-100/70 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800/60 dark:hover:text-zinc-100"
 						>

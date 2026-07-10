@@ -35,7 +35,7 @@ const {
 	reloadOnNavigate = false,
 } = Astro.props as Props;
 
-const tags = (post.data.tags ?? []).filter((tag) => tag.trim().length > 0);
+const tags = (post.data.tags ?? []).filter((tag: string) => tag.trim().length > 0);
 const analyticsKey = getPostAnalyticsKey(post);
 const Heading = titleTag;
 ---

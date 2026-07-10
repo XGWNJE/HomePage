@@ -1,5 +1,6 @@
 import type { CollectionEntry } from 'astro:content';
 import { getPostLang } from './postAnalytics';
+import { filterPublishedPosts } from './publishedPosts';
 
 export function getRelatedPosts(
 	currentPost: CollectionEntry<'blog'>,
@@ -8,9 +9,10 @@ export function getRelatedPosts(
 ): CollectionEntry<'blog'>[] {
 	const currentTags = new Set(currentPost.data.tags ?? []);
 	const currentLang = getPostLang(currentPost);
+	const publishedPosts = filterPublishedPosts(allPosts);
 
 	// Filter: same language, not current post, has at least 1 shared tag
-	const candidates = allPosts
+	const candidates = publishedPosts
 		.filter((post) => {
 			// Exclude current post
 			if (post.id === currentPost.id) return false;
@@ -40,7 +42,7 @@ export function getRelatedPosts(
 	}
 
 	// Fallback: latest posts (same language, excluding current)
-	const sorted = allPosts
+	const sorted = publishedPosts
 		.filter((post) => {
 			if (post.id === currentPost.id) return false;
 			return getPostLang(post) === currentLang;

@@ -1,15 +1,13 @@
 import rss from '@astrojs/rss';
-import type { APIContext } from 'astro';
-import { getCollection, type CollectionEntry } from 'astro:content';
-import { SITE_TITLE, SITE_DESCRIPTION } from '../consts';
+import type { CollectionEntry } from 'astro:content';
 import { getPostLang as getPostLangBase } from './postAnalytics';
+import { getPublishedPosts } from './publishedPosts';
 
 interface RssFeedOptions {
 	posts: CollectionEntry<'blog'>[];
 	title: string;
 	description: string;
-	feedUrl: string;
-	site?: string;
+	site?: string | URL;
 }
 
 export function getPostLang(post: CollectionEntry<'blog'>): string {
@@ -19,7 +17,7 @@ export function getPostLang(post: CollectionEntry<'blog'>): string {
 /**
  * Generate RSS feed
  */
-export async function generateRssFeed({ posts, title, description, feedUrl, site }: RssFeedOptions) {
+export async function generateRssFeed({ posts, title, description, site }: RssFeedOptions) {
 	const BASE_URL = import.meta.env.BASE_URL || '/';
 	const items = await Promise.all(
 		posts.map(async (post) => {
@@ -53,14 +51,12 @@ export async function generateRssFeed({ posts, title, description, feedUrl, site
  * Get all posts sorted by date (newest first)
  */
 export async function getAllPosts(): Promise<CollectionEntry<'blog'>[]> {
-	const posts = await getCollection('blog');
-	return posts
-		.filter((post) => post.data.draft !== true)
-		.sort((a, b) => {
-		const dateA = a.data.updatedDate ?? a.data.pubDate;
-		const dateB = b.data.updatedDate ?? b.data.pubDate;
-		return dateB.valueOf() - dateA.valueOf();
-		});
+	const posts = await getPublishedPosts();
+	return posts.sort((a, b) => {
+			const dateA = a.data.updatedDate ?? a.data.pubDate;
+			const dateB = b.data.updatedDate ?? b.data.pubDate;
+			return dateB.valueOf() - dateA.valueOf();
+	});
 }
 
 /**

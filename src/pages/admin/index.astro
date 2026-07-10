@@ -1,14 +1,265 @@
 ---
 import BaseHead from '../../components/BaseHead.astro';
-
-Astro.response.status = 404;
+import Footer from '../../components/Footer.astro';
+import Header from '../../components/Header.astro';
+import MobileDrawer from '../../components/MobileDrawer.astro';
 ---
 
 <!doctype html>
-<html lang="en">
+<html lang="zh-CN">
 	<head>
-		<BaseHead title="404 - Admin Not Found | XGWNJE" description="This page does not exist." />
+		<BaseHead title="管理台 | XGWNJE" description="XGWNJE 站点内容与消息管理台。" />
 		<meta name="robots" content="noindex, nofollow" />
 	</head>
-	<body></body>
+	<body>
+		<Header />
+		<MobileDrawer />
+		<main class="page-shell page-fade-in py-10 md:py-14" data-admin-root transition:name="page-main" transition:animate="fade">
+			<section class="mx-auto max-w-5xl">
+				<header class="border-b border-zinc-200/80 pb-7 dark:border-zinc-800/80">
+					<div class="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
+						<div>
+							<p class="m-0 text-[11px] font-semibold uppercase tracking-[0.18em] text-amber-700 dark:text-amber-400">Operations / Private</p>
+							<h1 class="mt-2 text-3xl font-semibold tracking-[-0.035em] text-zinc-950 dark:text-zinc-50 md:text-4xl">站点管理台</h1>
+							<p class="mt-3 max-w-2xl text-sm leading-6 text-zinc-500 dark:text-zinc-400">审阅评论、联系消息与邮件队列。权限来自当前登录会话，本页不会要求或显示管理令牌。</p>
+						</div>
+						<a href="/" class="inline-flex w-fit items-center rounded-full border border-zinc-200 bg-white px-4 py-2 text-sm font-medium text-zinc-700 no-underline shadow-sm hover:border-zinc-300 hover:text-zinc-950 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:border-zinc-600 dark:hover:text-white">返回站点</a>
+					</div>
+				</header>
+
+				<section class="mt-7 rounded-2xl border border-zinc-200/80 bg-white/80 p-5 shadow-[0_18px_48px_rgba(15,23,42,0.05)] backdrop-blur dark:border-zinc-800/80 dark:bg-zinc-900/75" data-admin-auth-state aria-live="polite">
+					<p class="m-0 text-sm font-medium text-zinc-700 dark:text-zinc-300" data-admin-auth-message>正在验证当前会话…</p>
+				</section>
+
+				<div class="mt-8 hidden space-y-10" data-admin-workspace>
+					<section aria-labelledby="admin-stats-heading">
+						<div class="mb-4 flex items-center justify-between gap-4">
+							<div>
+								<p class="m-0 text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-400 dark:text-zinc-500">Overview</p>
+								<h2 id="admin-stats-heading" class="mt-1 text-xl">评论概览</h2>
+							</div>
+							<button type="button" class="rounded-full border border-zinc-200 bg-white px-3.5 py-2 text-sm font-medium text-zinc-600 hover:border-zinc-300 hover:text-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300" data-admin-refresh>刷新数据</button>
+						</div>
+						<div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4" data-admin-stats>
+							<div class="rounded-2xl border border-zinc-200/80 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900"><p class="m-0 text-xs uppercase tracking-[0.12em] text-zinc-400">全部</p><p class="mt-3 text-3xl font-semibold tabular-nums" data-admin-stat="total">—</p></div>
+							<div class="rounded-2xl border border-amber-200/80 bg-amber-50/70 p-5 dark:border-amber-900/60 dark:bg-amber-950/25"><p class="m-0 text-xs uppercase tracking-[0.12em] text-amber-700 dark:text-amber-400">待审</p><p class="mt-3 text-3xl font-semibold tabular-nums" data-admin-stat="pending">—</p></div>
+							<div class="rounded-2xl border border-emerald-200/80 bg-emerald-50/70 p-5 dark:border-emerald-900/60 dark:bg-emerald-950/25"><p class="m-0 text-xs uppercase tracking-[0.12em] text-emerald-700 dark:text-emerald-400">已批准</p><p class="mt-3 text-3xl font-semibold tabular-nums" data-admin-stat="approved">—</p></div>
+							<div class="rounded-2xl border border-rose-200/80 bg-rose-50/70 p-5 dark:border-rose-900/60 dark:bg-rose-950/25"><p class="m-0 text-xs uppercase tracking-[0.12em] text-rose-700 dark:text-rose-400">已拒绝</p><p class="mt-3 text-3xl font-semibold tabular-nums" data-admin-stat="rejected">—</p></div>
+						</div>
+					</section>
+
+					<section aria-labelledby="admin-comments-heading">
+						<div class="flex flex-col gap-4 border-b border-zinc-200/80 pb-4 dark:border-zinc-800/80 md:flex-row md:items-end md:justify-between">
+							<div><p class="m-0 text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-400 dark:text-zinc-500">Moderation</p><h2 id="admin-comments-heading" class="mt-1 text-xl">评论审阅</h2></div>
+							<div class="flex flex-wrap gap-2" role="group" aria-label="评论状态筛选">
+								<button type="button" class="admin-filter" data-admin-comment-filter="all" aria-pressed="true">全部</button>
+								<button type="button" class="admin-filter" data-admin-comment-filter="pending" aria-pressed="false">待审</button>
+								<button type="button" class="admin-filter" data-admin-comment-filter="approved" aria-pressed="false">已批准</button>
+								<button type="button" class="admin-filter" data-admin-comment-filter="rejected" aria-pressed="false">已拒绝</button>
+							</div>
+						</div>
+						<div class="mt-5 space-y-3" data-admin-comments aria-live="polite"></div>
+					</section>
+
+					<div class="grid gap-8 lg:grid-cols-2">
+						<section aria-labelledby="admin-contact-heading">
+							<div class="border-b border-zinc-200/80 pb-4 dark:border-zinc-800/80"><p class="m-0 text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-400 dark:text-zinc-500">Inbox</p><h2 id="admin-contact-heading" class="mt-1 text-xl">联系消息</h2></div>
+							<div class="mt-5 space-y-3" data-admin-contact-messages></div>
+						</section>
+						<section aria-labelledby="admin-outbox-heading">
+							<div class="border-b border-zinc-200/80 pb-4 dark:border-zinc-800/80"><p class="m-0 text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-400 dark:text-zinc-500">Delivery</p><h2 id="admin-outbox-heading" class="mt-1 text-xl">邮件队列</h2></div>
+							<div class="mt-5 space-y-3" data-admin-outbox></div>
+						</section>
+					</div>
+				</div>
+			</section>
+		</main>
+		<Footer />
+
+		<style>
+			.admin-filter { border: 1px solid rgb(228 228 231); border-radius: 9999px; background: rgba(255,255,255,.82); padding: .45rem .85rem; color: rgb(82 82 91); font-size: .8125rem; font-weight: 500; transition: border-color .18s ease, background-color .18s ease, color .18s ease; }
+			.admin-filter:hover, .admin-filter[aria-pressed='true'] { border-color: rgb(161 161 170); background: rgb(24 24 27); color: white; }
+			:global(.dark) .admin-filter { border-color: rgb(63 63 70); background: rgba(24,24,27,.78); color: rgb(212 212 216); }
+			:global(.dark) .admin-filter:hover, :global(.dark) .admin-filter[aria-pressed='true'] { border-color: rgb(113 113 122); background: rgb(244 244 245); color: rgb(24 24 27); }
+		</style>
+	</body>
 </html>
+
+<script>
+	import {
+		approveComment,
+		checkAdmin,
+		deleteComment,
+		getAdminComments,
+		getAdminContactMessages,
+		getAdminOutbox,
+		getAdminStats,
+		rejectComment,
+		type AdminComment,
+		type AdminContactMessage,
+		type AdminOutboxItem,
+	} from '../../lib/admin';
+
+	type CommentFilter = AdminComment['status'] | 'all';
+	const initAdminPage = () => {
+	const root = document.querySelector<HTMLElement>('[data-admin-root]');
+	if (!root || root.dataset.adminInitialized === 'true') return;
+	root.dataset.adminInitialized = 'true';
+	const authState = root?.querySelector<HTMLElement>('[data-admin-auth-state]');
+	const authMessage = root?.querySelector<HTMLElement>('[data-admin-auth-message]');
+	const workspace = root?.querySelector<HTMLElement>('[data-admin-workspace]');
+	const commentsRoot = root?.querySelector<HTMLElement>('[data-admin-comments]');
+	const contactsRoot = root?.querySelector<HTMLElement>('[data-admin-contact-messages]');
+	const outboxRoot = root?.querySelector<HTMLElement>('[data-admin-outbox]');
+	let currentFilter: CommentFilter = 'all';
+
+	const createElement = <K extends keyof HTMLElementTagNameMap>(tag: K, className = '', text = '') => {
+		const node = document.createElement(tag);
+		if (className) node.className = className;
+		if (text) node.textContent = text;
+		return node;
+	};
+
+	const formatDate = (timestamp: number) => new Date(timestamp).toLocaleString('zh-CN', {
+		year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit',
+	});
+
+	const emptyState = (message: string) => createElement('p', 'rounded-2xl border border-dashed border-zinc-300 px-5 py-8 text-center text-sm text-zinc-500 dark:border-zinc-700 dark:text-zinc-400', message);
+
+	const actionButton = (label: string, action: string, id: string, tone: 'default' | 'danger' = 'default') => {
+		const button = createElement('button', tone === 'danger'
+			? 'rounded-full border border-rose-200 px-3 py-1.5 text-xs font-medium text-rose-700 hover:bg-rose-50 dark:border-rose-900 dark:text-rose-400 dark:hover:bg-rose-950/30'
+			: 'rounded-full border border-zinc-200 px-3 py-1.5 text-xs font-medium text-zinc-600 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800', label);
+		button.type = 'button';
+		button.setAttribute('data-admin-action', action);
+		button.dataset.commentId = id;
+		return button;
+	};
+
+	const renderComments = (comments: AdminComment[]) => {
+		if (!commentsRoot) return;
+		commentsRoot.replaceChildren();
+		if (!comments.length) return commentsRoot.append(emptyState('当前筛选条件下没有评论。'));
+		for (const comment of comments) {
+			const article = createElement('article', 'rounded-2xl border border-zinc-200/80 bg-white p-5 shadow-[0_12px_32px_rgba(15,23,42,0.04)] dark:border-zinc-800 dark:bg-zinc-900');
+			const header = createElement('div', 'flex flex-wrap items-start justify-between gap-3');
+			const meta = createElement('div');
+			meta.append(createElement('p', 'm-0 text-sm font-semibold text-zinc-900 dark:text-zinc-100', comment.name || comment.login));
+			meta.append(createElement('p', 'mt-1 text-xs text-zinc-500 dark:text-zinc-400', `@${comment.login} · ${formatDate(comment.created_at)}`));
+			const badge = createElement('span', 'rounded-full border border-zinc-200 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-zinc-500 dark:border-zinc-700 dark:text-zinc-400', comment.status);
+			header.append(meta, badge);
+			article.append(header);
+			article.append(createElement('p', 'mt-4 whitespace-pre-wrap break-words text-sm leading-6 text-zinc-700 dark:text-zinc-300', comment.body));
+			article.append(createElement('p', 'mt-3 break-all font-mono text-[11px] text-zinc-400 dark:text-zinc-500', comment.post_slug));
+			const actions = createElement('div', 'mt-4 flex flex-wrap gap-2');
+			if (comment.status !== 'approved') actions.append(actionButton('批准', 'approve', comment.id));
+			if (comment.status !== 'rejected') actions.append(actionButton('拒绝', 'reject', comment.id));
+			actions.append(actionButton('删除', 'delete', comment.id, 'danger'));
+			article.append(actions);
+			commentsRoot.append(article);
+		}
+	};
+
+	const renderContacts = (messages: AdminContactMessage[]) => {
+		if (!contactsRoot) return;
+		contactsRoot.replaceChildren();
+		if (!messages.length) return contactsRoot.append(emptyState('暂无联系消息。'));
+		for (const message of messages) {
+			const card = createElement('article', 'rounded-2xl border border-zinc-200/80 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900');
+			card.append(createElement('p', 'm-0 text-sm font-semibold text-zinc-900 dark:text-zinc-100', message.name));
+			card.append(createElement('p', 'mt-1 break-all text-xs text-zinc-500 dark:text-zinc-400', `${message.email} · ${formatDate(message.created_at)}`));
+			card.append(createElement('p', 'mt-4 whitespace-pre-wrap break-words text-sm leading-6 text-zinc-700 dark:text-zinc-300', message.message));
+			contactsRoot.append(card);
+		}
+	};
+
+	const renderOutbox = (items: AdminOutboxItem[]) => {
+		if (!outboxRoot) return;
+		outboxRoot.replaceChildren();
+		if (!items.length) return outboxRoot.append(emptyState('邮件队列为空。'));
+		for (const item of items) {
+			const card = createElement('article', 'rounded-2xl border border-zinc-200/80 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900');
+			card.append(createElement('p', 'm-0 text-sm font-semibold text-zinc-900 dark:text-zinc-100', item.subject || item.type));
+			card.append(createElement('p', 'mt-1 break-all text-xs text-zinc-500 dark:text-zinc-400', `${item.recipient || '未指定收件人'} · ${item.status} · ${formatDate(item.created_at)}`));
+			card.append(createElement('p', 'mt-4 line-clamp-5 whitespace-pre-wrap break-words font-mono text-xs leading-5 text-zinc-600 dark:text-zinc-400', item.body));
+			outboxRoot.append(card);
+		}
+	};
+
+	const loadComments = async () => {
+		if (commentsRoot) commentsRoot.replaceChildren(emptyState('正在加载评论…'));
+		const { comments } = await getAdminComments(currentFilter);
+		renderComments(comments);
+	};
+
+	const loadDashboard = async () => {
+		const [stats, comments, contacts, outbox] = await Promise.all([
+			getAdminStats(), getAdminComments(currentFilter), getAdminContactMessages(), getAdminOutbox(),
+		]);
+		for (const key of ['total', 'pending', 'approved', 'rejected'] as const) {
+			const target = root?.querySelector<HTMLElement>(`[data-admin-stat="${key}"]`);
+			if (target) target.textContent = String(stats[key]);
+		}
+		renderComments(comments.comments);
+		renderContacts(contacts.messages);
+		renderOutbox(outbox.items);
+	};
+
+	const showFailure = (message: string) => {
+		if (authState) authState.className = 'mt-7 rounded-2xl border border-rose-200 bg-rose-50/80 p-5 dark:border-rose-900/60 dark:bg-rose-950/25';
+		if (authMessage) authMessage.textContent = message;
+		workspace?.classList.add('hidden');
+	};
+
+	const initialize = async () => {
+		const identity = await checkAdmin();
+		if (!identity.isAdmin) return showFailure('无法访问管理台。请先使用被授予管理员权限的账户登录后重试。');
+		if (authState) authState.className = 'mt-7 rounded-2xl border border-emerald-200 bg-emerald-50/80 p-5 dark:border-emerald-900/60 dark:bg-emerald-950/25';
+		if (authMessage) authMessage.textContent = `管理员会话已验证${identity.login ? `：@${identity.login}` : ''}`;
+		workspace?.classList.remove('hidden');
+		try { await loadDashboard(); } catch { showFailure('管理数据加载失败。会话可能已过期，请重新登录后重试。'); }
+	};
+
+	root?.querySelector('[data-admin-refresh]')?.addEventListener('click', async () => {
+		try { await loadDashboard(); } catch { showFailure('刷新失败。请确认会话仍然有效。'); }
+	});
+
+	root?.querySelectorAll<HTMLButtonElement>('[data-admin-comment-filter]').forEach((button) => {
+		button.addEventListener('click', async () => {
+			currentFilter = (button.dataset.adminCommentFilter || 'all') as CommentFilter;
+			root.querySelectorAll<HTMLButtonElement>('[data-admin-comment-filter]').forEach((item) => item.setAttribute('aria-pressed', String(item === button)));
+			try { await loadComments(); } catch { showFailure('评论加载失败。请确认会话仍然有效。'); }
+		});
+	});
+
+	commentsRoot?.addEventListener('click', async (event) => {
+		const button = (event.target as HTMLElement).closest<HTMLButtonElement>('[data-admin-action]');
+		const id = button?.dataset.commentId;
+		if (!button || !id) return;
+		const action = button.dataset.adminAction;
+		if (action === 'delete' && !window.confirm('确认永久删除这条评论？')) return;
+		button.disabled = true;
+		try {
+			if (action === 'approve') await approveComment(id);
+			else if (action === 'reject') await rejectComment(id);
+			else if (action === 'delete') await deleteComment(id);
+			await Promise.all([loadComments(), getAdminStats().then((stats) => {
+				for (const key of ['total', 'pending', 'approved', 'rejected'] as const) {
+					const target = root.querySelector<HTMLElement>(`[data-admin-stat="${key}"]`);
+					if (target) target.textContent = String(stats[key]);
+				}
+			})]);
+		} catch { showFailure('评论操作失败。请确认会话仍然有效。'); }
+		finally { button.disabled = false; }
+	});
+
+	void initialize();
+	};
+
+	document.addEventListener('astro:page-load', initAdminPage);
+	if (document.readyState === 'loading') {
+		document.addEventListener('DOMContentLoaded', initAdminPage, { once: true });
+	} else {
+		initAdminPage();
+	}
+</script>

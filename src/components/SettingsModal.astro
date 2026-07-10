@@ -127,6 +127,7 @@ const T = getUiText(DEFAULT_UI_LANG);
 		const saveButton = document.getElementById('settings-save') as HTMLButtonElement | null;
 		const resetButton = document.getElementById('settings-reset') as HTMLButtonElement | null;
 		const status = document.getElementById('settings-status');
+		const adminLink = document.getElementById('settings-admin-link');
 		const fallbackAvatar = '/image/favicon-192.png';
 		const i18nText = (key: string, fallback: string) => (window as any).__xgwnjeI18n?.text?.(key) ?? fallback;
 		let currentAvatar = '';
@@ -135,9 +136,10 @@ const T = getUiText(DEFAULT_UI_LANG);
 
 		const openModal = async () => {
 			if (!modal) return;
+			if (adminLink) adminLink.style.display = 'none';
 
 			// Fetch current user info
-			const { getCurrentUser } = window.__auth || {};
+			const { getCurrentUser } = (window as any).__auth || {};
 			if (getCurrentUser) {
 				try {
 					const user = await getCurrentUser();
@@ -157,15 +159,13 @@ const T = getUiText(DEFAULT_UI_LANG);
 				}
 			}
 
-			// Check admin status via Cloudflare Access
+			// Check admin status with the current authenticated Bearer session.
 			try {
 				const { isAdmin } = await checkAdmin();
-				const adminLink = document.getElementById('settings-admin-link');
 				if (adminLink) {
 					adminLink.style.display = isAdmin ? '' : 'none';
 				}
 			} catch (e) {
-				const adminLink = document.getElementById('settings-admin-link');
 				if (adminLink) {
 					adminLink.style.display = 'none';
 				}

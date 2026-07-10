@@ -2,13 +2,13 @@
  * IndexNow Notifier
  *
  * Notifies Bing about updated URLs.
- * Designed for Cloudflare Pages automatic deployment.
+ * Run explicitly after a verified VPS release when URL discovery should be accelerated.
  *
  * Usage:
  *   npm run indexnow:sitemap   # Notify all URLs from sitemap
  *   npm run indexnow -- https://xgwnje.cn/blog/new-post/  # Notify single URL
  *
- * Required env vars (set in Cloudflare Pages):
+ * Required environment variables (provide them only for this command):
  *   INDEXNOW_KEY    - Your IndexNow key
  *   INDEXNOW_HOST   - Your domain (optional, defaults to xgwnje.cn)
  */
@@ -31,8 +31,7 @@ function getKey() {
 		console.error('To run locally:');
 		console.error('  INDEXNOW_KEY=your-key node scripts/indexnow.mjs sitemap');
 		console.error('');
-		console.error('In Cloudflare Pages, add this in Settings > Variables and Secrets:');
-		console.error('  INDEXNOW_KEY = your-indexnow-key');
+		console.error('Provide INDEXNOW_KEY through the protected maintenance environment.');
 		process.exit(1);
 	}
 	return KEY;
@@ -122,10 +121,9 @@ async function notifyIndexNow(urls, key) {
  * Main
  */
 async function main() {
-	// Get key - from env or file
+	// Read the key from the protected command environment.
 	const key = getKey();
-	const source = KEY ? 'environment' : 'file';
-	console.log(`✅ Key loaded from ${source}`);
+	console.log('✅ Key loaded from environment');
 
 	const args = process.argv.slice(2);
 

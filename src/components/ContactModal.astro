@@ -92,68 +92,40 @@ const T = getUiText(DEFAULT_UI_LANG);
 
 <script>
 	import { sendContactMessage } from '../lib/auth';
-
-	const form = document.getElementById('contact-form') as HTMLFormElement;
-	const successDiv = document.getElementById('contact-success');
-	const nameInput = document.getElementById('contact-name-input') as HTMLInputElement;
-	const emailInput = document.getElementById('contact-email-input') as HTMLInputElement;
-	const messageInput = document.getElementById('contact-message-input') as HTMLTextAreaElement;
-	const submitBtn = document.getElementById('contact-submit') as HTMLButtonElement;
-	const turnstileContainer = document.getElementById('contact-turnstile-container');
-	const turnstileRequired = form?.dataset.turnstileRequired === 'true';
-	const i18nText = (key: string, fallback: string) => (window as any).__xgwnjeI18n?.text?.(key) ?? fallback;
+	import { getTurnstileToken, removeTurnstile, renderTurnstile, resetTurnstile } from '../lib/turnstile';
 
 	let turnstileWidgetId: string | null = null;
+	const i18nText = (key: string, fallback: string) => (window as any).__xgwnjeI18n?.text?.(key) ?? fallback;
+	const cleanupTurnstile = () => {
+		removeTurnstile(turnstileWidgetId);
+		turnstileWidgetId = null;
+	};
 
-	// Load Turnstile script and render widget
-	function initTurnstile() {
-		if (!turnstileRequired) return;
-		if (typeof (window as any).turnstile !== 'undefined' && turnstileContainer && !turnstileWidgetId) {
-			const sitekey = turnstileContainer.getAttribute('data-sitekey');
-			if (sitekey) {
-				turnstileWidgetId = (window as any).turnstile.render(turnstileContainer, {
-					sitekey: sitekey,
-					callback: function(token: string) {
-						console.log('Contact Turnstile token obtained');
-					},
-					'error-callback': function() {
-						console.log('Contact Turnstile error');
-					},
-				});
-			}
-		}
-	}
+	const initContactModal = async () => {
+		const modal = document.getElementById('contact-modal');
+		const modalClose = document.getElementById('contact-modal-close');
+		const form = document.getElementById('contact-form') as HTMLFormElement | null;
+		const successDiv = document.getElementById('contact-success');
+		const nameInput = document.getElementById('contact-name-input') as HTMLInputElement | null;
+		const emailInput = document.getElementById('contact-email-input') as HTMLInputElement | null;
+		const messageInput = document.getElementById('contact-message-input') as HTMLTextAreaElement | null;
+		const submitBtn = document.getElementById('contact-submit') as HTMLButtonElement | null;
+		const turnstileContainer = document.getElementById('contact-turnstile-container');
+		if (!modal || !modalClose || !form || !nameInput || !emailInput || !messageInput || !submitBtn) return;
+		if (form.dataset.contactInitialized === 'true') return;
+		form.dataset.contactInitialized = 'true';
+		const turnstileRequired = form.dataset.turnstileRequired === 'true';
+		const ensureTurnstile = async () => {
+			if (!turnstileRequired || !turnstileContainer || turnstileWidgetId) return;
+			try { turnstileWidgetId = await renderTurnstile(turnstileContainer); } catch { turnstileWidgetId = null; }
+		};
+		const setSubmitLabel = (label: string) => {
+			const labelNode = submitBtn.querySelector<HTMLElement>('[data-i18n="contact.send"]');
+			if (labelNode) labelNode.textContent = label;
+			else submitBtn.textContent = label;
+		};
 
-	// Get token from specific widget
-	function getTurnstileToken(): string {
-		if (!turnstileRequired) return '';
-		if (typeof (window as any).turnstile !== 'undefined' && turnstileWidgetId) {
-			return (window as any).turnstile.getResponse(turnstileWidgetId) || '';
-		}
-		return '';
-	}
-
-	// Load Turnstile script
-	function loadTurnstileScript(): Promise<void> {
-		return new Promise((resolve) => {
-			if (!turnstileRequired) {
-				resolve();
-				return;
-			}
-			if (typeof (window as any).turnstile !== 'undefined') {
-				resolve();
-				return;
-			}
-			const script = document.createElement('script');
-			script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js';
-			script.async = true;
-			script.defer = true;
-			script.onload = () => resolve();
-			document.head.appendChild(script);
-		});
-	}
-
-	if (form) {
+		void ensureTurnstile();
 		form.addEventListener('submit', async (e) => {
 			e.preventDefault();
 			const name = nameInput.value.trim();
@@ -171,28 +143,20 @@ const T = getUiText(DEFAULT_UI_LANG);
 			}
 
 			submitBtn.disabled = true;
-			submitBtn.textContent = i18nText('contact.sending', 'Sending...');
+			setSubmitLabel(i18nText('contact.sending', 'Sending...'));
+			await ensureTurnstile();
 
-			if (turnstileRequired) {
-				let attempts = 0;
-				while (attempts < 20) {
-					const token = getTurnstileToken();
-					if (token) break;
-					await new Promise(resolve => setTimeout(resolve, 250));
-					attempts++;
-				}
-			}
-
-			const turnstileToken = getTurnstileToken();
+			const turnstileToken = getTurnstileToken(turnstileWidgetId);
 
 			if (turnstileRequired && !turnstileToken) {
 				alert(i18nText('contact.captcha', 'Please complete the captcha verification'));
 				submitBtn.disabled = false;
-				submitBtn.textContent = i18nText('contact.send', 'Send Message');
+				setSubmitLabel(i18nText('contact.send', 'Send Message'));
 				return;
 			}
 
 			const result = await sendContactMessage(name, email, message, turnstileToken);
+			resetTurnstile(turnstileWidgetId);
 
 			if (result.ok) {
 				form.classList.add('hidden');
@@ -200,22 +164,12 @@ const T = getUiText(DEFAULT_UI_LANG);
 			} else {
 				alert(result.error ?? i18nText('contact.failed', 'Failed to send message'));
 				submitBtn.disabled = false;
-				submitBtn.textContent = i18nText('contact.send', 'Send Message');
+				setSubmitLabel(i18nText('contact.send', 'Send Message'));
 			}
 		});
-	}
-
-	const initContactModal = () => {
-		const modal = document.getElementById('contact-modal');
-		const modalClose = document.getElementById('contact-modal-close');
-
-		if (!modal || !modalClose) return;
 
 		const openModal = async () => {
-			// Load Turnstile if not loaded
-			await loadTurnstileScript();
-			initTurnstile();
-
+			await ensureTurnstile();
 			requestAnimationFrame(() => {
 				modal.classList.remove('opacity-0', 'invisible');
 				modal.classList.add('opacity-100');
@@ -235,20 +189,11 @@ const T = getUiText(DEFAULT_UI_LANG);
 				content.classList.add('scale-95', 'opacity-0');
 				content.classList.remove('scale-100', 'opacity-100');
 			}
-			// Reset form state
-			form?.classList.remove('hidden');
+			form.classList.remove('hidden');
 			successDiv?.classList.add('hidden');
-			const submitBtn = document.getElementById('contact-submit') as HTMLButtonElement;
-			if (submitBtn) {
-				submitBtn.disabled = false;
-				const sendLabel = i18nText('contact.send', 'Send Message');
-				submitBtn.innerHTML = `<span class="apple-float-label">
-					<svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-						<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-					</svg>
-					<span data-i18n="contact.send">${sendLabel}</span>
-				</span>`;
-			}
+			submitBtn.disabled = false;
+			setSubmitLabel(i18nText('contact.send', 'Send Message'));
+			resetTurnstile(turnstileWidgetId);
 			setTimeout(() => {
 				modal.classList.add('invisible');
 			}, 200);
@@ -270,7 +215,11 @@ const T = getUiText(DEFAULT_UI_LANG);
 		(window as any).openContactModal = openModal;
 	};
 
-	// Initialize
-	initContactModal();
-	document.addEventListener('astro:page-load', initContactModal);
+	document.addEventListener('astro:page-load', () => void initContactModal());
+	document.addEventListener('astro:before-swap', cleanupTurnstile);
+	if (document.readyState === 'loading') {
+		document.addEventListener('DOMContentLoaded', () => void initContactModal(), { once: true });
+	} else {
+		void initContactModal();
+	}
 </script>

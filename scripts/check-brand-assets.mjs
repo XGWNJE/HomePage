@@ -9,6 +9,7 @@ const assert = (condition, message) => {
 const readText = (path) => readFileSync(path, 'utf8');
 
 const head = readText('src/components/BaseHead.astro');
+const constants = readText('src/consts.ts');
 const generator = readText('scripts/generate-brand-assets.mjs');
 const faviconSvg = readText('public/favicon.svg');
 
@@ -17,6 +18,12 @@ assert(!generator.includes('circle-cropped'), 'Brand generator should not descri
 assert(!generator.includes('const SOURCE'), 'Brand generator should not depend on the old avatar source image.');
 assert(!faviconSvg.includes('<image'), 'SVG favicon should be vector, not a PNG-embedded avatar.');
 assert(faviconSvg.includes('data-generic-site-icon'), 'SVG favicon should be the generic site icon.');
+assert(head.includes('XGWNJE — Research · Engineering · Notes'), 'Default OG alt text should match the current positioning.');
+assert(constants.includes("SITE_DESCRIPTION = 'Research · Engineering · Notes'"), 'Shared site description should match the current positioning.');
+
+const ogMeta = await sharp('public/image/og-default.png').metadata();
+assert(ogMeta.width === 1200 && ogMeta.height === 630, 'Default OG image should be 1200x630.');
+assert(readFileSync('public/image/og-default.png').length < 1024 * 1024, 'Default OG image should stay below 1 MB.');
 
 const expectedPngs = [
 	['public/image/favicon-32.png', 32],

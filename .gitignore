@@ -1,39 +1,40 @@
-# build output
+# Build output and generated metadata
 dist/
-# generated types
 .astro/
 
-# dependencies
+# Dependencies
 node_modules/
 
-# logs
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-dev-server*.log
-output/
-
-
-# environment variables
-.env
-.env.production
+# Local runtime data
 server-data/
 *.sqlite
 *.sqlite-shm
 *.sqlite-wal
 
-# macOS-specific files
+# Environment and machine-local configuration
+.env
+.env.*
+!.env.example
+!.env.*.example
+server.local.env
+**/server.local.env
+*.local.env
+
+# Logs, process files, and agent/browser output
+*.log
+*.pid
+output/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# OS and editor state
 .DS_Store
-
-# jetbrains setting folder
+Thumbs.db
 .idea/
-
-# VSCode settings
 .vscode/
-
-# Claude Code settings
 .claude/
 
-# git protection
+# Git protection
 .git_disable/

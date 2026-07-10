@@ -7,6 +7,8 @@ import Busboy from 'busboy';
 import * as cookie from 'cookie';
 import express from 'express';
 
+import { CURRENT_SCHEMA_VERSION } from './db.js';
+
 const OAUTH_STATE_COOKIE = '__Host-homepage_oauth_state';
 const OAUTH_VERIFIER_COOKIE = '__Host-homepage_oauth_verifier';
 const OAUTH_RETURN_COOKIE = '__Host-homepage_oauth_return';
@@ -18,13 +20,19 @@ const SUSPICIOUS_RE = /(https?:\/\/|www\.|telegram|whatsapp|casino|crypto|airdro
 const ALLOWED_IMAGE_EXTENSIONS = new Set(['.jpg', '.jpeg', '.png', '.gif', '.webp']);
 const ALLOWED_IMAGE_MIME_TYPES = new Set(['image/jpeg', 'image/png', 'image/gif', 'image/webp']);
 
-export function createApp({ db, config }) {
+export function createApp({ db, config, fetchImpl = globalThis.fetch }) {
+	if (Boolean(config.turnstileSiteKey) !== Boolean(config.turnstileSecretKey)) {
+		throw new Error('Turnstile site and secret keys must be configured together');
+	}
+	const turnstileReadiness = config.turnstileSecretKey ? 'enabled' : 'disabled';
 	mkdirSync(config.uploadDir, { recursive: true });
 	const app = express();
 	const rateMap = new Map();
 
 	app.disable('x-powered-by');
-	app.set('trust proxy', true);
+	// The service only accepts proxied traffic from the local Nginx hop. Trusting
+	// arbitrary proxy chains would let clients spoof the IP used for rate limits.
+	app.set('trust proxy', 'loopback');
 	app.use(express.json({ limit: '1mb' }));
 	app.use('/uploads', express.static(config.uploadDir, {
 		index: false,
@@ -41,7 +49,7 @@ export function createApp({ db, config }) {
 		}
 		if (req.method === 'OPTIONS') {
 			res.setHeader('Access-Control-Allow-Methods', 'GET,POST,DELETE,OPTIONS');
-			res.setHeader('Access-Control-Allow-Headers', 'Authorization, Content-Type, X-Admin-Token');
+			res.setHeader('Access-Control-Allow-Headers', 'Authorization, Content-Type');
 			res.status(204).end();
 			return;
 		}
@@ -49,7 +57,37 @@ export function createApp({ db, config }) {
 	});
 
 	app.get('/health', (_req, res) => {
-		res.json({ ok: true, service: 'homepage-api' });
+		const metadata = {
+			service: 'homepage-api',
+			version: config.serviceVersion || 'unknown',
+			revision: config.serviceRevision || 'unknown',
+		};
+		try {
+			const schemaVersion = Number(db.prepare('PRAGMA user_version').get()?.user_version || 0);
+			if (schemaVersion !== CURRENT_SCHEMA_VERSION) {
+				return res.status(503).json({
+					ok: false,
+					...metadata,
+					readiness: {
+						database: 'schema-mismatch',
+						schemaVersion,
+						expectedSchemaVersion: CURRENT_SCHEMA_VERSION,
+						turnstile: turnstileReadiness,
+					},
+				});
+			}
+			res.json({
+				ok: true,
+				...metadata,
+				readiness: { database: 'ready', schemaVersion, turnstile: turnstileReadiness },
+			});
+		} catch {
+			res.status(503).json({
+				ok: false,
+				...metadata,
+				readiness: { database: 'unavailable', schemaVersion: null, turnstile: turnstileReadiness },
+			});
+		}
 	});
 
 	app.use('/api/auth/github', (_req, res, next) => {
@@ -215,10 +253,11 @@ export function createApp({ db, config }) {
 		res.json({ ok: true });
 	});
 
-	app.post('/api/auth/email/send', (req, res) => {
+	app.post('/api/auth/email/send', async (req, res) => {
 		if (!checkRate(req, res, rateMap, 'email_send', 10)) return;
 		const email = cleanEmail(req.body?.email);
 		if (!email) return res.status(400).json({ error: 'Invalid email address' });
+		if (!await verifyTurnstile(req, res, config, fetchImpl)) return;
 		const token = randomToken(32);
 		const now = Date.now();
 		db.prepare(
@@ -333,12 +372,13 @@ export function createApp({ db, config }) {
 		});
 	});
 
-	app.post('/api/contact', (req, res) => {
+	app.post('/api/contact', async (req, res) => {
 		if (!checkRate(req, res, rateMap, 'contact', 10)) return;
 		const name = cleanText(req.body?.name, 80);
 		const email = cleanEmail(req.body?.email);
 		const message = cleanText(req.body?.message, 4000);
 		if (!name || !email || !message) return res.status(400).json({ error: 'Invalid contact message' });
+		if (!await verifyTurnstile(req, res, config, fetchImpl)) return;
 		const id = `msg_${randomToken(12)}`;
 		db.prepare(
 			`INSERT INTO contact_messages (id, name, email, message, ip, user_agent, created_at)
@@ -534,9 +574,8 @@ function adminCommentSelect(where) {
 }
 
 function adminAuth(db, config, req) {
-	const adminHeader = req.headers['x-admin-token'];
 	const token = bearerToken(req);
-	if (config.adminToken && (token === config.adminToken || adminHeader === config.adminToken)) {
+	if (config.adminToken && token === config.adminToken) {
 		return { authorized: true, email: null, login: 'admin-token' };
 	}
 	const user = findSessionUser(db, req);
@@ -618,6 +657,44 @@ function trySendmail(config, recipient, subject, body) {
 	if (!config.enableSendmail || !recipient) return;
 	const child = spawn(config.sendmailPath, ['-t'], { stdio: ['pipe', 'ignore', 'ignore'] });
 	child.stdin.end(`To: ${recipient}\nSubject: ${subject}\nContent-Type: text/plain; charset=UTF-8\n\n${body}`);
+}
+
+async function verifyTurnstile(req, res, config, fetchImpl) {
+	if (!config.turnstileSecretKey) return true;
+	const token = cleanText(req.body?.turnstileToken || req.body?.['cf-turnstile-response'], 2048);
+	if (!token) {
+		res.status(400).json({ error: 'Verification failed' });
+		return false;
+	}
+
+	try {
+		const response = await fetchImpl('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
+			method: 'POST',
+			headers: { 'content-type': 'application/json' },
+			signal: AbortSignal.timeout(5_000),
+			body: JSON.stringify({
+				secret: config.turnstileSecretKey,
+				response: token,
+				remoteip: clientIp(req),
+			}),
+		});
+		if (!response.ok) {
+			res.status(503).json({ error: 'Verification unavailable' });
+			return false;
+		}
+		const result = await response.json();
+		if (
+			result?.success !== true
+			|| (config.turnstileExpectedHostname && result?.hostname !== config.turnstileExpectedHostname)
+		) {
+			res.status(400).json({ error: 'Verification failed' });
+			return false;
+		}
+		return true;
+	} catch {
+		res.status(503).json({ error: 'Verification unavailable' });
+		return false;
+	}
 }
 
 function checkRate(req, res, rateMap, route, limit = RATE_LIMIT_PER_WINDOW) {
@@ -757,8 +834,7 @@ function safeEqual(a, b) {
 }
 
 function clientIp(req) {
-	return String(req.headers['cf-connecting-ip'] || req.headers['x-forwarded-for'] || req.ip || 'unknown')
-		.split(',')[0]
+	return String(req.ip || req.socket?.remoteAddress || 'unknown')
 		.trim()
 		.slice(0, 80);
 }

@@ -465,7 +465,7 @@ const { showTocButton = false } = Astro.props as Props;
 	}
 </style>
 
-<script define:vars={{ translations: uiText, defaultUiLang: DEFAULT_UI_LANG }}>
+<script is:inline define:vars={{ translations: uiText, defaultUiLang: DEFAULT_UI_LANG }}>
 	(() => {
 		const storageKey = 'xgwnje.uiLang';
 		const hasLang = (value) => Boolean(value && Object.prototype.hasOwnProperty.call(translations, value));

@@ -6,8 +6,6 @@ import { API_BASE } from '../lib/config';
 const TURNSTILE_SITE_KEY = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
 const T = getUiText(DEFAULT_UI_LANG);
 ---
-<script is:inline src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
-
 <div
 	id="login-modal"
 	class="fixed inset-0 z-[100] invisible opacity-0 flex items-center justify-center bg-black/40 backdrop-blur-sm transition-opacity duration-200 ease-out"
@@ -56,7 +54,7 @@ const T = getUiText(DEFAULT_UI_LANG);
 				required
 				class="w-full rounded-lg border border-zinc-200 px-4 py-3 text-zinc-900 placeholder-zinc-400 focus:border-zinc-400 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100 dark:placeholder-zinc-500"
 			/>
-			{TURNSTILE_SITE_KEY && <div class="cf-turnstile" data-sitekey={TURNSTILE_SITE_KEY}></div>}
+			{TURNSTILE_SITE_KEY && <div id="login-turnstile-container" data-sitekey={TURNSTILE_SITE_KEY}></div>}
 			<button
 				type="submit"
 				id="email-login-submit"
@@ -94,31 +92,35 @@ const T = getUiText(DEFAULT_UI_LANG);
 
 <script>
 	import { sendEmailLogin } from '../lib/auth';
+	import { getTurnstileToken, removeTurnstile, renderTurnstile, resetTurnstile } from '../lib/turnstile';
 
-	const form = document.getElementById('email-login-form') as HTMLFormElement;
-	const successDiv = document.getElementById('email-login-success');
-	const input = document.getElementById('email-login-input') as HTMLInputElement;
-	const submitBtn = document.getElementById('email-login-submit') as HTMLButtonElement;
-	const turnstileRequired = form?.dataset.turnstileRequired === 'true';
+	let turnstileWidgetId: string | null = null;
 	const i18nText = (key: string, fallback: string) => (window as any).__xgwnjeI18n?.text?.(key) ?? fallback;
+	const cleanupTurnstile = () => {
+		removeTurnstile(turnstileWidgetId);
+		turnstileWidgetId = null;
+	};
 
-	// Get Turnstile token from the automatically rendered widget
-	function getTurnstileToken(): string {
-		if (!turnstileRequired) return '';
-		// Turnstile auto-renders elements with class 'cf-turnstile'
-		// We can use turnstile.getResponse() to get the token
-		if (typeof (window as any).turnstile !== 'undefined') {
-			// Try to get token from all rendered widgets
-			const widgets = document.querySelectorAll('.cf-turnstile');
-			for (let i = 0; i < widgets.length; i++) {
-				const token = (window as any).turnstile.getResponse(i);
-				if (token) return token;
-			}
-		}
-		return '';
-	}
+	const initLoginForm = async () => {
+		const form = document.getElementById('email-login-form') as HTMLFormElement | null;
+		const successDiv = document.getElementById('email-login-success');
+		const input = document.getElementById('email-login-input') as HTMLInputElement | null;
+		const submitBtn = document.getElementById('email-login-submit') as HTMLButtonElement | null;
+		const turnstileContainer = document.getElementById('login-turnstile-container');
+		if (!form || !input || !submitBtn || form.dataset.loginInitialized === 'true') return;
+		form.dataset.loginInitialized = 'true';
+		const turnstileRequired = form.dataset.turnstileRequired === 'true';
+		const ensureTurnstile = async () => {
+			if (!turnstileRequired || !turnstileContainer || turnstileWidgetId) return;
+			try { turnstileWidgetId = await renderTurnstile(turnstileContainer); } catch { turnstileWidgetId = null; }
+		};
+		const setSubmitLabel = (label: string) => {
+			const labelNode = submitBtn.querySelector<HTMLElement>('[data-i18n="login.sendLink"]');
+			if (labelNode) labelNode.textContent = label;
+			else submitBtn.textContent = label;
+		};
+		void ensureTurnstile();
 
-	if (form) {
 		form.addEventListener('submit', async (e) => {
 			e.preventDefault();
 			const email = input.value.trim();
@@ -132,30 +134,22 @@ const T = getUiText(DEFAULT_UI_LANG);
 
 			// Disable button and show loading
 			submitBtn.disabled = true;
-			submitBtn.textContent = i18nText('login.verifying', 'Verifying...');
+			setSubmitLabel(i18nText('login.verifying', 'Verifying...'));
+			await ensureTurnstile();
 
-			if (turnstileRequired) {
-				let attempts = 0;
-				while (attempts < 20) {
-					const token = getTurnstileToken();
-					if (token) break;
-					await new Promise(resolve => setTimeout(resolve, 250));
-					attempts++;
-				}
-			}
-
-			const turnstileToken = getTurnstileToken();
+			const turnstileToken = getTurnstileToken(turnstileWidgetId);
 
 			if (turnstileRequired && !turnstileToken) {
 				alert(i18nText('login.captcha', 'Please complete the captcha verification'));
 				submitBtn.disabled = false;
-				submitBtn.textContent = i18nText('login.sendLink', 'Send Login Link');
+				setSubmitLabel(i18nText('login.sendLink', 'Send Login Link'));
 				return;
 			}
 
-			submitBtn.textContent = i18nText('login.sending', 'Sending...');
+			setSubmitLabel(i18nText('login.sending', 'Sending...'));
 
 			const result = await sendEmailLogin(email, turnstileToken);
+			resetTurnstile(turnstileWidgetId);
 
 			if (result.ok) {
 				form.classList.add('hidden');
@@ -163,8 +157,16 @@ const T = getUiText(DEFAULT_UI_LANG);
 			} else {
 				alert(result.error ?? i18nText('login.failed', 'Failed to send email'));
 				submitBtn.disabled = false;
-				submitBtn.textContent = i18nText('login.sendLink', 'Send Login Link');
+				setSubmitLabel(i18nText('login.sendLink', 'Send Login Link'));
 			}
 		});
+	};
+
+	document.addEventListener('astro:page-load', () => void initLoginForm());
+	document.addEventListener('astro:before-swap', cleanupTurnstile);
+	if (document.readyState === 'loading') {
+		document.addEventListener('DOMContentLoaded', () => void initLoginForm(), { once: true });
+	} else {
+		void initLoginForm();
 	}
 </script>

@@ -1,6 +1,11 @@
-const API_BASE = import.meta.env.DEV
-	? 'http://localhost:8787'
-	: 'https://api.xgwnje.cn';
+import { getToken } from './auth';
+import { API_BASE } from './config';
+
+export interface AdminIdentity {
+	isAdmin: boolean;
+	email: string | null;
+	login: string | null;
+}
 
 export interface AdminStats {
 	total: number;
@@ -21,73 +26,81 @@ export interface AdminComment {
 	avatar_url: string | null;
 }
 
-export async function getAdminStats(): Promise<AdminStats> {
-	const res = await fetch(`${API_BASE}/api/admin/stats`, {
-		headers: { 'CF-Access-Authenticated-User-Email': 'admin@placeholder.com' }
-	});
-	if (!res.ok) throw new Error('Failed to fetch stats');
-	return res.json();
+export interface AdminContactMessage {
+	id: string;
+	name: string;
+	email: string;
+	message: string;
+	status: string;
+	created_at: number;
 }
 
-export async function getAdminComments(status?: string): Promise<{ comments: AdminComment[] }> {
-	const url = new URL(`${API_BASE}/api/admin/comments`);
-	if (status && status !== 'all') url.searchParams.set('status', status);
-	const res = await fetch(url.toString(), {
-		headers: { 'CF-Access-Authenticated-User-Email': 'admin@placeholder.com' }
-	});
-	if (!res.ok) throw new Error('Failed to fetch comments');
-	return res.json();
+export interface AdminOutboxItem {
+	id: string;
+	type: string;
+	recipient: string | null;
+	subject: string | null;
+	body: string;
+	status: string;
+	created_at: number;
 }
 
-export async function approveComment(id: string): Promise<{ success: boolean }> {
-	const res = await fetch(`${API_BASE}/api/admin/comment/approve`, {
-		method: 'POST',
-		headers: {
-			'Content-Type': 'application/json',
-			'CF-Access-Authenticated-User-Email': 'admin@placeholder.com'
-		},
-		body: JSON.stringify({ id })
-	});
-	if (!res.ok) throw new Error('Failed to approve comment');
-	return res.json();
-}
+async function adminRequest<T>(path: string, init: RequestInit = {}): Promise<T> {
+	const token = getToken();
+	if (!token) throw new Error('Authentication required');
 
-export async function rejectComment(id: string): Promise<{ success: boolean }> {
-	const res = await fetch(`${API_BASE}/api/admin/comment/reject`, {
-		method: 'POST',
-		headers: {
-			'Content-Type': 'application/json',
-			'CF-Access-Authenticated-User-Email': 'admin@placeholder.com'
-		},
-		body: JSON.stringify({ id })
-	});
-	if (!res.ok) throw new Error('Failed to reject comment');
-	return res.json();
-}
+	const headers = new Headers(init.headers);
+	headers.set('Authorization', `Bearer ${token}`);
+	if (init.body && !headers.has('Content-Type')) headers.set('Content-Type', 'application/json');
 
-export async function deleteComment(id: string): Promise<{ success: boolean }> {
-	const res = await fetch(`${API_BASE}/api/admin/comment?id=${encodeURIComponent(id)}`, {
-		method: 'DELETE',
-		headers: {
-			'CF-Access-Authenticated-User-Email': 'admin@placeholder.com'
-		}
-	});
-	if (!res.ok) throw new Error('Failed to delete comment');
-	return res.json();
-}
-
-export async function checkAdmin(): Promise<{ isAdmin: boolean; email: string | null }> {
-	// Note: This requires Cloudflare Access policy on api.xgwnje.cn
-	// Cloudflare Access injects CF-Access-Authenticated-User-Email header
-	// when the user has an active Access session.
-	// Do NOT override this header - let Cloudflare inject the real value.
-	try {
-		const res = await fetch(`${API_BASE}/api/admin/check`, {
-			credentials: 'include'
-		});
-		if (!res.ok) return { isAdmin: false, email: null };
-		return res.json();
-	} catch {
-		return { isAdmin: false, email: null };
+	const response = await fetch(`${API_BASE}${path}`, { ...init, headers });
+	if (!response.ok) {
+		if (response.status === 401 || response.status === 403) throw new Error('Admin access required');
+		throw new Error('Admin request failed');
 	}
+	return response.json() as Promise<T>;
+}
+
+export async function checkAdmin(): Promise<AdminIdentity> {
+	if (!getToken()) return { isAdmin: false, email: null, login: null };
+	try {
+		return await adminRequest<AdminIdentity>('/api/admin/check');
+	} catch {
+		return { isAdmin: false, email: null, login: null };
+	}
+}
+
+export function getAdminStats(): Promise<AdminStats> {
+	return adminRequest<AdminStats>('/api/admin/stats');
+}
+
+export function getAdminComments(status?: AdminComment['status'] | 'all'): Promise<{ comments: AdminComment[] }> {
+	const query = status && status !== 'all' ? `?status=${encodeURIComponent(status)}` : '';
+	return adminRequest<{ comments: AdminComment[] }>(`/api/admin/comments${query}`);
+}
+
+export function approveComment(id: string): Promise<{ success: boolean; changes: number }> {
+	return adminRequest('/api/admin/comment/approve', {
+		method: 'POST',
+		body: JSON.stringify({ id }),
+	});
+}
+
+export function rejectComment(id: string): Promise<{ success: boolean; changes: number }> {
+	return adminRequest('/api/admin/comment/reject', {
+		method: 'POST',
+		body: JSON.stringify({ id }),
+	});
+}
+
+export function deleteComment(id: string): Promise<{ success: boolean; changes: number }> {
+	return adminRequest(`/api/admin/comment?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+}
+
+export function getAdminContactMessages(): Promise<{ messages: AdminContactMessage[] }> {
+	return adminRequest('/api/admin/contact-messages');
+}
+
+export function getAdminOutbox(): Promise<{ items: AdminOutboxItem[] }> {
+	return adminRequest('/api/admin/outbox');
 }

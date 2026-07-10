@@ -1,23 +1,22 @@
 ---
-import { type CollectionEntry, getCollection, render } from 'astro:content';
+import { type CollectionEntry, render } from 'astro:content';
 import BlogPost from '../../layouts/BlogPost.astro';
 import { getPostAnalyticsKey } from '../../utils/postAnalytics';
 import { getRelatedPosts } from '../../utils/posts';
+import { getPublishedPosts } from '../../utils/publishedPosts';
 
 export async function getStaticPaths() {
-	const posts = await getCollection('blog');
+	const posts = await getPublishedPosts();
 	return posts.map((post) => ({
 		params: { slug: post.id },
 		props: post,
 	}));
 }
-type Props = CollectionEntry<'blog'>;
-
-const post = Astro.props;
+const post = Astro.props as CollectionEntry<'blog'>;
 const { Content, headings } = await render(post);
 
 const BASE = import.meta.env.BASE_URL;
-const allPosts = await getCollection('blog');
+const allPosts = await getPublishedPosts();
 const postMeta = post.data as CollectionEntry<'blog'>['data'] & { lang?: string; group?: string };
 const analyticsKey = getPostAnalyticsKey(post);
 const idMatch = post.id.match(/-(cn|en)$/);

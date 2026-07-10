@@ -1,38 +1,50 @@
 {
-  "name": "astro-blog",
-  "type": "module",
+  "name": "xgwnje-homepage",
+  "private": true,
   "version": "0.0.1",
+  "type": "module",
+  "packageManager": "npm@10.9.8",
+  "engines": {
+    "node": ">=22.12.0 <25",
+    "npm": ">=10 <12"
+  },
   "scripts": {
     "dev": "astro dev",
-    "api:dev": "node server/src/server.js",
+    "api:dev": "npm --prefix server start",
     "build": "astro build && node scripts/ensure-sitemap-xml.mjs",
-    "postbuild": "node scripts/postbuild-sitemap.mjs",
     "indexnow": "node scripts/indexnow.mjs",
     "indexnow:sitemap": "node scripts/indexnow.mjs sitemap",
     "preview": "astro preview",
     "astro": "astro",
+    "typecheck": "astro check && tsc --noEmit",
+    "test": "npm run test:unit && npm run test:content && npm run test:brand && npm run test:header && npm run test:links && npm run test:i18n && npm run test:admin",
+    "test:unit": "tsx --test scripts/*.test.ts",
     "test:content": "node scripts/check-language-pairs.mjs",
-    "test:content-reset": "node scripts/check-content-reset.mjs",
     "test:brand": "node scripts/check-brand-assets.mjs",
     "test:header": "node scripts/check-header-responsive.mjs",
     "test:links": "node scripts/check-links-page.mjs",
     "test:i18n": "node scripts/check-ui-i18n.mjs",
-    "test:api": "node --test server/test/*.test.js"
+    "test:admin": "node scripts/check-admin-page.mjs",
+    "test:api": "npm --prefix server test",
+    "verify": "npm test && npm run typecheck && npm run build && npm run test:api"
   },
   "dependencies": {
-    "@astrojs/mdx": "^4.3.13",
-    "@astrojs/rss": "^4.0.15",
-    "@astrojs/sitemap": "^3.7.0",
-    "@tailwindcss/vite": "^4.1.18",
-    "astro": "^5.17.1",
-    "better-sqlite3": "^12.11.1",
-    "busboy": "^1.6.0",
-    "cookie": "^1.0.2",
-    "express": "^5.2.1",
-    "sharp": "^0.34.3",
-    "tailwindcss": "^4.1.18"
+    "@astrojs/markdown-remark": "^7.2.1",
+    "@astrojs/mdx": "^7.0.2",
+    "@astrojs/rss": "^4.0.19",
+    "@astrojs/sitemap": "^3.7.3",
+    "@tailwindcss/vite": "^4.3.2",
+    "astro": "^7.0.7",
+    "sharp": "^0.34.5",
+    "tailwindcss": "^4.3.2"
   },
   "devDependencies": {
-    "@tailwindcss/typography": "^0.5.19"
+    "@astrojs/check": "^0.9.9",
+    "@tailwindcss/typography": "^0.5.20",
+    "@types/hast": "^3.0.5",
+    "@types/mdast": "^4.0.4",
+    "tsx": "^4.23.0",
+    "typescript": "^6.0.3",
+    "vite": "^8.1.4"
   }
 }
