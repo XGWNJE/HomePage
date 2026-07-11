@@ -22,6 +22,9 @@ test('full release preserves versioned frontend and API rollback boundaries', ()
 	assert.match(apiHelper, /migration-probe\.sqlite/);
 	assert.match(apiHelper, /SERVICE_REVISION/);
 	assert.match(apiHelper, /release_dir\/\.release/);
+	assert.match(apiHelper, /ln -sfnT "\$release_dir" \/opt\/homepage-api\/current/);
+	assert.match(apiHelper, /ln -sfnT "\$releases_root\/\$previous_release" \/opt\/homepage-api\/current/);
+	assert.match(apiHelper, /for attempt in \$\(seq 1 15\)/);
 	assert.match(apiHelper, /rollback_release/);
 	assert.match(frontendHelper, /grep -F "  \$archive" SHA256SUMS \| sha256sum -c -/);
 	assert.match(frontendHelper, /grep -F "  \$manifest" SHA256SUMS \| sha256sum -c -/);

@@ -19,15 +19,23 @@ service="homepage-api.service"
 
 verify_health() {
 	local health
-	health="$(curl -fsS http://127.0.0.1:8787/health)"
-	printf '%s' "$health" | node -e '
-		const fs = require("node:fs");
-		const expectedRevision = process.argv[1];
-		const health = JSON.parse(fs.readFileSync(0, "utf8"));
-		if (!health.ok || health.revision !== expectedRevision || health.readiness?.database !== "ready") {
-			throw new Error(`Unexpected API health: ${JSON.stringify(health)}`);
-		}
-	' "$revision"
+	for attempt in $(seq 1 15); do
+		if health="$(curl -fsS http://127.0.0.1:8787/health 2>/dev/null)"; then
+			if printf '%s' "$health" | node -e '
+				const fs = require("node:fs");
+				const expectedRevision = process.argv[1];
+				const health = JSON.parse(fs.readFileSync(0, "utf8"));
+				if (!health.ok || health.revision !== expectedRevision || health.readiness?.database !== "ready") {
+					throw new Error(`Unexpected API health: ${JSON.stringify(health)}`);
+				}
+			' "$revision"; then
+				return 0
+			fi
+		fi
+		sleep 1
+	done
+	printf 'API health did not become ready for revision %s\n' "$revision" >&2
+	return 1
 }
 
 backup_persistent_data() {
@@ -108,14 +116,14 @@ activate_release() {
 
 	rollback_on_error() {
 		status=$?
-		ln -sfn "$previous_release" /opt/homepage-api/current || true
+		ln -sfnT "$releases_root/$previous_release" /opt/homepage-api/current || true
 		cp "$backup_dir/homepage-api.env.pre" "$env_file" || true
 		systemctl restart "$service" || true
 		exit "$status"
 	}
 	trap rollback_on_error ERR
-	ln -sfn "$previous_release" /opt/homepage-api/previous
-	ln -sfn "$release_id" /opt/homepage-api/current
+	ln -sfnT "$releases_root/$previous_release" /opt/homepage-api/previous
+	ln -sfnT "$release_dir" /opt/homepage-api/current
 	systemctl restart "$service"
 	systemctl is-active --quiet "$service"
 	verify_health
@@ -126,8 +134,8 @@ activate_release() {
 rollback_release() {
 	test -d "$backup_dir"
 	test -f "$backup_dir/homepage-api.env.pre"
-	ln -sfn "$previous_release" /opt/homepage-api/current
-	ln -sfn "$release_id" /opt/homepage-api/previous
+	ln -sfnT "$releases_root/$previous_release" /opt/homepage-api/current
+	ln -sfnT "$release_dir" /opt/homepage-api/previous
 	cp "$backup_dir/homepage-api.env.pre" "$env_file"
 	systemctl restart "$service"
 	systemctl is-active --quiet "$service"
