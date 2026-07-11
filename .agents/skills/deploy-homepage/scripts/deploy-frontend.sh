@@ -26,7 +26,8 @@ case "$mode" in
 		mkdir -p "$release_dir/site"
 		cp "$staging/$archive" "$staging/$manifest" "$staging/SHA256SUMS" "$staging/deploy-frontend.sh" "$release_dir/"
 		cd "$release_dir"
-		sha256sum -c SHA256SUMS
+		grep -F "  $archive" SHA256SUMS | sha256sum -c -
+		grep -F "  $manifest" SHA256SUMS | sha256sum -c -
 		test "$(sha256sum "$archive" | awk '{print $1}')" = "$archive_sha"
 		tar -xzf "$archive" -C site
 		test -f site/index.html

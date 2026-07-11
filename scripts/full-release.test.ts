@@ -4,6 +4,7 @@ import test from 'node:test';
 
 const fullPublisher = readFileSync('scripts/publish-full.ps1', 'utf8');
 const apiHelper = readFileSync('.agents/skills/deploy-homepage/scripts/deploy-api.sh', 'utf8');
+const frontendHelper = readFileSync('.agents/skills/deploy-homepage/scripts/deploy-frontend.sh', 'utf8');
 
 test('full release preserves versioned frontend and API rollback boundaries', () => {
 	assert.ok(existsSync('.agents/skills/deploy-homepage/scripts/deploy-frontend.sh'));
@@ -22,4 +23,6 @@ test('full release preserves versioned frontend and API rollback boundaries', ()
 	assert.match(apiHelper, /SERVICE_REVISION/);
 	assert.match(apiHelper, /release_dir\/\.release/);
 	assert.match(apiHelper, /rollback_release/);
+	assert.match(frontendHelper, /grep -F "  \$archive" SHA256SUMS \| sha256sum -c -/);
+	assert.match(frontendHelper, /grep -F "  \$manifest" SHA256SUMS \| sha256sum -c -/);
 });

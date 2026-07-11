@@ -158,7 +158,8 @@ test('the project release skill preserves production safety gates', async () => 
 	assert.match(contentPublisher, /StrictHostKeyChecking=yes/);
 	assert.match(contentPublisher, /-Mode AfterChange -Scope homepage,homepage-api/);
 	assert.match(contentPublisher, /Invoke-Remote -Command \$rollback/);
-	assert.match(remoteFrontend, /sha256sum -c SHA256SUMS/);
+	assert.match(remoteFrontend, /grep -F "  \$archive" SHA256SUMS \| sha256sum -c -/);
+	assert.match(remoteFrontend, /grep -F "  \$manifest" SHA256SUMS \| sha256sum -c -/);
 	assert.match(remoteFrontend, /rollback_on_error/);
 	assert.match(remoteFrontend, /ln -sfn "\$release_id" "\$releases_root\/current"/);
 	assert.doesNotMatch(`${skill}\n${contract}\n${preflight}`, /212\.135\.41\.88/);
