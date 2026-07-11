@@ -123,11 +123,19 @@ $baselineLines = @(Invoke-Remote -Command @'
 set -eu
 test "$(systemctl is-active homepage-api.service)" = active
 nginx -t >/dev/null 2>/dev/null
-printf '{"frontendRelease":"%s","apiRelease":"%s"}\n' \
-  "$(basename "$(readlink -f /var/www/xgwnje-home.releases/current)")" \
-  "$(basename "$(readlink -f /opt/homepage-api/current)")"
+printf 'frontendRelease=%s\n' "$(basename "$(readlink -f /var/www/xgwnje-home.releases/current)")"
+printf 'apiRelease=%s\n' "$(basename "$(readlink -f /opt/homepage-api/current)")"
 '@)
-$baseline = (($baselineLines | Select-Object -Last 1) -join "`n") | ConvertFrom-Json
+$baselineValues = @{}
+foreach ($line in $baselineLines) {
+    if ($line -match '^(?<key>frontendRelease|apiRelease)=(?<value>.+)$') {
+        $baselineValues[$matches['key']] = $matches['value']
+    }
+}
+if (-not $baselineValues.ContainsKey('frontendRelease') -or -not $baselineValues.ContainsKey('apiRelease')) {
+    throw 'Unable to read the current frontend and API release identifiers from the server.'
+}
+$baseline = [pscustomobject]@{ frontendRelease = $baselineValues['frontendRelease']; apiRelease = $baselineValues['apiRelease'] }
 Test-PublicUrl -Url 'https://xgwnje.cn/'
 Test-ApiHealth -Revision ((& curl.exe --silent --show-error --location --max-time 20 'https://api.xgwnje.cn/health' | ConvertFrom-Json).revision)
 Test-PublicUrl -Url 'https://visionguard.xgwnje.cn/'
