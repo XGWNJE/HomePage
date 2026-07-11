@@ -12,6 +12,8 @@ test('full release preserves versioned frontend and API rollback boundaries', ()
 	assert.match(fullPublisher, /-Mode', 'FullAudit'/);
 	assert.match(fullPublisher, /deploy-frontend\.sh/);
 	assert.match(fullPublisher, /deploy-api\.sh/);
+	assert.match(fullPublisher, /nginx -t >\/dev\/null 2>\/dev\/null/);
+	assert.match(fullPublisher, /baselineLines \| Select-Object -Last 1/);
 	assert.match(fullPublisher, /AfterChange -Scope anytls,homepage,homepage-api,visionguard/);
 	assert.match(apiHelper, /better-sqlite3/);
 	assert.match(apiHelper, /migration-probe\.sqlite/);

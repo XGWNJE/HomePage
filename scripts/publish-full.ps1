@@ -119,14 +119,15 @@ function Invoke-Remote {
     return Invoke-Native -FilePath 'ssh.exe' -Arguments ($sshArgs + @($sshTarget, $Command.Replace("`r", '')))
 }
 
-$baseline = ((Invoke-Remote -Command @'
+$baselineLines = @(Invoke-Remote -Command @'
 set -eu
 test "$(systemctl is-active homepage-api.service)" = active
-nginx -t >/dev/null
+nginx -t >/dev/null 2>/dev/null
 printf '{"frontendRelease":"%s","apiRelease":"%s"}\n' \
   "$(basename "$(readlink -f /var/www/xgwnje-home.releases/current)")" \
   "$(basename "$(readlink -f /opt/homepage-api/current)")"
-'@) -join "`n") | ConvertFrom-Json
+'@)
+$baseline = (($baselineLines | Select-Object -Last 1) -join "`n") | ConvertFrom-Json
 Test-PublicUrl -Url 'https://xgwnje.cn/'
 Test-ApiHealth -Revision ((& curl.exe --silent --show-error --location --max-time 20 'https://api.xgwnje.cn/health' | ConvertFrom-Json).revision)
 Test-PublicUrl -Url 'https://visionguard.xgwnje.cn/'
