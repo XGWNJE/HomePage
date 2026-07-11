@@ -1,0 +1,179 @@
+---
+export type TimelineStep = {
+	title: string;
+	detail: string;
+	state?: 'planned' | 'active' | 'done';
+	stateLabel?: string;
+};
+
+interface Props {
+	title: string;
+	eyebrow?: string;
+	steps: TimelineStep[];
+}
+
+const { title, eyebrow = 'Process', steps } = Astro.props;
+
+const stateLabels = {
+	planned: 'Planned',
+	active: 'In progress',
+	done: 'Ready',
+} as const;
+---
+
+<section class="mdx-timeline not-prose" aria-label={title}>
+	<div class="mdx-timeline-heading">
+		<p class="mdx-timeline-kicker">{eyebrow}</p>
+		<h3>{title}</h3>
+	</div>
+	<ol>
+		{
+			steps.map((step, index) => {
+				const state = step.state ?? 'planned';
+				return (
+					<li data-state={state}>
+						<span class="mdx-timeline-number" aria-hidden="true">{String(index + 1).padStart(2, '0')}</span>
+						<div class="mdx-timeline-copy">
+							<div class="mdx-timeline-title-row">
+								<h4>{step.title}</h4>
+								<span class="mdx-timeline-state">{step.stateLabel ?? stateLabels[state]}</span>
+							</div>
+							<p>{step.detail}</p>
+						</div>
+					</li>
+				);
+			})
+		}
+	</ol>
+</section>
+
+<style>
+	.mdx-timeline {
+		margin: 2rem 0;
+		padding: 1.25rem 0.2rem 0.25rem;
+	}
+
+	.mdx-timeline-heading {
+		padding: 0 1.05rem;
+	}
+
+	.mdx-timeline-kicker {
+		margin: 0;
+		font-size: 0.68rem;
+		font-weight: 700;
+		letter-spacing: 0.16em;
+		text-transform: uppercase;
+		color: rgb(161 98 7);
+	}
+
+	.mdx-timeline-heading h3 {
+		margin: 0.35rem 0 0;
+		font-family: ui-serif, Georgia, Cambria, 'Times New Roman', serif;
+		font-size: 1.2rem;
+		font-weight: 650;
+		color: rgb(39 39 42);
+	}
+
+	.mdx-timeline ol {
+		margin: 1rem 0 0;
+		padding: 0;
+		list-style: none;
+	}
+
+	.mdx-timeline li {
+		display: grid;
+		grid-template-columns: 2.75rem minmax(0, 1fr);
+		gap: 0.75rem;
+		padding: 0.7rem 1.05rem;
+		border-top: 1px solid rgb(228 228 231);
+	}
+
+	.mdx-timeline li:last-child {
+		border-bottom: 1px solid rgb(228 228 231);
+	}
+
+	.mdx-timeline-number {
+		padding-top: 0.1rem;
+		font-size: 0.72rem;
+		font-weight: 700;
+		letter-spacing: 0.08em;
+		color: rgb(161 98 7);
+	}
+
+	.mdx-timeline-title-row {
+		display: flex;
+		align-items: baseline;
+		justify-content: space-between;
+		gap: 0.75rem;
+	}
+
+	.mdx-timeline h4 {
+		margin: 0;
+		font-size: 0.95rem;
+		font-weight: 650;
+		color: rgb(39 39 42);
+	}
+
+	.mdx-timeline-state {
+		flex: 0 0 auto;
+		font-size: 0.67rem;
+		font-weight: 700;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		color: rgb(113 113 122);
+	}
+
+	.mdx-timeline li[data-state='active'] .mdx-timeline-number,
+	.mdx-timeline li[data-state='active'] .mdx-timeline-state {
+		color: rgb(37 99 235);
+	}
+
+	.mdx-timeline li[data-state='done'] .mdx-timeline-number,
+	.mdx-timeline li[data-state='done'] .mdx-timeline-state {
+		color: rgb(5 150 105);
+	}
+
+	.mdx-timeline p {
+		margin: 0.3rem 0 0;
+		font-size: 0.875rem;
+		line-height: 1.65;
+		color: rgb(82 82 91);
+	}
+
+	:global(html.dark) .mdx-timeline-kicker,
+	:global(html.dark) .mdx-timeline-number {
+		color: rgb(226 190 110);
+	}
+
+	:global(html.dark) .mdx-timeline-heading h3,
+	:global(html.dark) .mdx-timeline h4 {
+		color: rgb(244 244 245);
+	}
+
+	:global(html.dark) .mdx-timeline li,
+	:global(html.dark) .mdx-timeline li:last-child {
+		border-color: rgb(63 63 70);
+	}
+
+	:global(html.dark) .mdx-timeline-state,
+	:global(html.dark) .mdx-timeline p {
+		color: rgb(161 161 170);
+	}
+
+	@media (max-width: 32rem) {
+		.mdx-timeline {
+			padding-inline: 0;
+		}
+
+		.mdx-timeline li {
+			grid-template-columns: 2.25rem minmax(0, 1fr);
+			padding-inline: 0.8rem;
+		}
+
+		.mdx-timeline-title-row {
+			align-items: flex-start;
+			flex-direction: column;
+			gap: 0.2rem;
+		}
+	}
+</style>

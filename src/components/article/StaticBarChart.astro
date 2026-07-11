@@ -1,0 +1,161 @@
+---
+export type ChartItem = {
+	label: string;
+	value: number;
+	note?: string;
+	tone?: 'gold' | 'blue' | 'rose';
+};
+
+interface Props {
+	id: string;
+	title: string;
+	eyebrow?: string;
+	description?: string;
+	unit?: string;
+	items: ChartItem[];
+}
+
+const { id, title, eyebrow = 'Static chart', description, unit = '', items } = Astro.props;
+const maximum = Math.max(1, ...items.map((item) => item.value));
+---
+
+<figure class="mdx-bar-chart not-prose" aria-labelledby={`${id}-title`}>
+	<figcaption>
+		<p class="mdx-chart-kicker">{eyebrow}</p>
+		<h3 id={`${id}-title`}>{title}</h3>
+		{description && <p class="mdx-chart-description">{description}</p>}
+	</figcaption>
+	<div class="mdx-chart-bars" role="list">
+		{
+			items.map((item) => {
+				const percentage = Math.max(6, Math.round((item.value / maximum) * 100));
+				return (
+					<div class="mdx-chart-row" role="listitem">
+						<div class="mdx-chart-label-row">
+							<span>{item.label}</span>
+							<strong>{item.value}{unit}</strong>
+						</div>
+						<div class="mdx-chart-track" aria-label={`${item.label}: ${item.value}${unit}`}>
+							<span
+								class:list={['mdx-chart-bar', `mdx-chart-bar--${item.tone ?? 'gold'}`]}
+								style={`--mdx-bar-size: ${percentage}%`}
+							></span>
+						</div>
+						{item.note && <p>{item.note}</p>}
+					</div>
+				);
+			})
+		}
+	</div>
+</figure>
+
+<style>
+	.mdx-bar-chart {
+		margin: 2rem 0;
+		padding: 1.25rem;
+		border: 1px solid rgb(228 228 231);
+		border-radius: 1.25rem;
+		background-color: rgb(250 250 249);
+		background-image: linear-gradient(rgba(161, 98, 7, 0.055) 1px, transparent 1px), linear-gradient(90deg, rgba(161, 98, 7, 0.055) 1px, transparent 1px);
+		background-size: 1.15rem 1.15rem;
+	}
+
+	.mdx-chart-kicker {
+		margin: 0;
+		font-size: 0.68rem;
+		font-weight: 700;
+		letter-spacing: 0.16em;
+		text-transform: uppercase;
+		color: rgb(161 98 7);
+	}
+
+	.mdx-bar-chart h3 {
+		margin: 0.35rem 0 0;
+		font-family: ui-serif, Georgia, Cambria, 'Times New Roman', serif;
+		font-size: 1.2rem;
+		font-weight: 650;
+		color: rgb(39 39 42);
+	}
+
+	.mdx-chart-description {
+		margin: 0.45rem 0 0;
+		font-size: 0.875rem;
+		line-height: 1.6;
+		color: rgb(82 82 91);
+	}
+
+	.mdx-chart-bars {
+		display: grid;
+		gap: 0.9rem;
+		margin-top: 1.2rem;
+	}
+
+	.mdx-chart-label-row {
+		display: flex;
+		justify-content: space-between;
+		gap: 1rem;
+		font-size: 0.84rem;
+		color: rgb(63 63 70);
+	}
+
+	.mdx-chart-label-row strong {
+		font-variant-numeric: tabular-nums;
+		color: rgb(39 39 42);
+	}
+
+	.mdx-chart-track {
+		height: 0.55rem;
+		margin-top: 0.38rem;
+		overflow: hidden;
+		border-radius: 999px;
+		background: rgba(161, 98, 7, 0.1);
+	}
+
+	.mdx-chart-bar {
+		display: block;
+		width: var(--mdx-bar-size);
+		height: 100%;
+		border-radius: inherit;
+		background: linear-gradient(90deg, rgb(153 91 17), rgb(217 164 65));
+	}
+
+	.mdx-chart-bar--blue {
+		background: linear-gradient(90deg, rgb(29 78 216), rgb(96 165 250));
+	}
+
+	.mdx-chart-bar--rose {
+		background: linear-gradient(90deg, rgb(157 23 77), rgb(244 114 182));
+	}
+
+	.mdx-chart-row p {
+		margin: 0.28rem 0 0;
+		font-size: 0.76rem;
+		line-height: 1.45;
+		color: rgb(113 113 122);
+	}
+
+	:global(html.dark) .mdx-bar-chart {
+		border-color: rgb(63 63 70);
+		background-color: rgb(24 24 27);
+		background-image: linear-gradient(rgba(226, 190, 110, 0.08) 1px, transparent 1px), linear-gradient(90deg, rgba(226, 190, 110, 0.08) 1px, transparent 1px);
+	}
+
+	:global(html.dark) .mdx-chart-kicker {
+		color: rgb(226 190 110);
+	}
+
+	:global(html.dark) .mdx-bar-chart h3,
+	:global(html.dark) .mdx-chart-label-row strong {
+		color: rgb(244 244 245);
+	}
+
+	:global(html.dark) .mdx-chart-description,
+	:global(html.dark) .mdx-chart-label-row,
+	:global(html.dark) .mdx-chart-row p {
+		color: rgb(161 161 170);
+	}
+
+	:global(html.dark) .mdx-chart-track {
+		background: rgba(226, 190, 110, 0.13);
+	}
+</style>

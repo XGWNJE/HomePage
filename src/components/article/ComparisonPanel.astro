@@ -1,0 +1,139 @@
+---
+export type ComparisonColumn = {
+	eyebrow: string;
+	title: string;
+	description: string;
+	items: string[];
+	tone?: 'gold' | 'blue';
+};
+
+interface Props {
+	title: string;
+	eyebrow?: string;
+	columns: ComparisonColumn[];
+}
+
+const { title, eyebrow = 'Decision lens', columns } = Astro.props;
+---
+
+<section class="mdx-comparison not-prose" aria-label={title}>
+	<p class="mdx-comparison-kicker">{eyebrow}</p>
+	<h3>{title}</h3>
+	<div class="mdx-comparison-grid">
+		{
+			columns.map((column) => (
+				<section class:list={['mdx-comparison-column', `mdx-comparison-column--${column.tone ?? 'gold'}`]}>
+					<p class="mdx-comparison-eyebrow">{column.eyebrow}</p>
+					<h4>{column.title}</h4>
+					<p class="mdx-comparison-description">{column.description}</p>
+					<ul>
+						{column.items.map((item) => <li>{item}</li>)}
+					</ul>
+				</section>
+			))
+		}
+	</div>
+</section>
+
+<style>
+	.mdx-comparison {
+		margin: 2rem 0;
+		padding: 1.25rem;
+		border: 1px solid rgb(228 228 231);
+		border-radius: 1.25rem;
+		background: rgba(250, 250, 249, 0.72);
+	}
+
+	.mdx-comparison-kicker,
+	.mdx-comparison-eyebrow {
+		margin: 0;
+		font-size: 0.68rem;
+		font-weight: 700;
+		letter-spacing: 0.16em;
+		text-transform: uppercase;
+		color: rgb(161 98 7);
+	}
+
+	.mdx-comparison > h3 {
+		margin: 0.35rem 0 0;
+		font-family: ui-serif, Georgia, Cambria, 'Times New Roman', serif;
+		font-size: 1.2rem;
+		font-weight: 650;
+		color: rgb(39 39 42);
+	}
+
+	.mdx-comparison-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+		gap: 0.75rem;
+		margin-top: 1rem;
+	}
+
+	.mdx-comparison-column {
+		padding: 1rem;
+		border: 1px solid rgb(228 228 231);
+		border-radius: 0.9rem;
+		background: rgba(255, 255, 255, 0.82);
+	}
+
+	.mdx-comparison-column--blue .mdx-comparison-eyebrow {
+		color: rgb(37 99 235);
+	}
+
+	.mdx-comparison h4 {
+		margin: 0.4rem 0 0;
+		font-size: 1rem;
+		font-weight: 650;
+		color: rgb(39 39 42);
+	}
+
+	.mdx-comparison-description {
+		margin: 0.45rem 0 0;
+		font-size: 0.84rem;
+		line-height: 1.55;
+		color: rgb(82 82 91);
+	}
+
+	.mdx-comparison ul {
+		margin: 0.8rem 0 0;
+		padding: 0;
+		list-style: none;
+	}
+
+	.mdx-comparison li {
+		padding: 0.45rem 0;
+		border-top: 1px solid rgb(244 244 245);
+		font-size: 0.8rem;
+		line-height: 1.45;
+		color: rgb(63 63 70);
+	}
+
+	:global(html.dark) .mdx-comparison {
+		border-color: rgb(63 63 70);
+		background: rgba(24, 24, 27, 0.72);
+	}
+
+	:global(html.dark) .mdx-comparison-kicker,
+	:global(html.dark) .mdx-comparison-column--gold .mdx-comparison-eyebrow {
+		color: rgb(226 190 110);
+	}
+
+	:global(html.dark) .mdx-comparison > h3,
+	:global(html.dark) .mdx-comparison h4 {
+		color: rgb(244 244 245);
+	}
+
+	:global(html.dark) .mdx-comparison-column {
+		border-color: rgb(63 63 70);
+		background: rgba(24, 24, 27, 0.68);
+	}
+
+	:global(html.dark) .mdx-comparison-description,
+	:global(html.dark) .mdx-comparison li {
+		color: rgb(161 161 170);
+	}
+
+	:global(html.dark) .mdx-comparison li {
+		border-color: rgb(63 63 70);
+	}
+</style>

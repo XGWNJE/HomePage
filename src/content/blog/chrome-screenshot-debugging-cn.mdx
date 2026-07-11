@@ -1,0 +1,186 @@
+---
+title: "Codex 视觉验证为何一截图就超时：一次 Chrome 控制链路复盘"
+description: "一次发生在 Codex Desktop 真实 Chrome 视觉验收中的故障复盘：从截图超时和控制会话重置，到用单变量实验定位自定义光标的 MutationObserver 反馈循环。"
+pubDate: 2026-07-12
+updatedDate: 2026-07-12
+lang: "cn"
+author: "XGWNJE"
+group: "chrome-screenshot-debugging"
+tags: ["Chrome", "Debugging", "Frontend"]
+important: true
+importantOrder: 100
+category: "Engineering"
+---
+
+import MetricGrid from '../../components/article/MetricGrid.astro';
+import StepTimeline from '../../components/article/StepTimeline.astro';
+import StaticBarChart from '../../components/article/StaticBarChart.astro';
+import ComparisonPanel from '../../components/article/ComparisonPanel.astro';
+
+## 故障发生在 Codex 视觉验收中
+
+这次故障发生在 Codex Desktop 对本地博客进行真实 Chrome 视觉验收时。页面看起来已经正常打开：Codex 能读取标题和 URL，也能正常截取哔哩哔哩；只有本地博客 HTML 一进入截图、DOM 快照或底层 Chrome 调试命令就超时。随后 JavaScript 控制会话被重置，于是表象非常像 **Codex 的 Chrome 插件一截图就崩**。
+
+这里需要先澄清一个关键事实：Chrome 本身没有崩溃，ChatGPT Chrome 扩展也没有退出。真正被重置的是等待超时的控制会话。问题是页面渲染线程无法及时响应 Codex 发出的视觉检查指令。
+
+> [!NOTE]
+> 这不是一个“所有 Codex 截图都会失败”的通用故障。它只发生在加载了本站公共前端运行时的 HTML 页面上；远程网页、本地静态图片和图片回传链路都正常。
+
+## 可复现环境
+
+为了让这篇复盘可以被复查，下面保留故障发生时的实际环境，而不是只写“Windows + Chrome”：
+
+| 层级 | 版本或状态 |
+| --- | --- |
+| 操作系统 | Windows 11 专业版 |
+| Codex | Codex Desktop；CLI `0.142.5` |
+| Codex Chrome 插件 | `chrome@openai-bundled` `26.707.31428` |
+| ChatGPT Chrome Extension | `1.2.27203.26575`，已安装并启用 |
+| Google Chrome | `150.0.7871.102` |
+| 本机桥接 | Native Messaging Host 路径、注册表和允许来源检查全部通过 |
+| 项目运行时 | Node.js `24.14.0`、npm `11.9.0`、Astro `7.0.7` |
+| 验证目标 | `http://127.0.0.1:4321/` 开发服务与 `:4322` 静态预览 |
+| Codex 检查接口 | `tab.screenshot()`、DOM snapshot、原生 CDP `Page.captureScreenshot` |
+
+这套环境信息很重要：如果只写“截图失败”，读者很容易把故障误归因到 Chrome 版本、插件安装、localhost 权限或 Astro 开发服务器。
+
+<MetricGrid
+  title="故障现场的四个关键信号"
+  eyebrow="Incident snapshot"
+  intro="这些数字不是性能跑分，而是用来切分故障边界的诊断证据。"
+  items={[
+    { label: 'Codex 超时', value: '>20 s', detail: '本地 HTML 视觉检查持续无响应', tone: 'rose' },
+    { label: '远程对照', value: '551 ms', detail: '复杂的哔哩哔哩首页可正常截图', tone: 'blue' },
+    { label: '静态对照', value: '83 ms', detail: '同一 localhost 的 PNG 可正常截图', tone: 'gold' },
+    { label: '最终改动', value: '3 guards', detail: '保留光标功能，只阻止重复写入', tone: 'blue' },
+  ]}
+/>
+
+## 先把 Codex 的视觉验证链路拆开
+
+Codex 的 Chrome 视觉验证链路至少包含三段：浏览器生成图片字节、Chrome 扩展与本机桥接返回字节、Codex 客户端显示图片。把三段塞进同一次调用，只能得到一个模糊的“超时”。
+
+于是测试被拆成独立步骤：
+
+1. 只调用截图接口，记录耗时和字节数，不显示图片。
+2. 使用已经生成的字节测试图片回传。
+3. 更换页面类型，比较空白页、远程复杂页面、本地静态资源和本地 HTML。
+
+结果很快排除了两个方向：空白页和哔哩哔哩都能生成截图，数百 KB 的图片也能在几毫秒内回传。因此问题既不是图片太大，也不是 Codex 与 Chrome 之间的扩展通信整体失效。
+
+<StaticBarChart
+  id="screenshot-boundary"
+  title="同一截图链路，不同页面的响应时间"
+  eyebrow="Controlled comparison"
+  description="修复前的本地 HTML 以 20 秒超时阈值记入；其他数值均来自实际诊断。"
+  unit=" ms"
+  items={[
+    { label: '本地 HTML（修复前）', value: 20000, note: '超过阈值后控制环境重置', tone: 'rose' },
+    { label: '哔哩哔哩首页', value: 551, note: '复杂远程页面，截图正常', tone: 'blue' },
+    { label: '本地静态 PNG', value: 83, note: '证明 localhost 和图片采集本身正常', tone: 'gold' },
+    { label: '本地 HTML（修复后）', value: 1575, note: '真实鼠标模式，自定义光标保持启用', tone: 'blue' },
+  ]}
+/>
+
+## 排除 Astro、MDX 与开发服务器
+
+接下来把 Astro 开发服务器换成生产构建的静态预览。如果是热更新、WebSocket 或 MDX 编译造成的，Codex 在静态预览上应该恢复；事实是它仍然超时。
+
+随后直接打开同一域名下的 32×32 PNG，截图只需 83 毫秒。这一步把问题进一步缩小到：**只有加载了站点公共运行时代码的 HTML 页面会卡住。**
+
+<ComparisonPanel
+  title="被排除的猜测与保留下来的证据"
+  eyebrow="Evidence, not intuition"
+  columns={[
+    {
+      eyebrow: 'Ruled out',
+      title: '不是这些原因',
+      description: '它们都能被独立对照实验否定。',
+      items: ['Chrome 未安装或扩展未启用', 'Native Messaging Host 损坏', '图片字节过大或回传失败', 'MDX 编译、Astro HMR 或 localhost 限制'],
+      tone: 'gold',
+    },
+    {
+      eyebrow: 'Still standing',
+      title: '剩下的共同变量',
+      description: '所有失败页面都会启动站点的共享前端运行时。',
+      items: ['真实鼠标被识别为精细指针', '自定义光标初始化', '页面属性监听器持续工作', '截图和 DOM 读取都需要渲染线程响应'],
+      tone: 'blue',
+    },
+  ]}
+/>
+
+## 单变量实验把范围锁到自定义光标
+
+站点只在“精细指针”环境启用自定义光标。普通鼠标属于精细指针；触摸屏通常属于非精细指针。
+
+第一次实验把 `prefers-reduced-motion` 设为减少动态效果，本地截图立即从超时恢复到 91 毫秒。这个实验说明问题位于动态效果分支，但范围仍然太大。
+
+第二次实验保留普通动画，只模拟非精细指针。截图仍然恢复，只需 175 毫秒。此时唯一被绕开的关键功能就是自定义光标，根因范围已经足够小。
+
+## 真正的根因：监听器监听了自己的写入
+
+自定义光标为了防止页面切换后原生鼠标重新出现，使用 `MutationObserver` 监听 `html` 和 `body` 的 `class`、`style`。问题在于监听回调又无条件修改同一批属性：
+
+```ts
+const suppressNativeCursor = () => {
+  document.documentElement.classList.add('has-custom-cursor');
+  document.documentElement.style.cursor = 'none';
+  if (document.body) document.body.style.cursor = 'none';
+};
+```
+
+这形成了一个反馈循环：监听器发现属性变化，回调写入属性，写入再次触发监听器。页面可能已经完成第一帧绘制，所以肉眼看起来“打开了”；但需要渲染线程配合的截图、DOM 快照和调试命令会一直等不到稳定响应。
+
+<StepTimeline
+  title="一次看似无害的写入如何变成反馈循环"
+  eyebrow="Failure loop"
+  steps={[
+    { title: '属性发生变化', detail: '主题、页面切换或光标初始化修改 html/body。', state: 'done', stateLabel: '触发' },
+    { title: 'MutationObserver 执行', detail: '监听器调用 suppressNativeCursor 恢复隐藏原生光标。', state: 'active', stateLabel: '监听' },
+    { title: '回调再次写入被监听属性', detail: 'class 和 style 即使目标状态已经正确，仍被无条件赋值。', state: 'active', stateLabel: '反馈' },
+    { title: 'Codex 视觉命令饥饿', detail: '截图、DOM 快照与 CDP 命令超时，外层控制会话随后重置。', state: 'planned', stateLabel: '表象' },
+  ]}
+/>
+
+## 修复：让状态恢复真正幂等
+
+修复没有删除自定义光标，也没有关闭动画。它只是先检查当前状态，只在确实需要变化时写入：
+
+```ts
+const suppressNativeCursor = (): void => {
+  const root = document.documentElement;
+  if (!root.classList.contains('has-custom-cursor')) root.classList.add('has-custom-cursor');
+  if (root.style.cursor !== 'none') root.style.cursor = 'none';
+  if (document.body && document.body.style.cursor !== 'none') document.body.style.cursor = 'none';
+};
+```
+
+监听器仍能在外部代码改变光标状态时恢复它；由恢复动作产生的下一次回调则发现状态已经正确，不再写入，循环自然终止。
+
+修复后由 Codex 在真实鼠标模式下重新验证：`pointer: fine` 为真、减少动态效果为假、自定义光标实例数量为 1，`tab.screenshot()` 成功返回，文章组件与页面布局均正常。
+
+## 为什么这对 Codex 用户有参考意义
+
+Codex 的视觉验证不是简单地“打开一个 URL”。它需要浏览器扩展、Native Messaging、标签页调试会话和页面渲染线程共同工作。页面标题可读、URL 正确，甚至首屏已经显示，都不能证明截图和 DOM 检查一定可用。
+
+当 Codex 出现“能导航、不能截图”的症状时，比较有效的判断顺序是：
+
+1. 用一个远程复杂页面确认 Chrome 控制能力是否整体健康。
+2. 把截图采集与图片回传分开，避免把两种失败混在一起。
+3. 在同一 localhost 上比较静态资源和真实 HTML，区分来源限制与页面运行时问题。
+4. 同时测试截图、DOM 快照和 CDP；三者一起卡住时，优先怀疑渲染线程或调试会话，而不是图片格式。
+5. 观察控制会话重置与 Chrome 进程退出是不是同一件事，不要把超时自动称为“浏览器崩溃”。
+
+## 这次故障留下的工程习惯
+
+> 先拆链路，再做单变量实验。不要让最显眼的失败动作自动成为“根因”。
+
+这次最有价值的并不是三行条件判断，而是一条可重复的诊断路径：
+
+1. 把失败动作拆成采集、传输、显示等独立阶段。
+2. 建立空白、远程、本地静态和本地动态页面的对照组。
+3. 每次只改变一个环境变量，并记录可比较的结果。
+4. 用运行证据缩小范围，再回到源码寻找能解释全部现象的机制。
+5. 修复后验证原功能仍在，而不是只确认错误消失。
+
+Codex 的截图没有“神秘地拖垮 Chrome”。真正的问题是一段试图维持视觉一致性的页面代码，意外制造了自我强化的反馈循环。把 Codex、扩展、传输和页面渲染拆成可测量的边界，复杂故障就会重新变得具体。

@@ -38,6 +38,10 @@
 | `TerminalQuote.astro` | 首页终端打字卡；不要在 About 重新使用 |
 | `CharacterDialogue.astro` | 桑多涅与站长对话；站长默认使用黑猫 |
 | `Comment.astro` | 登录态评论和回复 |
+| `components/article/MetricGrid.astro` | MDX 的指标概览卡；适合少量可比较的数字或状态 |
+| `components/article/StepTimeline.astro` | MDX 的步骤时间线；用 `planned`、`active`、`done` 表达状态 |
+| `components/article/StaticBarChart.astro` | 构建期静态柱状图；不引入图表库或客户端脚本 |
+| `components/article/ComparisonPanel.astro` | MDX 的两列或多列取舍对比；适合决策说明 |
 
 ### 弹窗
 

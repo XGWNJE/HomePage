@@ -31,9 +31,10 @@ export const initCursor = (): void => {
 	const observedBodies = new WeakSet<HTMLElement>();
 
 	const suppressNativeCursor = (): void => {
-		document.documentElement.classList.add('has-custom-cursor');
-		document.documentElement.style.cursor = 'none';
-		if (document.body) document.body.style.cursor = 'none';
+		const root = document.documentElement;
+		if (!root.classList.contains('has-custom-cursor')) root.classList.add('has-custom-cursor');
+		if (root.style.cursor !== 'none') root.style.cursor = 'none';
+		if (document.body && document.body.style.cursor !== 'none') document.body.style.cursor = 'none';
 	};
 
 	const ensureCursor = (): HTMLDivElement => {
