@@ -1,31 +1,23 @@
 /*
- * One-shot brand asset generator.
- * Builds a neutral temporary favicon set for the site. The icon is intentionally
- * generic so it can be replaced later without changing head metadata.
+ * One-shot site icon generator.
+ * Builds the browser, Apple Touch, and fallback avatar icon set from the
+ * committed square source image.
  *
  *   node scripts/generate-brand-assets.mjs
  */
-import { writeFile } from 'node:fs/promises';
+import { readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import sharp from 'sharp';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const publicDir = path.join(root, 'public');
+const sourcePath = path.join(root, 'src', 'assets', 'site-icon-source.png');
 
-const iconSvg = (size = 512) => `<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${size} ${size}" data-generic-site-icon="xgwnje">
-  <rect width="${size}" height="${size}" rx="${size * 0.22}" fill="#18181b"/>
-  <rect x="${size * 0.08}" y="${size * 0.08}" width="${size * 0.84}" height="${size * 0.84}" rx="${size * 0.18}" fill="#ffffff" opacity="0.06"/>
-  <rect x="${size * 0.08}" y="${size * 0.08}" width="${size * 0.84}" height="${size * 0.84}" rx="${size * 0.18}" fill="none" stroke="#ffffff" stroke-opacity="0.18" stroke-width="${size * 0.025}"/>
-  <path d="M ${size * 0.32} ${size * 0.30} L ${size * 0.68} ${size * 0.70} M ${size * 0.68} ${size * 0.30} L ${size * 0.32} ${size * 0.70}" fill="none" stroke="#f8fafc" stroke-width="${size * 0.105}" stroke-linecap="round"/>
-  <path d="M ${size * 0.31} ${size * 0.76} H ${size * 0.69}" fill="none" stroke="#d6b35f" stroke-width="${size * 0.045}" stroke-linecap="round"/>
-</svg>`;
-
-const renderPng = async (size) =>
-	sharp(Buffer.from(iconSvg(size)))
-		.resize(size, size, { fit: 'contain' })
-		.png()
+const renderPng = async (source, size) =>
+	sharp(source)
+		.resize(size, size, { fit: 'cover', position: 'centre' })
+		.png({ compressionLevel: 9, palette: size <= 48 })
 		.toBuffer();
 
 // ICO container with PNG-compressed entries (supported since Windows Vista / all browsers).
@@ -56,8 +48,9 @@ const buildIco = (entries) => {
 };
 
 const main = async () => {
+	const source = await readFile(sourcePath);
 	const [png16, png32, png48, png180, png192, png512] = await Promise.all(
-		[16, 32, 48, 180, 192, 512].map(renderPng)
+		[16, 32, 48, 180, 192, 512].map((size) => renderPng(source, size))
 	);
 
 	const ico = buildIco([
@@ -69,14 +62,13 @@ const main = async () => {
 	await Promise.all([
 		writeFile(path.join(publicDir, 'favicon.ico'), ico),
 		writeFile(path.join(publicDir, 'image', 'favicon.ico'), ico),
-		writeFile(path.join(publicDir, 'favicon.svg'), iconSvg(64)),
 		writeFile(path.join(publicDir, 'image', 'favicon-32.png'), png32),
 		writeFile(path.join(publicDir, 'image', 'favicon-192.png'), png192),
 		writeFile(path.join(publicDir, 'image', 'favicon-512.png'), png512),
 		writeFile(path.join(publicDir, 'image', 'apple-touch-icon.png'), png180),
 	]);
 
-	console.log('Generic favicon set generated');
+	console.log('Site icon set generated from src/assets/site-icon-source.png');
 };
 
 await main();

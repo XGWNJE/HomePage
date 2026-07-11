@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import sharp from 'sharp';
 
 const failures = [];
@@ -11,15 +11,18 @@ const readText = (path) => readFileSync(path, 'utf8');
 const head = readText('src/components/BaseHead.astro');
 const constants = readText('src/consts.ts');
 const generator = readText('scripts/generate-brand-assets.mjs');
-const faviconSvg = readText('public/favicon.svg');
 
-assert(!head.includes('original avatar'), 'BaseHead should not describe the favicon set as avatar-derived.');
-assert(!generator.includes('circle-cropped'), 'Brand generator should not describe avatar circle cropping.');
-assert(!generator.includes('const SOURCE'), 'Brand generator should not depend on the old avatar source image.');
-assert(!faviconSvg.includes('<image'), 'SVG favicon should be vector, not a PNG-embedded avatar.');
-assert(faviconSvg.includes('data-generic-site-icon'), 'SVG favicon should be the generic site icon.');
+assert(head.includes('image/favicon.ico'), 'BaseHead should reference the generated ICO favicon.');
+assert(head.includes('image/favicon-32.png'), 'BaseHead should reference the generated 32px PNG favicon.');
+assert(!head.includes('favicon.svg'), 'BaseHead should not prefer the retired generic SVG favicon.');
+assert(!existsSync('public/favicon.svg'), 'The retired generic SVG favicon should be removed.');
+assert(existsSync('src/assets/site-icon-source.png'), 'The committed site icon source should exist.');
+assert(generator.includes("'site-icon-source.png'"), 'Brand generator should use the committed site icon source.');
 assert(head.includes('XGWNJE — Research · Engineering · Notes'), 'Default OG alt text should match the current positioning.');
 assert(constants.includes("SITE_DESCRIPTION = 'Research · Engineering · Notes'"), 'Shared site description should match the current positioning.');
+
+const sourceMeta = await sharp('src/assets/site-icon-source.png').metadata();
+assert(sourceMeta.width === sourceMeta.height && sourceMeta.width >= 512, 'Site icon source should be square and at least 512px.');
 
 const ogMeta = await sharp('public/image/og-default.png').metadata();
 assert(ogMeta.width === 1200 && ogMeta.height === 630, 'Default OG image should be 1200x630.');

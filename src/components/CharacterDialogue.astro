@@ -1,0 +1,109 @@
+---
+import { visualAssets } from '../data/visualAssets';
+
+interface Props {
+	speaker: string;
+	role?: string;
+	avatar?: string;
+	avatarAlt?: string;
+	variant?: 'narrator' | 'owner';
+}
+
+const {
+	speaker,
+	role,
+	avatar,
+	variant = 'narrator',
+} = Astro.props as Props;
+
+const isNarrator = variant === 'narrator';
+const resolvedAvatar = avatar ?? (!isNarrator ? visualAssets.mascot.ownerDialog : undefined);
+const resolvedAvatarAlt =
+	Astro.props.avatarAlt ?? (isNarrator ? `${speaker}形象` : `代表${speaker}的黑猫形象`);
+const hasAvatar = Boolean(resolvedAvatar);
+---
+
+<aside
+	class:list={[
+		'not-prose relative isolate my-9 w-full max-w-[42rem]',
+		isNarrator ? 'mr-auto pr-2 sm:pr-8' : 'ml-auto pl-2 sm:pl-8',
+	]}
+	aria-label={`${speaker}的说明`}
+>
+	<div class="relative min-h-[7rem]">
+		{
+			hasAvatar && (
+				<>
+					<span
+						class:list={[
+							'pointer-events-none absolute bottom-0 z-0 rounded-full blur-2xl',
+							isNarrator
+								? '-left-3 h-24 w-24 bg-[rgba(181,91,78,0.18)] dark:bg-[rgba(181,91,78,0.16)]'
+								: '-right-3 h-24 w-24 bg-[rgba(194,54,49,0.15)] dark:bg-[rgba(224,64,58,0.13)]',
+						]}
+						aria-hidden="true"
+					></span>
+					<img
+						src={resolvedAvatar}
+						alt={resolvedAvatarAlt}
+						style="border: 0; outline: 0; box-shadow: none; filter: none;"
+						class:list={[
+							'dialogue-avatar pointer-events-none absolute bottom-[-0.35rem] z-30 select-none object-contain object-bottom !rounded-none !border-0 !shadow-none !outline-none',
+							isNarrator
+								? '-left-2 h-[7.35rem] w-[5.9rem] sm:h-[8.5rem] sm:w-[6.8rem]'
+								: '-right-3 h-[7.6rem] w-[7.6rem] sm:h-[8.8rem] sm:w-[8.8rem]',
+						]}
+						loading="lazy"
+					/>
+				</>
+			)
+		}
+
+		<div
+			class:list={[
+				'relative z-10 min-h-[6.5rem] border px-5 pb-5 pt-7 shadow-[0_18px_46px_rgba(37,28,24,0.08)] backdrop-blur-md dark:shadow-[0_20px_50px_rgba(0,0,0,0.24)] sm:px-6',
+				isNarrator
+					? 'ml-8 rounded-[2.4rem_2.4rem_2.4rem_0.7rem] border-[#9f5c50]/30 bg-[linear-gradient(135deg,rgba(255,247,241,0.96),rgba(255,255,255,0.92)_54%,rgba(232,247,250,0.9))] pl-[4.6rem] dark:border-[#c68672]/28 dark:bg-[linear-gradient(135deg,rgba(67,31,29,0.9),rgba(25,25,28,0.94)_58%,rgba(26,59,67,0.88))] sm:ml-11 sm:pl-[5.2rem]'
+					: 'mr-8 rounded-[2.4rem_2.4rem_0.7rem_2.4rem] border-zinc-300/70 bg-[linear-gradient(145deg,rgba(250,250,249,0.97),rgba(244,244,245,0.93)_58%,rgba(255,238,235,0.88))] pr-[4.8rem] dark:border-zinc-600/70 dark:bg-[linear-gradient(145deg,rgba(39,39,42,0.96),rgba(24,24,27,0.95)_60%,rgba(61,26,25,0.88))] sm:mr-11 sm:pr-[5.4rem]',
+			]}
+		>
+			<span
+				class:list={[
+					'pointer-events-none absolute bottom-4 h-5 w-5 rotate-45 border',
+					isNarrator
+						? '-left-[0.68rem] border-b border-l border-[#9f5c50]/30 bg-[#fff7f1] dark:border-[#c68672]/28 dark:bg-[#431f1d]'
+						: '-right-[0.68rem] border-r border-t border-zinc-300/70 bg-[#ffefec] dark:border-zinc-600/70 dark:bg-[#3d1a19]',
+				]}
+				aria-hidden="true"
+			></span>
+
+			<div
+				class:list={[
+					'absolute top-0 z-40 flex -translate-y-1/2 flex-wrap items-baseline gap-x-2 gap-y-0 rounded-full border px-3.5 py-1.5 shadow-[0_8px_20px_rgba(32,24,22,0.09)] backdrop-blur-xl',
+					isNarrator
+						? 'left-[4.25rem] border-[#9f5c50]/35 bg-[#fff8f3]/95 dark:border-[#c68672]/32 dark:bg-[#321d1c]/95 sm:left-[5rem]'
+						: 'right-[4.25rem] flex-row-reverse border-zinc-300/75 bg-white/95 dark:border-zinc-600/75 dark:bg-zinc-900/95 sm:right-[5rem]',
+				]}
+			>
+				<strong
+					class:list={[
+						'font-sans text-sm font-semibold tracking-[0.02em]',
+						isNarrator ? 'text-[#7d403d] dark:text-[#e0aaa1]' : 'text-zinc-800 dark:text-zinc-100',
+					]}
+				>
+					{speaker}
+				</strong>
+				{role && <span class="font-sans text-[11px] tracking-[0.06em] text-zinc-400 dark:text-zinc-500">{role}</span>}
+			</div>
+
+			<div
+				class:list={[
+					'font-serif text-[0.96rem] leading-7 text-zinc-700 [&_p]:m-0 dark:text-zinc-200',
+					!isNarrator && 'text-right sm:text-left',
+				]}
+			>
+				<slot />
+			</div>
+		</div>
+	</div>
+</aside>

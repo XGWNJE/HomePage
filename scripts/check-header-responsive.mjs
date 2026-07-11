@@ -31,10 +31,8 @@ assert(
 	hasClass('rss-dropdown', 'max-[430px]:hidden'),
 	'RSS control should fold away on very narrow mobile widths.'
 );
-assert(
-	hasClass('github-link-mobile', 'max-[520px]:hidden'),
-	'Mobile GitHub shortcut should fold away before the header becomes cramped.'
-);
+assert(!header.includes('GITHUB_URL'), 'Header should not duplicate the homepage GitHub shortcut.');
+assert(!header.includes('github-link-mobile'), 'Header should not render a mobile GitHub shortcut.');
 assert(
 	!hasClass('theme-toggle-mobile', 'max-[520px]:hidden'),
 	'Theme toggle should stay available on narrow mobile widths.'

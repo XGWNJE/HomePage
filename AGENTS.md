@@ -31,13 +31,19 @@ npm ci
 npm ci --prefix server
 ```
 
-统一验证入口：
+`npm run verify` 是完整验证入口，不是每次常规改动的默认动作：
 
 ```powershell
 npm run verify
 ```
 
-前端变更还要在真实浏览器验证首页、博客、标签、至少一篇文章和移动端视口。依赖登录态或扩展态时优先使用用户真实 Chrome。
+常规开发默认按影响面选择最小充分验证：只运行与变更直接相关的测试、类型检查、构建或页面检查；前端只验收受影响路由和交互，普通视觉改动使用一个代表性视口，涉及响应式布局时再覆盖桌面与移动端。
+
+前端日常预览默认使用 Codex 内置浏览器。调试时按问题选择合适载体：普通布局、交互、Console 和资源问题优先在内置浏览器定位；依赖真实登录态、用户 profile、扩展状态或 Chrome 特有行为时使用用户真实 Chrome；需要隔离复现或自动化诊断时可使用临时浏览器或终端工具，并说明选择原因。生产发布的浏览器验收仍遵循 `deploy-homepage` Skill。
+
+当内置浏览器预览是交给用户查看的结果时，应显示并保留预览标签，同时保持对应本地预览服务运行；不得在自动检查结束后立即关闭。只有用户明确表示看完、要求关闭，或新任务明确取代该预览时才清理。纯后台自动化诊断产生的临时标签不受此限制。
+
+以下情况升级为 `npm run verify` 和全站浏览器矩阵：用户明确要求端到端、全局或完整验证；准备生产发布或回滚；变更跨越前后端、认证、数据库、构建配置或共享基础组件；相关验证失败，或影响边界无法可靠判断。交付时明确列出已运行和有意跳过的验证，不得把局部验证表述为全局通过。
 
 ## 内容与资产
 
@@ -45,6 +51,14 @@ npm run verify
 - 引用 `public/` 资产前确认文件存在；删除资产前用 `rg` 检查源码、内容和文档引用。
 - 不得提交临时验证截图、构建产物、浏览器 profile、数据库、上传数据或真实密钥。README 使用的正式产品截图必须经过选择、压缩并由文档实际引用。
 - 文章迁移如带入外部图片，先保留原 URL；只有目标 CDN 已真实可用并完成逐篇校验后才迁移。
+
+## 组件与视觉复用
+
+- 开发前先查 [`docs/visual-system/ui-reuse.zh-CN.md`](./docs/visual-system/ui-reuse.zh-CN.md) 的组件地图；现有组件只差状态时先扩展 Prop 或 slot，不复制外观重画。
+- 桑多涅、站长形象和包装备用资产统一登记在 `src/data/visualAssets.ts`；页面和组件不得新增裸 `/image/sandrone/`、`/image/mascot/` 路径，也不得引用研究目录 `references/visual/sandrone/`。
+- 新增 UI 图标必须走成熟图标库或集中图标入口；现有品牌装饰 SVG 只在具名组件内维护。不得在新页面散落匿名 `<svg>`/`<path>`。
+- 背景和动效优先复用 `MeteorShower`、`GoldenSpiral`、`ParthenonColumns` 及现有进入动效，并保持 `aria-hidden`、`pointer-events: none`、z-index 和 reduced-motion 降级。
+- 运行 `npm run test:ui-reuse` 检查视觉资产存在性、字符资产入口和新增内联 SVG；详细视觉语法见 [`docs/visual-system/sandrone-visual-language.zh-CN.md`](./docs/visual-system/sandrone-visual-language.zh-CN.md)。
 
 ## 生产操作
 

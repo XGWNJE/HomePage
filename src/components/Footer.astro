@@ -11,22 +11,40 @@ const T = getUiText(DEFAULT_UI_LANG);
 ---
 
 <footer class="mt-16 border-t border-zinc-200 py-8 transition-colors duration-200 dark:border-zinc-800">
-	<div class="page-shell flex flex-col items-center justify-between gap-4 text-sm text-zinc-500 dark:text-zinc-400 md:flex-row">
-		<p class="m-0">&copy; {today.getFullYear()} XGWNJE. <span data-i18n="footer.rights">{T['footer.rights']}</span></p>
-		<button
-			type="button"
-			id="contact-button"
-			class="apple-float-chip inline-flex items-center rounded-full border border-zinc-200/80 bg-white/70 px-3.5 py-1.5 text-sm font-medium text-zinc-600 shadow-[0_10px_24px_rgba(15,23,42,0.04)] backdrop-blur-sm transition dark:border-zinc-700/80 dark:bg-zinc-950/55 dark:text-zinc-300"
+	<div class="page-shell">
+		<aside
+			hidden
+			data-motion-hint
+			class="mb-6 rounded-2xl border border-amber-200/80 bg-amber-50/70 p-4 text-amber-950 shadow-[0_14px_34px_rgba(120,79,20,0.06)] dark:border-amber-900/50 dark:bg-amber-950/20 dark:text-amber-100"
+			role="note"
+			aria-labelledby="motion-hint-title"
 		>
-			<span class="apple-float-label">
-				<span data-i18n="footer.contact">{T['footer.contact']}</span>
-				<svg viewBox="0 0 20 20" class="h-4 w-4 opacity-70" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true">
-					<path d="M3.75 6.75h12.5" stroke-linecap="round" />
-					<path d="M3.75 10h12.5" stroke-linecap="round" />
-					<path d="M3.75 13.25h8.5" stroke-linecap="round" />
-				</svg>
-			</span>
-		</button>
+			<div class="flex items-start gap-3">
+				<span class="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full bg-amber-500 shadow-[0_0_0_4px_rgba(245,158,11,0.13)] dark:bg-amber-400" aria-hidden="true"></span>
+				<div class="min-w-0">
+					<p id="motion-hint-title" class="m-0 text-sm font-semibold text-amber-950 dark:text-amber-100" data-i18n="footer.motionPaused">{T['footer.motionPaused']}</p>
+					<p class="mb-0 mt-1.5 text-sm leading-6 text-amber-900/80 dark:text-amber-200/80" data-i18n="footer.motionHelp">{T['footer.motionHelp']}</p>
+				</div>
+			</div>
+		</aside>
+
+		<div class="flex flex-col items-center justify-between gap-4 text-sm text-zinc-500 dark:text-zinc-400 md:flex-row">
+			<p class="m-0">&copy; {today.getFullYear()} XGWNJE. <span data-i18n="footer.rights">{T['footer.rights']}</span></p>
+			<button
+				type="button"
+				id="contact-button"
+				class="apple-float-chip inline-flex items-center rounded-full border border-zinc-200/80 bg-white/70 px-3.5 py-1.5 text-sm font-medium text-zinc-600 shadow-[0_10px_24px_rgba(15,23,42,0.04)] backdrop-blur-sm transition dark:border-zinc-700/80 dark:bg-zinc-950/55 dark:text-zinc-300"
+			>
+				<span class="apple-float-label">
+					<span data-i18n="footer.contact">{T['footer.contact']}</span>
+					<svg viewBox="0 0 20 20" class="h-4 w-4 opacity-70" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true">
+						<path d="M3.75 6.75h12.5" stroke-linecap="round" />
+						<path d="M3.75 10h12.5" stroke-linecap="round" />
+						<path d="M3.75 13.25h8.5" stroke-linecap="round" />
+					</svg>
+				</span>
+			</button>
+		</div>
 	</div>
 </footer>
 
@@ -41,7 +59,17 @@ const T = getUiText(DEFAULT_UI_LANG);
 			});
 		}
 	};
+	const initMotionHint = () => {
+		const hint = document.querySelector<HTMLElement>('[data-motion-hint]');
+		if (!hint || hint.dataset.motionHintReady === 'true') return;
+		hint.dataset.motionHintReady = 'true';
+		hint.hidden = !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+	};
 
 	initContactButton();
-	document.addEventListener('astro:page-load', initContactButton);
+	initMotionHint();
+	document.addEventListener('astro:page-load', () => {
+		initContactButton();
+		initMotionHint();
+	});
 </script>

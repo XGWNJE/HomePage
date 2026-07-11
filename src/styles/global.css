@@ -1978,54 +1978,6 @@ html.dark .back-to-top-progress {
 	height: 1.05rem;
 }
 
-/* --- One-stroke signature brand mark --- */
-.brand-mark {
-	display: inline-block;
-	height: 1em;
-	width: auto;
-	overflow: visible;
-	flex: none;
-}
-
-.brand-mark-path {
-	stroke-width: 7;
-	stroke-linecap: round;
-	stroke-linejoin: round;
-	stroke-dasharray: 322;
-	stroke-dashoffset: 0;
-	animation: brand-draw 1300ms cubic-bezier(0.45, 0, 0.2, 1) 150ms both;
-}
-
-html.dark .brand-mark-path {
-	stroke: url(#brand-mark-gold-dark);
-}
-
-/* Hovering the mark (or its parent link) redraws the signature. A second
-   keyframe name is required so the animation actually restarts. */
-.brand-mark:hover .brand-mark-path,
-a:hover .brand-mark .brand-mark-path,
-h1:hover .brand-mark .brand-mark-path {
-	animation: brand-draw-again 850ms cubic-bezier(0.45, 0, 0.2, 1) both;
-}
-
-@keyframes brand-draw {
-	from {
-		stroke-dashoffset: 322;
-	}
-	to {
-		stroke-dashoffset: 0;
-	}
-}
-
-@keyframes brand-draw-again {
-	from {
-		stroke-dashoffset: 322;
-	}
-	to {
-		stroke-dashoffset: 0;
-	}
-}
-
 /* --- Brand wordmark (Instrument Serif, glyph-subset loaded in BaseHead) --- */
 .brand-wordmark {
 	font-family: 'Instrument Serif', Georgia, 'Times New Roman', serif;
@@ -2414,8 +2366,4 @@ html.dark .parthenon-grp {
 		opacity: 0.4 !important;
 	}
 
-	.brand-mark-path {
-		animation: none !important;
-		stroke-dashoffset: 0 !important;
-	}
 }

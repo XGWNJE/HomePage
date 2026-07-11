@@ -31,6 +31,8 @@ const requiredKeys = [
 	'home.latestPosts',
 	'home.viewAll',
 	'footer.contact',
+	'footer.motionPaused',
+	'footer.motionHelp',
 	'login.title',
 	'contact.title',
 	'settings.title',
@@ -45,7 +47,7 @@ for (const key of requiredKeys) {
 const fileChecks = [
 	['src/components/Header.astro', ['data-ui-lang-option', 'window.__xgwnjeI18n', 'data-i18n={link.labelKey}']],
 	['src/components/MobileDrawer.astro', ['XGWNJE', 'data-i18n={link.labelKey}']],
-	['src/components/Footer.astro', ['data-i18n="footer.contact"']],
+	['src/components/Footer.astro', ['data-i18n="footer.contact"', 'data-motion-hint', 'data-i18n="footer.motionPaused"', 'data-i18n="footer.motionHelp"']],
 	['src/components/LoginModal.astro', ['data-i18n="login.title"']],
 	['src/components/ContactModal.astro', ['data-i18n="contact.title"']],
 	['src/components/SettingsModal.astro', ['data-i18n="settings.title"']],

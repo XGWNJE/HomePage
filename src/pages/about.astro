@@ -1,109 +1,192 @@
 ---
-import Layout from '../layouts/BlogPost.astro';
+import CharacterDialogue from '../components/CharacterDialogue.astro';
 import GoldenSpiral from '../components/GoldenSpiral.astro';
 import MeteorShower from '../components/MeteorShower.astro';
-import TerminalQuote from '../components/TerminalQuote.astro';
-
-const nowText =
-	'Now: turning a personal blog, GitHub projects, and daily engineering notes into a long-term, verifiable knowledge index.';
+import { visualAssets } from '../data/visualAssets';
+import Layout from '../layouts/BlogPost.astro';
 ---
 
 <Layout
-	title="关于 XGWNJE / 邢文杰"
-	description="XGWNJE / 邢文杰的个人介绍：一个关注 AI 工具、自托管服务、Android/Windows 应用、知识索引和可验证工程实践的个人技术博客。"
+	title="关于这里的主人"
+	description="站长 XGWNJE 和本站助手桑多涅随便聊了聊：关于这个人、这个网站，以及最近还在折腾的事情。"
 	pubDate={new Date('Feb 10 2026')}
 	metaMode="page"
-	heroImage="/image/about/image.png"
 	profileImage="/image/favicon-192.png"
 	relatedPostsLang="cn"
 >
 	<Fragment slot="background">
 		<GoldenSpiral />
-		<MeteorShower density={1.8} heightVh={60} />
+		<MeteorShower density={1.35} heightVh={58} />
 	</Fragment>
+
 	<div class="mx-auto max-w-3xl">
-		<p>
-			我是 <strong>XGWNJE / 邢文杰</strong>，目前公开 GitHub 资料显示我在 Shanghai。
-			这个站点是我的个人技术索引：用来整理我做过的工具、部署过的服务、踩过的坑，以及那些值得反复验证的工程判断。
-			我更关心一个东西能不能长期运行、能不能复现、能不能交给未来的自己继续维护，而不只是第一次做出来时看起来足够漂亮。
-		</p>
+		<section
+			class="not-prose relative mb-12 grid overflow-hidden rounded-[1.75rem] border border-zinc-200/85 bg-white/82 shadow-[0_28px_70px_rgba(54,39,33,0.09)] backdrop-blur-sm dark:border-zinc-700/85 dark:bg-zinc-950/78 dark:shadow-[0_30px_76px_rgba(0,0,0,0.28)] md:grid-cols-[minmax(0,1.08fr)_minmax(250px,0.92fr)]"
+			aria-labelledby="about-intro-title"
+		>
+			<div
+				class="pointer-events-none absolute inset-x-0 top-0 h-px bg-[linear-gradient(90deg,transparent,rgba(181,91,78,0.7),rgba(209,170,91,0.82),rgba(81,163,186,0.62),transparent)]"
+				aria-hidden="true"
+			></div>
 
-		<h2>我在做什么</h2>
-		<p>
-			我的项目大多围绕实际工作流展开：AI 辅助开发、自托管服务、Android 与 Windows 端工具、浏览器与桌面效率工具、
-			个人知识资产整理，以及面向真实设备和真实网络环境的验证。相比把项目写成一次性演示，我更倾向于把它们做成可部署、
-			可回滚、可测试、可记录的系统。
-		</p>
+			<div class="order-2 flex min-w-0 flex-col justify-center p-5 sm:p-7 md:order-1 md:p-8">
+				<p class="m-0 font-sans text-[11px] font-semibold uppercase tracking-[0.2em] text-[#8f5b4f] dark:text-[#d7a498]">
+					About · Conversation 001
+				</p>
+				<h2 id="about-intro-title" class="mt-3 font-sans text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100 sm:text-3xl">
+					先随便聊两句
+				</h2>
 
-		<ul>
-			<li>
-				<a href="https://github.com/XGWNJE/VisionGuard" target="_blank" rel="noreferrer">VisionGuard</a>：
-				基于 AI 的实时监控与报警系统，包含 Windows、Android 和自建服务器链路。
-			</li>
-			<li>
-				<a href="https://github.com/XGWNJE/Vigil" target="_blank" rel="noreferrer">Vigil</a>：
-				Android 通知关键词监控工具，面向静音勿扰场景下的强提醒需求。
-			</li>
-			<li>
-				<a href="https://github.com/XGWNJE/MarkPad" target="_blank" rel="noreferrer">MarkPad</a>：
-				面向触控操作的新标签页书签面板，关注卡片式书签、图标系统和日常使用手感。
-			</li>
-			<li>
-				<a href="https://github.com/XGWNJE/CmdPaster" target="_blank" rel="noreferrer">CmdPaster</a>：
-				通过拼音搜索快速粘贴命令片段的 VS Code 插件。
-			</li>
-			<li>
-				<a href="https://github.com/XGWNJE/visual-rules-collection" target="_blank" rel="noreferrer">visual-rules-collection</a>
-				和 <a href="https://github.com/XGWNJE/readme-polish" target="_blank" rel="noreferrer">readme-polish</a>：
-				把视觉规范、README 表达和 Agent 工作流沉淀成可复用材料。
-			</li>
-		</ul>
+				<CharacterDialogue
+					speaker="桑多涅"
+					role="本站助手"
+					avatar={visualAssets.sandrone.dialogChibi}
+					avatarAlt="手持记录板的 Q 版桑多涅"
+				>
+					<p>按照惯例，About 页面应该先介绍站长。你打算自己说，还是继续让我替你整理？</p>
+				</CharacterDialogue>
 
-		<h2>我的工作方式</h2>
-		<p>
-			从 Codex 协作过程看，我的工程偏好很明确：先确认真实路径、真实运行状态和真实远端，再下结论。
-			遇到问题时，我通常会要求保留证据链：本地命令输出、浏览器实际点击、服务器状态、回滚路径、部署备份和维护说明。
-			我不太喜欢“看起来应该可以”的答案，更愿意把复杂流程拆成可验证的小步骤。
-		</p>
-		<p>
-			这个博客也延续这种习惯。这里不会只放整理好的结论，也会记录工具选择、迁移过程、失败原因、替代方案和后续维护方式。
-			如果一篇文章能让几年后的我更快恢复上下文，或者让另一个遇到同类问题的人少走一点弯路，它就有价值。
-		</p>
+				<CharacterDialogue speaker="XGWNJE" role="站长" variant="owner">
+					<p>
+						我自己来吧。我是邢文杰，平时也用 XGWNJE 这个名字。我喜欢折腾软件、自动化和 AI Agent。
+						遇到不顺手的地方，我通常会先找找有没有现成方案；没有合适的，就自己试着改改。
+					</p>
+				</CharacterDialogue>
+			</div>
 
-		<h2>关于这个博客</h2>
-		<p>
-			本站前端基于
-			<a href="https://github.com/Dancncn/DansBlog" target="_blank" rel="noreferrer">Dancncn/DansBlog</a>
-			改造而来。原项目作者是 <a href="https://github.com/Dancncn" target="_blank" rel="noreferrer">Dan_Arnoux / Dancncn</a>，
-			原站点为 <a href="https://danarnoux.com/" target="_blank" rel="noreferrer">danarnoux.com</a>。
-			感谢 Dan_Arnoux 开源了这个 Astro + Tailwind 的博客基础，以及配套的
-			<a href="https://github.com/Dancncn/DansBlogs_worker" target="_blank" rel="noreferrer">DansBlogs_worker</a>
-			后端参考实现。
-		</p>
-		<p>
-			当前的 xgwnje.cn 已经替换成我的内容、身份、域名、部署方式和自托管后端。它保留了原项目优秀的阅读体验和文章组织方式，
-			同时改造成适合我长期维护的个人技术档案。
-		</p>
+			<div class="order-1 min-h-[360px] overflow-hidden border-b border-zinc-200/80 bg-[#151415] dark:border-zinc-700/80 md:order-2 md:min-h-[620px] md:border-b-0 md:border-l">
+				<img
+					src={visualAssets.sandrone.aboutObserver}
+					alt="桑多涅坐在机械档案桌前整理记录"
+					class="h-full w-full object-cover object-[center_18%]"
+					width="1003"
+					height="1568"
+					loading="eager"
+					fetchpriority="high"
+				/>
+			</div>
+		</section>
 
-		<h2>现在</h2>
-		<div class="mx-auto max-w-2xl text-left">
-			<TerminalQuote text={nowText} once={true} fixedHeight={false} />
-		</div>
+		<h2>所以，你平时在做什么？</h2>
+		<CharacterDialogue
+			speaker="桑多涅"
+			role="本站助手"
+			avatar={visualAssets.sandrone.dialogChibi}
+			avatarAlt="正在核对记录的 Q 版桑多涅"
+		>
+			<p>“试着改改”这个说法需要备注一下。有时候只是改个设置，有时候会多出一个新仓库。你最近主要在折腾什么？</p>
+		</CharacterDialogue>
+		<CharacterDialogue speaker="XGWNJE" role="站长" variant="owner">
+			<p>
+				主要是 AI Agent、自动化和个人工具。很多尝试都从日常遇到的小问题开始：先弄清楚哪里不顺手，
+				再做一个尽量简单的解决方案。具体项目还在整理，等我觉得能讲清楚了，再慢慢放到这里。
+			</p>
+		</CharacterDialogue>
+		<CharacterDialogue
+			speaker="桑多涅"
+			role="本站助手"
+			avatar={visualAssets.sandrone.dialogChibi}
+			avatarAlt="正在补充记录的 Q 版桑多涅"
+		>
+			<p>也就是说，项目清单暂时空着。等他不再用“这个还没整理好”作为开场白，我们再补。</p>
+		</CharacterDialogue>
 
-		<h2>联系</h2>
-		<p>
-			可以通过本站的
-			<button type="button" class="contact-link" data-modal-toggle="contact">联系表单</button>
-			给我留言，也可以从页面导航进入我的 GitHub 和其他公开主页。
-		</p>
+		<h2>那为什么还要写博客？</h2>
+		<CharacterDialogue speaker="XGWNJE" role="站长" variant="owner">
+			<p>
+				因为我真的会忘。一个问题当时为什么这样处理，隔几个月再看，经常只剩下“这段代码应该有它的理由”。
+				所以我想把做过的事、踩过的坑，还有后来为什么改方向写下来。
+			</p>
+		</CharacterDialogue>
+		<CharacterDialogue
+			speaker="桑多涅"
+			role="本站助手"
+			avatar={visualAssets.sandrone.dialogChibi}
+			avatarAlt="抱着记录板的 Q 版桑多涅"
+		>
+			<p>这点我可以作证。没有记录的话，他很可能会先怀疑当初写代码的那个人，然后发现那个人就是自己。</p>
+		</CharacterDialogue>
+		<CharacterDialogue speaker="XGWNJE" role="站长" variant="owner">
+			<p>对，大概就是这个用途。如果这些记录刚好也能帮到遇到相似问题的人，那就更好了。</p>
+		</CharacterDialogue>
+
+		<h2>这个网站从哪来？</h2>
+		<CharacterDialogue speaker="XGWNJE" role="站长" variant="owner">
+			<p>
+				前端最初基于
+				<a href="https://github.com/Dancncn/DansBlog" target="_blank" rel="noreferrer">Dancncn/DansBlog</a>
+				改造。感谢 <a href="https://github.com/Dancncn" target="_blank" rel="noreferrer">Dan_Arnoux / Dancncn</a>
+				开源原有的 Astro 博客结构，以及
+				<a href="https://github.com/Dancncn/DansBlogs_worker" target="_blank" rel="noreferrer">DansBlogs_worker</a>
+				提供的后端参考。现在这里已经换成了我的内容、域名和自托管后端，日常维护也由我负责。
+			</p>
+		</CharacterDialogue>
+		<CharacterDialogue
+			speaker="桑多涅"
+			role="本站助手"
+			avatar={visualAssets.sandrone.dialogChibi}
+			avatarAlt="正在整理网站档案的 Q 版桑多涅"
+		>
+			<p>简单说，房子的框架来自开源项目，现在里面放什么、怎么收拾，是你的事。</p>
+		</CharacterDialogue>
+		<CharacterDialogue speaker="XGWNJE" role="站长" variant="owner">
+			<p>可以这么理解。</p>
+		</CharacterDialogue>
+
+		<h2>接下来呢？</h2>
+		<CharacterDialogue speaker="XGWNJE" role="站长" variant="owner">
+			<p>
+				没有特别完整的长期计划。最近主要在学习怎样和 AI Agent 更好地协作，也会继续维护手边真正用得上的东西。
+				哪个问题让我感兴趣，就先往前走一点。
+			</p>
+		</CharacterDialogue>
+		<CharacterDialogue
+			speaker="桑多涅"
+			role="本站助手"
+			avatar={visualAssets.sandrone.dialogChibi}
+			avatarAlt="给出临时结论的 Q 版桑多涅"
+		>
+			<p>结论：方向还会变，但暂时没有停下来的打算。</p>
+		</CharacterDialogue>
+		<CharacterDialogue speaker="XGWNJE" role="站长" variant="owner">
+			<p>这句可以留。</p>
+		</CharacterDialogue>
+
+		<h2>怎么联系？</h2>
+		<CharacterDialogue
+			speaker="桑多涅"
+			role="本站助手"
+			avatar={visualAssets.sandrone.dialogChibi}
+			avatarAlt="等待留言的 Q 版桑多涅"
+		>
+			<p>如果有人想聊聊呢？</p>
+		</CharacterDialogue>
+		<CharacterDialogue speaker="XGWNJE" role="站长" variant="owner">
+			<p>
+				可以通过本站的
+				<button type="button" class="contact-link" data-modal-toggle="contact">联系表单</button>
+				给我留言，也可以从首页进入 GitHub。回复可能不会特别快，但我会看。
+			</p>
+		</CharacterDialogue>
+
+		<aside class="not-prose mt-10 rounded-2xl border border-zinc-200/85 bg-zinc-50/75 px-4 py-3 text-xs leading-6 text-zinc-500 dark:border-zinc-700/85 dark:bg-zinc-900/70 dark:text-zinc-400">
+			桑多涅是本站采用的非官方虚拟助手形象；角色及原始设计相关权利归其权利人所有。
+			本站与 HoYoverse、《原神》官方不存在合作、隶属或背书关系。
+		</aside>
 	</div>
 </Layout>
 
 <script>
-	document.querySelectorAll('.contact-link').forEach(btn => {
-		btn.addEventListener('click', () => {
-			const event = new CustomEvent('open-contact-modal');
-			window.dispatchEvent(event);
+	const initContactLinks = () => {
+		document.querySelectorAll<HTMLButtonElement>('.contact-link').forEach(button => {
+			if (button.dataset.contactInitialized === 'true') return;
+			button.dataset.contactInitialized = 'true';
+			button.addEventListener('click', () => {
+				(window as any).openContactModal?.();
+			});
 		});
-	});
+	};
+
+	initContactLinks();
+	document.addEventListener('astro:page-load', initContactLinks);
 </script>
