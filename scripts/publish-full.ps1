@@ -138,7 +138,7 @@ if (-not $baselineValues.ContainsKey('frontendRelease') -or -not $baselineValues
 $baseline = [pscustomobject]@{ frontendRelease = $baselineValues['frontendRelease']; apiRelease = $baselineValues['apiRelease'] }
 Test-PublicUrl -Url 'https://xgwnje.cn/'
 Test-ApiHealth -Revision ((& curl.exe --silent --show-error --location --max-time 20 'https://api.xgwnje.cn/health' | ConvertFrom-Json).revision)
-Test-PublicUrl -Url 'https://visionguard.xgwnje.cn/'
+Test-PublicUrl -Url 'https://visionguard.xgwnje.cn/' -ExpectedStatus 404
 
 $distRoot = Join-Path $projectRoot 'dist'
 if (-not (Test-Path -LiteralPath (Join-Path $distRoot 'index.html') -PathType Leaf)) { throw 'dist/index.html is missing after preflight.' }
@@ -207,7 +207,7 @@ try {
     }
     Test-PublicUrl -Url ("https://xgwnje.cn/__full-release-probe-$releaseId") -ExpectedStatus 404
     Test-ApiHealth -Revision $head
-    Test-PublicUrl -Url 'https://visionguard.xgwnje.cn/'
+    Test-PublicUrl -Url 'https://visionguard.xgwnje.cn/' -ExpectedStatus 404
     powershell.exe -NoProfile -ExecutionPolicy Bypass -File $maintainScript -Mode AfterChange -Scope anytls,homepage,homepage-api,visionguard | Out-Host
     if ($LASTEXITCODE -ne 0) { throw 'Server-infra AfterChange failed.' }
     Invoke-Remote -Command "rm -rf $(ConvertTo-BashLiteral $remoteStaging)" | Out-Null
