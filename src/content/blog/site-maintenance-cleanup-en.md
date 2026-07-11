@@ -55,3 +55,7 @@ Changes to shared components, sign-in, databases, dependencies, or deployment co
 I want this site to be a place where I can write something when it is worth writing, without turning every post into a deployment ceremony. And when it is time for a bigger change, the process should still slow down and inspect the right things.
 
 That is what this cleanup was really for. It is not the loudest kind of update, but it should save a lot of future friction.
+
+## Postscript
+
+After publishing this post, I will change just this small note and send it through the new content fast lane. No page code, API, or server configuration changes—only a practical check that ordinary writing no longer needs to bring the whole release process along with it.
