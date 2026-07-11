@@ -37,6 +37,7 @@ for (const file of sourceFiles) {
 }
 
 const allowedInlineSvgFiles = new Set([
+	'src/components/BlogViewTabs.astro',
 	'src/components/Comment.astro',
 	'src/components/ContactModal.astro',
 	'src/components/Footer.astro',
@@ -49,10 +50,8 @@ const allowedInlineSvgFiles = new Set([
 	'src/components/SettingsModal.astro',
 	'src/components/TocDrawer.astro',
 	'src/layouts/BlogPost.astro',
-	'src/pages/blog/archive.astro',
 	'src/pages/blog/important.astro',
 	'src/pages/blog/index.astro',
-	'src/pages/blog/page/[...page].astro',
 	'src/pages/index.astro',
 	'src/pages/links/index.astro',
 ]);
@@ -64,6 +63,51 @@ for (const file of sourceFiles.filter(file => file.endsWith('.astro'))) {
 		allowedInlineSvgFiles.has(normalized),
 		`${normalized} adds inline SVG outside the current legacy allowlist; reuse the icon system or a named decoration component.`,
 	);
+}
+
+const shellPages = [
+	'src/pages/404.astro',
+	'src/pages/admin/index.astro',
+	'src/pages/blog/archive.astro',
+	'src/pages/blog/important.astro',
+	'src/pages/blog/index.astro',
+	'src/pages/blog/page/[...page].astro',
+	'src/pages/index.astro',
+	'src/pages/links/index.astro',
+	'src/pages/tags/[tag].astro',
+	'src/pages/tags/index.astro',
+];
+
+for (const file of shellPages) {
+	const source = readFileSync(file, 'utf8');
+	assert.match(source, /import SiteLayout from ['"].+\/layouts\/SiteLayout\.astro['"];/, `${file} should use SiteLayout.`);
+	assert.match(source, /<SiteLayout\b/, `${file} should render SiteLayout.`);
+	assert.doesNotMatch(source, /import (?:BaseHead|Footer|Header|MobileDrawer) from /, `${file} should not rebuild the shared site shell.`);
+}
+
+const blogViewPages = [
+	'src/pages/blog/archive.astro',
+	'src/pages/blog/important.astro',
+	'src/pages/blog/index.astro',
+	'src/pages/blog/page/[...page].astro',
+];
+
+for (const file of blogViewPages) {
+	const source = readFileSync(file, 'utf8');
+	assert.match(source, /<BlogViewTabs\b/, `${file} should reuse BlogViewTabs.`);
+	assert.doesNotMatch(source, /class=["']view-toggle/, `${file} should not duplicate the Blog view switcher.`);
+}
+
+for (const file of ['src/components/LoginModal.astro', 'src/components/SettingsModal.astro', 'src/components/ContactModal.astro']) {
+	const source = readFileSync(file, 'utf8');
+	assert.match(source, /import ModalShell from ['"]\.\/ModalShell\.astro['"];/, `${file} should reuse ModalShell.`);
+	assert.match(source, /<ModalShell\b/, `${file} should render ModalShell.`);
+	assert.match(source, /data-modal-close/, `${file} should expose a close control to ModalShell.`);
+}
+
+const modalShell = readFileSync('src/components/ModalShell.astro', 'utf8');
+for (const contract of ['role="dialog"', 'aria-modal="true"', 'aria-labelledby={titleId}', 'modal-scroll-locked', 'focusableSelector']) {
+	assert(modalShell.includes(contract), `ModalShell should preserve ${contract}.`);
 }
 
 console.log(`UI reuse contract verified (${localAssetPaths.length} visual assets registered).`);

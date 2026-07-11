@@ -1,13 +1,10 @@
 ---
-import BaseHead from '../../components/BaseHead.astro';
-import Footer from '../../components/Footer.astro';
-import Header from '../../components/Header.astro';
 import MeteorShower from '../../components/MeteorShower.astro';
-import MobileDrawer from '../../components/MobileDrawer.astro';
 import PageHeading from '../../components/PageHeading.astro';
 import { SITE_TITLE } from '../../consts';
 import { links } from '../../data/links';
 import { DEFAULT_UI_LANG, getUiText } from '../../data/i18n';
+import SiteLayout from '../../layouts/SiteLayout.astro';
 
 const MAX_TAGS = 3;
 const FRIENDS_PAGE_SIZE = 9;
@@ -38,15 +35,10 @@ const friendPagesFilled: FriendPageItem[][] = friendPages.map((items, pageIndex)
 const projectLinks = links.filter((item) => item.kind === 'project');
 ---
 
-<!doctype html>
-<html lang="zh-CN">
-	<head>
-		<BaseHead title={`GitHub Links | ${SITE_TITLE}`} description="Only the XGWNJE GitHub profile and the original DansBlog author GitHub profile are listed here." />
-	</head>
-	<body>
+<SiteLayout title={`GitHub Links | ${SITE_TITLE}`} description="Only the XGWNJE GitHub profile and the original DansBlog author GitHub profile are listed here.">
+	<Fragment slot="background">
 		<MeteorShower density={0.5} heightVh={42} />
-		<Header />
-		<MobileDrawer />
+	</Fragment>
 		<main class="links-page mx-auto max-w-6xl px-4 py-12" transition:name="page-main" transition:animate="fade">
 			<PageHeading
 				eyebrow={T['links.eyebrow']}
@@ -277,7 +269,6 @@ const projectLinks = links.filter((item) => item.kind === 'project');
 				</section>
 			)}
 		</main>
-		<Footer />
 		<script>
 			function initFriends() {
 				const prevButton = document.querySelector<HTMLButtonElement>('[data-friends-prev]');
@@ -411,5 +402,4 @@ const projectLinks = links.filter((item) => item.kind === 'project');
 				}
 			}
 		</style>
-	</body>
-</html>
+</SiteLayout>

@@ -36,12 +36,22 @@ npm run dev -- --host 127.0.0.1
 
 本地站点默认位于 `http://127.0.0.1:4321/`。后端本地开发与环境变量说明见 [后端开发](./docs/backend-development.md)。
 
-提交或发布前运行统一验证：
+明确进行软件审查、后端改动或跨模块发布时运行完整验证：
 
 ```powershell
 npm ci --prefix server
 npm run verify
 ```
+
+仅更新文章时，先提交并推送文章与 `public/image/blog/` 下的专用图片，再使用内容快速通道：
+
+```powershell
+npm run content:release:plan
+git push origin main
+npm run publish:content
+```
+
+它会自动核对生产 revision、拒绝夹带代码改动、构建完整静态站并原子切换；不会重新发布 API 或修改 Nginx。日常内容与回滚细节见 [站点维护](./docs/site-maintenance.zh-CN.md)。
 
 ## 核心能力
 
@@ -74,7 +84,7 @@ flowchart LR
 | --- | --- |
 | 文章内容 | `src/content/blog/` |
 | 页面与组件 | `src/pages/`、`src/components/` |
-| 全局样式 | `src/styles/global.css` |
+| 全局样式 | `src/styles/global.css`、`src/styles/tokens.css`、`src/styles/polish.css` |
 | 后端源码 | `server/` |
 | 日常维护 | [站点维护](./docs/site-maintenance.zh-CN.md) |
 | 全部文档 | [文档地图](./docs/index.md) |

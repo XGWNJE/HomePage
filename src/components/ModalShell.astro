@@ -1,0 +1,143 @@
+---
+interface Props {
+	id: string;
+	titleId: string;
+	contentId?: string;
+	contentClass?: string;
+}
+
+const {
+	id,
+	titleId,
+	contentId = `${id}-content`,
+	contentClass = 'w-[380px]',
+} = Astro.props;
+---
+
+<div
+	id={id}
+	data-modal-shell
+	class="fixed inset-0 z-[100] invisible flex items-center justify-center bg-black/40 opacity-0 backdrop-blur-sm transition-opacity duration-200 ease-out"
+	aria-hidden="true"
+>
+	<div
+		id={contentId}
+		data-modal-content
+		class:list={[
+			'modal-content mx-4 max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-[1.4rem] border border-zinc-200/85 bg-white/94 p-6 opacity-0 shadow-[0_28px_70px_rgba(15,23,42,0.18)] backdrop-blur-xl transition-all duration-200 ease-out dark:border-zinc-800/85 dark:bg-zinc-900/94 scale-95',
+			contentClass,
+		]}
+		role="dialog"
+		aria-modal="true"
+		aria-labelledby={titleId}
+		tabindex="-1"
+	>
+		<slot />
+	</div>
+</div>
+
+<script>
+	const focusableSelector = [
+		'a[href]',
+		'button:not([disabled])',
+		'input:not([disabled])',
+		'select:not([disabled])',
+		'textarea:not([disabled])',
+		'[tabindex]:not([tabindex="-1"])',
+	].join(',');
+
+	type ModalState = HTMLElement & {
+		_modalReturnFocus?: HTMLElement | null;
+		_modalWasOpen?: boolean;
+	};
+
+	const isOpen = (shell: HTMLElement) => shell.getAttribute('aria-hidden') === 'false';
+	const visibleShells = () => Array.from(document.querySelectorAll<HTMLElement>('[data-modal-shell]')).filter(isOpen);
+
+	const syncScrollLock = () => {
+		document.documentElement.classList.toggle('modal-scroll-locked', visibleShells().length > 0);
+	};
+
+	const requestClose = (shell: HTMLElement) => {
+		const closeButton = shell.querySelector<HTMLButtonElement>('[data-modal-close]');
+		closeButton?.click();
+	};
+
+	const syncModalState = (shell: ModalState) => {
+		const open = isOpen(shell);
+		if (open === shell._modalWasOpen) return;
+		shell._modalWasOpen = open;
+
+		if (open) {
+			shell._modalReturnFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+			queueMicrotask(() => {
+				const target = shell.querySelector<HTMLElement>('[autofocus], ' + focusableSelector)
+					?? shell.querySelector<HTMLElement>('[data-modal-content]');
+				target?.focus({ preventScroll: true });
+			});
+		} else {
+			shell._modalReturnFocus?.focus({ preventScroll: true });
+			shell._modalReturnFocus = null;
+		}
+
+		syncScrollLock();
+	};
+
+	const bindModalShells = () => {
+		document.querySelectorAll<ModalState>('[data-modal-shell]').forEach((shell) => {
+			if (shell.dataset.modalShellBound === 'true') return;
+			shell.dataset.modalShellBound = 'true';
+			shell._modalWasOpen = isOpen(shell);
+			shell.addEventListener('click', (event) => {
+				if (event.target === shell) requestClose(shell);
+			});
+			new MutationObserver(() => syncModalState(shell)).observe(shell, {
+				attributes: true,
+				attributeFilter: ['aria-hidden'],
+			});
+		});
+		syncScrollLock();
+	};
+
+	if (!(window as any).__xgwnjeModalA11yBound) {
+		(window as any).__xgwnjeModalA11yBound = true;
+		document.addEventListener('keydown', (event) => {
+			const shell = visibleShells().at(-1);
+			if (!shell) return;
+
+			if (event.key === 'Escape') {
+				event.preventDefault();
+				requestClose(shell);
+				return;
+			}
+
+			if (event.key !== 'Tab') return;
+			const focusable = Array.from(shell.querySelectorAll<HTMLElement>(focusableSelector));
+			if (!focusable.length) {
+				event.preventDefault();
+				shell.querySelector<HTMLElement>('[data-modal-content]')?.focus();
+				return;
+			}
+			const first = focusable[0];
+			const last = focusable.at(-1)!;
+			if (event.shiftKey && document.activeElement === first) {
+				event.preventDefault();
+				last.focus();
+			} else if (!event.shiftKey && document.activeElement === last) {
+				event.preventDefault();
+				first.focus();
+			}
+		});
+	}
+
+	bindModalShells();
+	document.addEventListener('astro:page-load', bindModalShells);
+	document.addEventListener('astro:after-swap', bindModalShells);
+</script>
+
+<style is:global>
+	html.modal-scroll-locked,
+	html.modal-scroll-locked body {
+		overflow: hidden;
+	}
+</style>

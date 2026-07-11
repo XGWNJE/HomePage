@@ -1,19 +1,11 @@
 ---
-import BaseHead from '../../components/BaseHead.astro';
-import Footer from '../../components/Footer.astro';
-import Header from '../../components/Header.astro';
-import MobileDrawer from '../../components/MobileDrawer.astro';
+import SiteLayout from '../../layouts/SiteLayout.astro';
 ---
 
-<!doctype html>
-<html lang="zh-CN">
-	<head>
-		<BaseHead title="管理台 | XGWNJE" description="XGWNJE 站点内容与消息管理台。" />
+<SiteLayout title="管理台 | XGWNJE" description="XGWNJE 站点内容与消息管理台。">
+	<Fragment slot="head">
 		<meta name="robots" content="noindex, nofollow" />
-	</head>
-	<body>
-		<Header />
-		<MobileDrawer />
+	</Fragment>
 		<main class="page-shell page-fade-in py-10 md:py-14" data-admin-root transition:name="page-main" transition:animate="fade">
 			<section class="mx-auto max-w-5xl">
 				<header class="border-b border-zinc-200/80 pb-7 dark:border-zinc-800/80">
@@ -74,7 +66,6 @@ import MobileDrawer from '../../components/MobileDrawer.astro';
 				</div>
 			</section>
 		</main>
-		<Footer />
 
 		<style>
 			.admin-filter { border: 1px solid rgb(228 228 231); border-radius: 9999px; background: rgba(255,255,255,.82); padding: .45rem .85rem; color: rgb(82 82 91); font-size: .8125rem; font-weight: 500; transition: border-color .18s ease, background-color .18s ease, color .18s ease; }
@@ -82,8 +73,7 @@ import MobileDrawer from '../../components/MobileDrawer.astro';
 			:global(.dark) .admin-filter { border-color: rgb(63 63 70); background: rgba(24,24,27,.78); color: rgb(212 212 216); }
 			:global(.dark) .admin-filter:hover, :global(.dark) .admin-filter[aria-pressed='true'] { border-color: rgb(113 113 122); background: rgb(244 244 245); color: rgb(24 24 27); }
 		</style>
-	</body>
-</html>
+</SiteLayout>
 
 <script>
 	import {

@@ -45,15 +45,17 @@ for (const key of requiredKeys) {
 }
 
 const fileChecks = [
-	['src/components/Header.astro', ['data-ui-lang-option', 'window.__xgwnjeI18n', 'data-i18n={link.labelKey}']],
+	['src/components/Header.astro', ['data-ui-lang-option', 'data-i18n={link.labelKey}', 'startHeaderRuntime']],
+	['src/client/site/i18n.ts', ['window.__xgwnjeI18n', 'applyLanguage', "from '../../data/i18n'"]],
 	['src/components/MobileDrawer.astro', ['XGWNJE', 'data-i18n={link.labelKey}']],
 	['src/components/Footer.astro', ['data-i18n="footer.contact"', 'data-motion-hint', 'data-i18n="footer.motionPaused"', 'data-i18n="footer.motionHelp"']],
 	['src/components/LoginModal.astro', ['data-i18n="login.title"']],
 	['src/components/ContactModal.astro', ['data-i18n="contact.title"']],
 	['src/components/SettingsModal.astro', ['data-i18n="settings.title"']],
+	['src/components/BlogViewTabs.astro', ['data-i18n={tab.labelKey}', "labelKey: 'blog.important'", "labelKey: 'blog.latest'", "labelKey: 'blog.archive'"]],
 	['src/components/Comment.astro', ['data-i18n="comments.title"']],
 	['src/pages/index.astro', ['data-i18n="home.latestPosts"', 'data-i18n="home.viewAll"']],
-	['src/pages/blog/index.astro', ['data-i18n="blog.latest"', 'data-i18n-content-lang']],
+	['src/pages/blog/index.astro', ['<BlogViewTabs', 'data-i18n-content-lang']],
 	['src/pages/tags/index.astro', ['titleKey="tags.title"']],
 	['src/pages/links/index.astro', ['data-i18n="links.projects"']],
 ];

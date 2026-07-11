@@ -20,9 +20,10 @@
 | `Header.astro` | 桌面导航、语言、RSS、主题、账号；挂载 Login/Settings 弹窗 | 不要再次单独挂载这两个弹窗 |
 | `MobileDrawer.astro` | 移动导航 | 与 Header 成套使用 |
 | `Footer.astro` | 页脚、联系入口、动态效果提示；挂载 ContactModal | 不要重复挂载 ContactModal |
+| `SiteLayout.astro` | 普通页面的 Head、桌面/移动导航、页脚与背景 slot | 新增普通页面默认使用；文章正文继续用 BlogPost |
 | `BlogPost.astro` | 文章与内容页重布局、TOC、评论、灯箱、阅读进度 | 普通轻页面不要直接当通用 Layout |
 
-普通页面目前仍重复手排壳层；后续应优先补一个轻量 `SiteLayout`，再新增普通页面。
+首页、404、管理台、链接、标签和博客列表页已统一使用 `SiteLayout`。About 与文章正文依赖文章排版和 TOC，继续使用 `BlogPost`。
 
 ### 内容展示
 
@@ -33,9 +34,21 @@
 | `TagBadges.astro` | 响应式标签与 `+N` |
 | `FormattedDate.astro` | 日期格式 |
 | `Pagination.astro` | 页码和 URL 规则 |
+| `BlogViewTabs.astro` | Blog 最新、重要、归档三视图导航；四个列表路由共用 |
 | `TerminalQuote.astro` | 首页终端打字卡；不要在 About 重新使用 |
 | `CharacterDialogue.astro` | 桑多涅与站长对话；站长默认使用黑猫 |
 | `Comment.astro` | 登录态评论和回复 |
+
+### 弹窗
+
+| 组件 | 用途 |
+| --- | --- |
+| `ModalShell.astro` | 遮罩、对话框语义、焦点循环、Escape、背景滚动锁与焦点恢复 |
+| `LoginModal.astro` | 登录方式、邮箱登录和 Turnstile 业务 |
+| `SettingsModal.astro` | 资料读取、头像/用户名更新和管理员入口业务 |
+| `ContactModal.astro` | 联系表单、Turnstile 和提交状态业务 |
+
+新增弹窗必须复用 `ModalShell`，用 `data-modal-close` 标记关闭控件；弹窗自身只维护数据请求、表单状态和专属内容。
 
 ### 目录与文章能力
 
@@ -78,10 +91,8 @@
 
 ### P1：下一次相关开发时收敛
 
-1. 新增 `BlogViewTabs.astro`，替换 Blog、Important、Archive 和分页页的四份复制。
-2. 新增轻量 `SiteLayout.astro`，收拢普通页面壳层。
-3. 新增 `ModalShell.astro`，统一三个弹窗的遮罩、焦点、Escape 和滚动锁。
-4. 建立 UI 图标集中入口；装饰 SVG 继续保留为具名组件。
+1. 建立 UI 图标集中入口；装饰 SVG 继续保留为具名组件。
+2. 将 Header 中认证、语言和主题脚本逐步迁到有类型的客户端模块。
 
 ### P2：样式系统
 

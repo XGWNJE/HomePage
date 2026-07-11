@@ -1,5 +1,7 @@
 [CmdletBinding()]
 param(
+    [ValidateSet('ContentOnly', 'FastFrontend', 'FullAudit')]
+    [string]$Mode = 'FastFrontend',
     [switch]$AllowDirty,
     [switch]$SkipVerify,
     [string]$ServerInfraRoot = 'D:\ObjectCode\Server-infra'
@@ -41,14 +43,30 @@ if ($missingKeys.Count -gt 0) {
 
 Push-Location $projectRoot
 try {
+    $verificationCommands = @()
     if (-not $SkipVerify) {
-        & npm run verify
-        if ($LASTEXITCODE -ne 0) {
-            throw "npm run verify failed with exit code $LASTEXITCODE"
+        $verificationCommands = switch ($Mode) {
+            'ContentOnly' { @('npm run content:check') }
+            'FullAudit' { @('npm run verify') }
+            default {
+                @(
+                    'npm run test:ui-reuse',
+                    'npm run typecheck',
+                    'npm run build'
+                )
+            }
+        }
+
+        foreach ($command in $verificationCommands) {
+            & cmd.exe /d /s /c $command
+            if ($LASTEXITCODE -ne 0) {
+                throw "$command failed with exit code $LASTEXITCODE"
+            }
         }
     }
 
     $result = [ordered]@{
+        mode = $Mode
         projectRoot = $projectRoot
         branch = (& git branch --show-current).Trim()
         commit = (& git rev-parse HEAD).Trim()
@@ -59,6 +77,7 @@ try {
         serverInventory = $serverEnvPath
         serverKeysPresent = $requiredServerKeys
         verification = if ($SkipVerify) { 'skipped' } else { 'passed' }
+        verificationCommands = $verificationCommands
     }
     $result | ConvertTo-Json -Depth 4
 } finally {

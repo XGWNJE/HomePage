@@ -1,22 +1,13 @@
 ---
 // ContactModal.astro - Apple-style contact form modal
 import { DEFAULT_UI_LANG, getUiText } from '../data/i18n';
+import ModalShell from './ModalShell.astro';
 
 const TURNSTILE_SITE_KEY = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
 const T = getUiText(DEFAULT_UI_LANG);
 ---
 
-<div
-	id="contact-modal"
-	class="fixed inset-0 z-[100] invisible opacity-0 flex items-center justify-center bg-black/40 backdrop-blur-sm transition-opacity duration-200 ease-out"
-	aria-hidden="true"
->
-	<div
-		class="modal-content mx-4 w-[380px] rounded-[1.4rem] border border-zinc-200/85 bg-white/94 p-6 shadow-[0_28px_70px_rgba(15,23,42,0.18)] backdrop-blur-xl transition-all duration-200 ease-out dark:border-zinc-800/85 dark:bg-zinc-900/94 scale-95 opacity-0"
-		role="dialog"
-		aria-modal="true"
-		aria-labelledby="contact-modal-title"
-	>
+<ModalShell id="contact-modal" titleId="contact-modal-title">
 		<div class="mb-6 text-center">
 			<h2 id="contact-modal-title" class="text-xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
 				<span data-i18n="contact.title">{T['contact.title']}</span>
@@ -83,12 +74,12 @@ const T = getUiText(DEFAULT_UI_LANG);
 		<button
 			type="button"
 			id="contact-modal-close"
+			data-modal-close
 			class="apple-float-chip mt-4 w-full rounded-xl border border-zinc-200/85 bg-white/72 px-4 py-2.5 text-zinc-600 shadow-[0_10px_20px_rgba(15,23,42,0.04)] transition dark:border-zinc-700/85 dark:bg-zinc-900/62 dark:text-zinc-300"
 		>
 			<span class="apple-float-label justify-center" data-i18n="actions.cancel">{T['actions.cancel']}</span>
 		</button>
-	</div>
-</div>
+</ModalShell>
 
 <script>
 	import { sendContactMessage } from '../lib/auth';
@@ -178,6 +169,7 @@ const T = getUiText(DEFAULT_UI_LANG);
 					content.classList.remove('scale-95', 'opacity-0');
 					content.classList.add('scale-100', 'opacity-100');
 				}
+				modal.setAttribute('aria-hidden', 'false');
 			});
 		};
 
@@ -197,19 +189,10 @@ const T = getUiText(DEFAULT_UI_LANG);
 			setTimeout(() => {
 				modal.classList.add('invisible');
 			}, 200);
+			modal.setAttribute('aria-hidden', 'true');
 		};
 
 		modalClose.addEventListener('click', closeModal);
-
-		modal.addEventListener('click', (e) => {
-			if (e.target === modal) closeModal();
-		});
-
-		document.addEventListener('keydown', (e) => {
-			if (e.key === 'Escape' && !modal.classList.contains('invisible')) {
-				closeModal();
-			}
-		});
 
 		// Expose open function globally
 		(window as any).openContactModal = openModal;

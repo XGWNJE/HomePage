@@ -1,12 +1,9 @@
 ---
-import BaseHead from '../../components/BaseHead.astro';
-import Footer from '../../components/Footer.astro';
-import Header from '../../components/Header.astro';
 import MeteorShower from '../../components/MeteorShower.astro';
-import MobileDrawer from '../../components/MobileDrawer.astro';
 import PageHeading from '../../components/PageHeading.astro';
 import { SITE_TITLE } from '../../consts';
 import { DEFAULT_UI_LANG, getUiText } from '../../data/i18n';
+import SiteLayout from '../../layouts/SiteLayout.astro';
 import { getPublishedPosts } from '../../utils/publishedPosts';
 import { getTagSlug, normalizeTagLabel } from '../../utils/tags';
 
@@ -50,15 +47,10 @@ const scaleFor = (count: number) => {
 };
 ---
 
-<!doctype html>
-<html lang="zh-CN">
-	<head>
-		<BaseHead title={`Browse All Tags | ${SITE_TITLE} - Find Articles by Topic`} description="Browse all topics covered in this blog. Find articles by tags including programming, Cloudflare, SEO, and technical guides." />
-	</head>
-	<body>
+<SiteLayout title={`Browse All Tags | ${SITE_TITLE} - Find Articles by Topic`} description="Browse all topics covered in this blog. Find articles by tags including programming, Cloudflare, SEO, and technical guides.">
+	<Fragment slot="background">
 		<MeteorShower density={0.5} heightVh={42} />
-		<Header />
-		<MobileDrawer />
+	</Fragment>
 		<main class="mx-auto max-w-3xl px-4 py-12" transition:name="page-main" transition:animate="fade">
 			<PageHeading
 				eyebrow={T['tags.eyebrow']}
@@ -97,6 +89,4 @@ const scaleFor = (count: number) => {
 				}
 			</div>
 		</main>
-		<Footer />
-	</body>
-</html>
+</SiteLayout>

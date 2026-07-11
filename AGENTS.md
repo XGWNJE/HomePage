@@ -43,11 +43,11 @@ npm run verify
 
 当内置浏览器预览是交给用户查看的结果时，应显示并保留预览标签，同时保持对应本地预览服务运行；不得在自动检查结束后立即关闭。只有用户明确表示看完、要求关闭，或新任务明确取代该预览时才清理。纯后台自动化诊断产生的临时标签不受此限制。
 
-以下情况升级为 `npm run verify` 和全站浏览器矩阵：用户明确要求端到端、全局或完整验证；准备生产发布或回滚；变更跨越前后端、认证、数据库、构建配置或共享基础组件；相关验证失败，或影响边界无法可靠判断。交付时明确列出已运行和有意跳过的验证，不得把局部验证表述为全局通过。
+以下情况升级为 `npm run verify` 和全站浏览器矩阵：用户明确要求软件审查、端到端、全局或完整验证；变更跨越前后端、认证、数据库、依赖锁、构建配置或共享基础组件；相关验证失败，或影响边界无法可靠判断。纯静态前端发布本身不再自动触发完整验证。交付时明确列出已运行和有意跳过的验证，不得把局部验证表述为全局通过。
 
 ## 内容与资产
 
-- 文章位于 `src/content/blog/`；中英文版本使用 `-cn` / `-en` 文件名并共享 `group`。
+- 文章位于 `src/content/blog/`；中英文版本使用 `-cn` / `-en` 文件名并共享 `group`。文章专用本地图片放在 `public/image/blog/`，以便内容快速发布通道可靠判定范围。
 - 引用 `public/` 资产前确认文件存在；删除资产前用 `rg` 检查源码、内容和文档引用。
 - 不得提交临时验证截图、构建产物、浏览器 profile、数据库、上传数据或真实密钥。README 使用的正式产品截图必须经过选择、压缩并由文档实际引用。
 - 文章迁移如带入外部图片，先保留原 URL；只有目标 CDN 已真实可用并完成逐篇校验后才迁移。
@@ -64,6 +64,8 @@ npm run verify
 
 - 不在本仓库复制服务器密码、token、私有 IP 清单或共享 Nginx/SNI 拓扑。
 - 生产发布优先使用项目级 [`deploy-homepage` Skill](./.agents/skills/deploy-homepage/SKILL.md)；前端细节见 [站点维护](./docs/site-maintenance.zh-CN.md)，后端使用版本化 `releases/current/previous` 流程，见 [后端维护](./docs/backend-maintenance.zh-CN.md)。
+- 影响边界清晰的纯静态前端发布默认使用 `FastFrontend`；用户明确要求软件审查/完整验收，或变更触及高风险边界时使用 `FullAudit`。两档都保留版本化制品、哈希、备份、原子切换、回滚和 `Server-infra AfterChange`。
+- 仅文章与 `public/image/blog/` 图片变更使用 `npm run publish:content` 的 `ContentOnly` 通道；它必须从线上 manifest revision 自动判定范围，夹带任何代码、配置或基础设施改动时拒绝并升级普通发布。
 - 修改 Nginx 前先在 `Server-infra` 核对真实配置，备份目标文件并运行 `nginx -t`；仅替换静态文件不需要 reload。
 - SQLite 与上传文件属于持久数据，不随代码 release 替换；备份必须保证 SQLite 一致性。
 

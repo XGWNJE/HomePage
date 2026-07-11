@@ -58,6 +58,9 @@ test('the root package owns frontend tooling and delegates API commands to serve
 	assert.match(packageJson.engines.npm, /10/);
 	assert.equal(packageJson.scripts['api:dev'], 'npm --prefix server start');
 	assert.equal(packageJson.scripts['test:api'], 'npm --prefix server test');
+	assert.equal(packageJson.scripts['publish:content'], 'powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/publish-content.ps1');
+	assert.match(packageJson.scripts['content:check'], /test:content-release/);
+	assert.equal(packageJson.scripts['clean:local'], 'powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/clean-local.ps1');
 	assert.equal(packageJson.scripts.postbuild, undefined);
 	assert.equal(packageJson.scripts['test:content-reset'], undefined);
 	assert.ok(packageJson.scripts.test);
@@ -74,13 +77,23 @@ test('the root package owns frontend tooling and delegates API commands to serve
 	assert.match(serverPackageJson.engines.npm, /10/);
 });
 
-test('CI installs both package boundaries and runs the Node 22 verification gate', async () => {
-	const workflow = await readFile(path.resolve('.github/workflows/ci.yml'), 'utf8');
+test('CI separates content, frontend, API, and explicit full-audit gates', async () => {
+	const frontend = await readFile(path.resolve('.github/workflows/ci.yml'), 'utf8');
+	const content = await readFile(path.resolve('.github/workflows/content-ci.yml'), 'utf8');
+	const api = await readFile(path.resolve('.github/workflows/api-ci.yml'), 'utf8');
+	const audit = await readFile(path.resolve('.github/workflows/full-audit.yml'), 'utf8');
 
-	assert.match(workflow, /node-version:\s*22/);
-	assert.match(workflow, /run:\s*npm ci\s*$/m);
-	assert.match(workflow, /run:\s*npm ci --prefix server\s*$/m);
-	assert.match(workflow, /run:\s*npm run verify\s*$/m);
+	for (const workflow of [frontend, content, api, audit]) assert.match(workflow, /node-version:\s*22/);
+	assert.match(frontend, /run:\s*npm test\s*$/m);
+	assert.match(frontend, /run:\s*npm run typecheck\s*$/m);
+	assert.match(frontend, /run:\s*npm run build\s*$/m);
+	assert.doesNotMatch(frontend, /npm ci --prefix server/);
+	assert.match(content, /src\/content\/blog\/\*\*/);
+	assert.match(content, /run:\s*npm run content:check\s*$/m);
+	assert.match(api, /run:\s*npm ci --prefix server\s*$/m);
+	assert.match(api, /run:\s*npm --prefix server test\s*$/m);
+	assert.match(audit, /workflow_dispatch/);
+	assert.match(audit, /run:\s*npm run verify\s*$/m);
 });
 
 test('Dependabot covers frontend, server, and workflow dependencies', async () => {
@@ -93,10 +106,13 @@ test('Dependabot covers frontend, server, and workflow dependencies', async () =
 
 test('document auth bootstrap uses the shared API configuration', async () => {
 	const head = await readFile(path.resolve('src/components/BaseHead.astro'), 'utf8');
+	const siteAuth = await readFile(path.resolve('src/client/site/auth.ts'), 'utf8');
 
-	assert.match(head, /import \{ API_BASE, TOKEN_KEY \} from ['"]\.\.\/lib\/config['"]/);
-	assert.match(head, /define:vars=\{\{ API_BASE, TOKEN_KEY \}\}/);
-	assert.doesNotMatch(head, /isLocalhost\s*\?/);
+	assert.match(head, /startSiteRuntime/);
+	assert.match(siteAuth, /from ['"]\.\.\/\.\.\/lib\/auth['"]/);
+	assert.match(siteAuth, /import \{ API_BASE \} from ['"]\.\.\/\.\.\/lib\/config['"]/);
+	assert.match(siteAuth, /window\.__API_BASE = API_BASE/);
+	assert.doesNotMatch(`${head}\n${siteAuth}`, /isLocalhost\s*\?/);
 });
 
 test('the project release skill preserves production safety gates', async () => {
@@ -109,16 +125,51 @@ test('the project release skill preserves production safety gates', async () => 
 		path.resolve('.agents/skills/deploy-homepage/scripts/preflight.ps1'),
 		'utf8',
 	);
+	const contentPublisher = await readFile(path.resolve('scripts/publish-content.ps1'), 'utf8');
+	const remoteFrontend = await readFile(
+		path.resolve('.agents/skills/deploy-homepage/scripts/deploy-frontend.sh'),
+		'utf8',
+	);
 
 	assert.match(skill, /^---\r?\nname: deploy-homepage\r?\ndescription: .*Use when/m);
 	assert.match(skill, /D:\\ObjectCode\\Server-infra/);
-	assert.match(skill, /npm run verify/);
+	assert.match(skill, /FastFrontend/);
+	assert.match(skill, /ContentOnly/);
+	assert.match(skill, /FullAudit/);
+	assert.match(skill, /-Mode FastFrontend/);
+	assert.match(skill, /-Mode FullAudit/);
 	assert.match(skill, /真实 Chrome/);
+	assert.match(preflight, /ValidateSet\('ContentOnly', 'FastFrontend', 'FullAudit'\)/);
+	assert.match(preflight, /@\('npm run verify'\)/);
+	assert.match(preflight, /npm run content:check/);
+	assert.match(preflight, /npm run test:ui-reuse/);
+	assert.match(preflight, /npm run typecheck/);
+	assert.match(preflight, /npm run build/);
+	assert.match(contract, /所有档位共同的安全底线/);
+	assert.match(contract, /AfterChange/);
 	assert.match(contract, /SQLite.*backup/is);
 	assert.match(contract, /nginx -t/);
 	assert.match(contract, /明确授权.*Nginx/s);
 	assert.match(contract, /current.*previous/s);
 	assert.match(contract, /worktree-<server-sha12>/);
+	assert.match(contentPublisher, /productionRevision\.\.HEAD/);
+	assert.match(contentPublisher, /ls-remote --heads origin refs\/heads\/main/);
+	assert.match(contentPublisher, /Content fast lane rejected/);
+	assert.match(contentPublisher, /StrictHostKeyChecking=yes/);
+	assert.match(contentPublisher, /-Mode AfterChange -Scope homepage,homepage-api/);
+	assert.match(contentPublisher, /Invoke-Remote -Command \$rollback/);
+	assert.match(remoteFrontend, /sha256sum -c SHA256SUMS/);
+	assert.match(remoteFrontend, /rollback_on_error/);
+	assert.match(remoteFrontend, /ln -sfn "\$release_id" "\$releases_root\/current"/);
 	assert.doesNotMatch(`${skill}\n${contract}\n${preflight}`, /212\.135\.41\.88/);
-	assert.doesNotMatch(`${skill}\n${contract}\n${preflight}`, /SSH_PASSWORD\s*=/);
+	assert.doesNotMatch(`${skill}\n${contract}\n${preflight}\n${contentPublisher}`, /SSH_PASSWORD\s*=/);
+});
+
+test('local cleanup stays inside the repository and preserves persistent data', async () => {
+	const cleanup = await readFile(path.resolve('scripts/clean-local.ps1'), 'utf8');
+
+	assert.match(cleanup, /GetFullPath/);
+	assert.match(cleanup, /StartsWith\(\$rootPrefix/);
+	assert.match(cleanup, /server-data/);
+	assert.doesNotMatch(cleanup, /Remove-Item[^\r\n]*server-data/);
 });

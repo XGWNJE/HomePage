@@ -1,0 +1,29 @@
+---
+import BaseHead from '../components/BaseHead.astro';
+import Footer from '../components/Footer.astro';
+import Header from '../components/Header.astro';
+import MobileDrawer from '../components/MobileDrawer.astro';
+
+interface Props {
+	title: string;
+	description: string;
+	lang?: string;
+}
+
+const { title, description, lang = 'zh-CN' } = Astro.props;
+---
+
+<!doctype html>
+<html lang={lang}>
+	<head>
+		<BaseHead {title} {description} />
+		<slot name="head" />
+	</head>
+	<body>
+		<slot name="background" />
+		<Header />
+		<MobileDrawer />
+		<slot />
+		<Footer />
+	</body>
+</html>

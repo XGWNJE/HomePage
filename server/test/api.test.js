@@ -321,6 +321,96 @@ test('github oauth redirects are not cacheable', async () => {
 	assert.match(callback.response.headers.get('cache-control') || '', /no-store/);
 });
 
+test('github oauth exchanges PKCE state for a local session without exposing the provider token', async () => {
+	const providerToken = 'github-provider-secret';
+	const exchangeCalls = [];
+	await withIsolatedApp({
+		fetchImpl: async (url, options = {}) => {
+			exchangeCalls.push({ url: String(url), options });
+			if (url === 'https://github.com/login/oauth/access_token') {
+				return new Response(JSON.stringify({ access_token: providerToken }), {
+					status: 200,
+					headers: { 'content-type': 'application/json' },
+				});
+			}
+			if (url === 'https://api.github.com/user') {
+				return new Response(JSON.stringify({
+					id: 4242,
+					login: 'oauth-user',
+					name: 'OAuth User',
+					avatar_url: 'https://avatars.example/oauth-user.png',
+					html_url: 'https://github.com/oauth-user',
+				}), {
+					status: 200,
+					headers: { 'content-type': 'application/json' },
+				});
+			}
+			throw new Error(`Unexpected OAuth request: ${url}`);
+		},
+	}, async ({ request: isolatedRequest, db: isolatedDb }) => {
+		const start = await isolatedRequest('/api/auth/github/start?returnTo=https%3A%2F%2Fxgwnje.cn%2Fblog%2Fdemo', {
+			redirect: 'manual',
+		});
+		assert.equal(start.response.status, 302);
+
+		const authorizeUrl = new URL(start.response.headers.get('location'));
+		const state = authorizeUrl.searchParams.get('state');
+		assert.ok(state);
+		assert.equal(authorizeUrl.searchParams.get('code_challenge_method'), 'S256');
+
+		const setCookie = start.response.headers.get('set-cookie') || '';
+		const cookieValues = Object.fromEntries(
+			[...setCookie.matchAll(/(__Host-homepage_oauth_(?:state|verifier|return))=([^;,]+)/g)]
+				.map((match) => [match[1], match[2]])
+		);
+		assert.equal(decodeURIComponent(cookieValues['__Host-homepage_oauth_state']), state);
+		assert.ok(cookieValues['__Host-homepage_oauth_verifier']);
+		assert.equal(
+			decodeURIComponent(cookieValues['__Host-homepage_oauth_return']),
+			'https://xgwnje.cn/blog/demo'
+		);
+		const callbackCookie = Object.entries(cookieValues)
+			.map(([name, value]) => `${name}=${value}`)
+			.join('; ');
+
+		const callback = await isolatedRequest(`/api/auth/github/callback?state=${encodeURIComponent(state)}&code=valid-code`, {
+			redirect: 'manual',
+			headers: { cookie: callbackCookie },
+		});
+		assert.equal(callback.response.status, 302);
+		const location = callback.response.headers.get('location') || '';
+		assert.match(location, /^https:\/\/xgwnje\.cn\/blog\/demo\/#token=[A-Za-z0-9_-]+$/);
+		assert.doesNotMatch(location, new RegExp(providerToken));
+		assert.doesNotMatch(String(callback.body), new RegExp(providerToken));
+
+		assert.equal(exchangeCalls.length, 2);
+		assert.equal(exchangeCalls[0].url, 'https://github.com/login/oauth/access_token');
+		const tokenPayload = new URLSearchParams(exchangeCalls[0].options.body);
+		assert.equal(tokenPayload.get('code'), 'valid-code');
+		assert.equal(
+			tokenPayload.get('code_verifier'),
+			decodeURIComponent(cookieValues['__Host-homepage_oauth_verifier'])
+		);
+		assert.equal(exchangeCalls[1].url, 'https://api.github.com/user');
+		assert.equal(exchangeCalls[1].options.headers.authorization, `Bearer ${providerToken}`);
+
+		const sessionToken = new URL(location).hash.replace(/^#token=/, '');
+		assert.notEqual(sessionToken, providerToken);
+		const session = isolatedDb.prepare(
+			`SELECT s.id, s.user_id, u.login, u.name
+			   FROM sessions s
+			   JOIN users u ON u.id = s.user_id
+			  WHERE s.id = ?`
+		).get(sessionToken);
+		assert.deepEqual({ ...session }, {
+			id: sessionToken,
+			user_id: 'github:4242',
+			login: 'oauth-user',
+			name: 'OAuth User',
+		});
+	});
+});
+
 test('comments require auth, approve clean text, and hide rejected html', async () => {
 	const anonymous = await request('/api/comments', {
 		method: 'POST',

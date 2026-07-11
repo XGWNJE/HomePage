@@ -2,22 +2,12 @@
 // LoginModal.astro - Solid background login modal with Apple-style animation
 import { DEFAULT_UI_LANG, getUiText } from '../data/i18n';
 import { API_BASE } from '../lib/config';
+import ModalShell from './ModalShell.astro';
 
 const TURNSTILE_SITE_KEY = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
 const T = getUiText(DEFAULT_UI_LANG);
 ---
-<div
-	id="login-modal"
-	class="fixed inset-0 z-[100] invisible opacity-0 flex items-center justify-center bg-black/40 backdrop-blur-sm transition-opacity duration-200 ease-out"
-	aria-hidden="true"
->
-	<div
-		class="modal-content mx-4 w-[360px] rounded-[1.4rem] border border-zinc-200/85 bg-white/94 p-6 shadow-[0_28px_70px_rgba(15,23,42,0.18)] backdrop-blur-xl transition-all duration-200 ease-out dark:border-zinc-800/85 dark:bg-zinc-900/94 scale-95 opacity-0"
-		role="dialog"
-		aria-modal="true"
-		aria-labelledby="login-modal-title"
-		id="login-modal-content"
-	>
+<ModalShell id="login-modal" titleId="login-modal-title" contentClass="w-[360px]">
 		<h2 id="login-modal-title" class="mb-6 text-center text-xl font-semibold text-zinc-900 dark:text-zinc-100">
 			<span data-i18n="login.title">{T['login.title']}</span>
 		</h2>
@@ -83,12 +73,12 @@ const T = getUiText(DEFAULT_UI_LANG);
 		<button
 			type="button"
 			id="login-modal-close"
+			data-modal-close
 			class="apple-float-chip mt-4 w-full rounded-xl border border-zinc-200/85 bg-white/72 px-4 py-2.5 text-zinc-600 shadow-[0_10px_20px_rgba(15,23,42,0.04)] transition dark:border-zinc-700/85 dark:bg-zinc-900/62 dark:text-zinc-300"
 		>
 			<span class="apple-float-label justify-center" data-i18n="actions.cancel">{T['actions.cancel']}</span>
 		</button>
-	</div>
-</div>
+</ModalShell>
 
 <script>
 	import { sendEmailLogin } from '../lib/auth';

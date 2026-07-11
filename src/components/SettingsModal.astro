@@ -1,22 +1,12 @@
 ---
 // SettingsModal.astro - User settings modal with avatar editing
 import { DEFAULT_UI_LANG, getUiText } from '../data/i18n';
+import ModalShell from './ModalShell.astro';
 
 const T = getUiText(DEFAULT_UI_LANG);
 ---
 
-<div
-	id="settings-modal"
-	class="fixed inset-0 z-[100] invisible opacity-0 flex items-center justify-center bg-black/40 backdrop-blur-sm transition-opacity duration-200 ease-out"
-	aria-hidden="true"
->
-	<div
-		class="modal-content mx-4 w-[380px] rounded-[1.4rem] border border-zinc-200/85 bg-white/94 p-6 shadow-[0_28px_70px_rgba(15,23,42,0.18)] backdrop-blur-xl transition-all duration-200 ease-out dark:border-zinc-800/85 dark:bg-zinc-900/94 scale-95 opacity-0"
-		role="dialog"
-		aria-modal="true"
-		aria-labelledby="settings-modal-title"
-		id="settings-modal-content"
-	>
+<ModalShell id="settings-modal" titleId="settings-modal-title">
 		<div class="flex items-center justify-between mb-6">
 			<h2 id="settings-modal-title" class="text-xl font-semibold text-zinc-900 dark:text-zinc-100">
 				<span data-i18n="settings.title">{T['settings.title']}</span>
@@ -24,6 +14,9 @@ const T = getUiText(DEFAULT_UI_LANG);
 			<button
 				type="button"
 				id="settings-modal-close"
+				data-modal-close
+				aria-label={T['actions.cancel']}
+				data-i18n-aria-label="actions.cancel"
 				class="p-1 rounded-lg text-zinc-500 hover:text-zinc-700 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:text-zinc-200 dark:hover:bg-zinc-800 transition-colors"
 			>
 				<svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
@@ -109,8 +102,7 @@ const T = getUiText(DEFAULT_UI_LANG);
 				</button>
 			</div>
 		</div>
-	</div>
-</div>
+</ModalShell>
 
 <script>
 	import { updateProfileAvatar, updateProfileUsername } from '../lib/auth';
@@ -130,6 +122,8 @@ const T = getUiText(DEFAULT_UI_LANG);
 		const adminLink = document.getElementById('settings-admin-link');
 		const fallbackAvatar = '/image/favicon-192.png';
 		const i18nText = (key: string, fallback: string) => (window as any).__xgwnjeI18n?.text?.(key) ?? fallback;
+		if (!modal || modal.dataset.settingsInitialized === 'true') return;
+		modal.dataset.settingsInitialized = 'true';
 		let currentAvatar = '';
 		let currentUsername = '';
 		let currentLogin = '';
@@ -270,9 +264,6 @@ const T = getUiText(DEFAULT_UI_LANG);
 		// Listen for custom open-settings event
 		modal?.addEventListener('open-settings', openModal);
 
-		// Close on backdrop click
-		modal?.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
-
 		// Close on close button click
 		modalClose?.addEventListener('click', closeModal);
 		saveButton?.addEventListener('click', saveAll);
@@ -282,10 +273,6 @@ const T = getUiText(DEFAULT_UI_LANG);
 			if (settingsAvatar) settingsAvatar.src = value || currentAvatar || fallbackAvatar;
 		});
 
-		// Close on Escape key
-		document.addEventListener('keydown', (e) => {
-			if (e.key === 'Escape' && modal && !modal.classList.contains('invisible')) closeModal();
-		});
 	};
 
 	initSettingsModal();

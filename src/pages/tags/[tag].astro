@@ -1,11 +1,8 @@
 ---
-import BaseHead from '../../components/BaseHead.astro';
-import Footer from '../../components/Footer.astro';
-import Header from '../../components/Header.astro';
-import MobileDrawer from '../../components/MobileDrawer.astro';
 import PostCard from '../../components/PostCard.astro';
 import { SITE_TITLE } from '../../consts';
 import { DEFAULT_UI_LANG, getUiText } from '../../data/i18n';
+import SiteLayout from '../../layouts/SiteLayout.astro';
 import { getPostLang } from '../../utils/postAnalytics';
 import { getPublishedPosts } from '../../utils/publishedPosts';
 import { getTagSlug, normalizeTagLabel } from '../../utils/tags';
@@ -39,14 +36,7 @@ const posts = (await getPublishedPosts())
 const postGroupCount = new Set(posts.map((post) => post.data.group ?? post.id.replace(/-(cn|en)$/, ''))).size;
 ---
 
-<!doctype html>
-<html lang="zh-CN">
-	<head>
-		<BaseHead title={`Tag: ${displayTag} | ${SITE_TITLE} - Articles & Tutorials`} description={tagDescription} />
-	</head>
-	<body>
-		<Header />
-		<MobileDrawer />
+<SiteLayout title={`Tag: ${displayTag} | ${SITE_TITLE} - Articles & Tutorials`} description={tagDescription}>
 		<main class="page-shell page-fade-in py-10 md:py-14" transition:name="page-main" transition:animate="fade">
 			<section class="section-enter mx-auto max-w-4xl">
 				<h1 class="text-3xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100 md:text-4xl" transition:name="page-title" transition:animate="fade">
@@ -66,6 +56,4 @@ const postGroupCount = new Set(posts.map((post) => post.data.group ?? post.id.re
 				</ul>
 			</section>
 		</main>
-		<Footer />
-	</body>
-</html>
+</SiteLayout>

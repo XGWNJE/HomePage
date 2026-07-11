@@ -1,14 +1,41 @@
-name: CI
+name: Frontend CI
 
 on:
   push:
+    paths:
+      - "src/**"
+      - "!src/content/blog/**"
+      - "public/**"
+      - "!public/image/blog/**"
+      - "scripts/**"
+      - "package.json"
+      - "package-lock.json"
+      - "astro.config.mjs"
+      - "tailwind.config.mjs"
+      - "tsconfig.json"
+      - ".agents/skills/deploy-homepage/**"
+      - ".github/workflows/ci.yml"
   pull_request:
+    paths:
+      - "src/**"
+      - "!src/content/blog/**"
+      - "public/**"
+      - "!public/image/blog/**"
+      - "scripts/**"
+      - "package.json"
+      - "package-lock.json"
+      - "astro.config.mjs"
+      - "tailwind.config.mjs"
+      - "tsconfig.json"
+      - ".agents/skills/deploy-homepage/**"
+      - ".github/workflows/ci.yml"
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
-  verify:
+  frontend:
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
@@ -21,15 +48,16 @@ jobs:
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: |
-            package-lock.json
-            server/package-lock.json
+          cache-dependency-path: package-lock.json
 
       - name: Install frontend dependencies
         run: npm ci
 
-      - name: Install API dependencies
-        run: npm ci --prefix server
+      - name: Test frontend contracts
+        run: npm test
 
-      - name: Verify project
-        run: npm run verify
+      - name: Type-check frontend
+        run: npm run typecheck
+
+      - name: Build frontend
+        run: npm run build
