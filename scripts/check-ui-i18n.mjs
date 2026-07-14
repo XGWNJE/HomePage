@@ -37,6 +37,10 @@ const requiredKeys = [
 	'contact.title',
 	'settings.title',
 	'comments.title',
+	'links.profiles',
+	'links.webEffects',
+	'links.inspiration',
+	'links.crossPlatform',
 ];
 
 for (const key of requiredKeys) {
@@ -57,7 +61,7 @@ const fileChecks = [
 	['src/pages/index.astro', ['data-i18n="home.latestPosts"', 'data-i18n="home.viewAll"']],
 	['src/pages/blog/index.astro', ['<BlogViewTabs', 'data-i18n-content-lang']],
 	['src/pages/tags/index.astro', ['titleKey="tags.title"']],
-	['src/pages/links/index.astro', ['data-i18n="links.projects"']],
+	['src/pages/links/index.astro', ['data-i18n={group.titleKey}', 'data-i18n={group.subtitleKey}', '<LinkCard']],
 ];
 
 for (const [relativePath, needles] of fileChecks) {

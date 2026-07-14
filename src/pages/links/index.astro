@@ -1,405 +1,95 @@
 ---
+import LinkCard from '../../components/LinkCard.astro';
 import MeteorShower from '../../components/MeteorShower.astro';
 import PageHeading from '../../components/PageHeading.astro';
 import { SITE_TITLE } from '../../consts';
-import { links } from '../../data/links';
+import { links, type LinkGroup } from '../../data/links';
 import { DEFAULT_UI_LANG, getUiText } from '../../data/i18n';
 import SiteLayout from '../../layouts/SiteLayout.astro';
 
-const MAX_TAGS = 3;
-const FRIENDS_PAGE_SIZE = 9;
+type LinkTextKey = Extract<keyof ReturnType<typeof getUiText>, `links.${string}`>;
+type LinkGroupDefinition = {
+	id: LinkGroup;
+	titleKey: LinkTextKey;
+	subtitleKey: LinkTextKey;
+};
+
 const base = import.meta.env.BASE_URL || '/';
 const T = getUiText(DEFAULT_UI_LANG);
-const withBase = (p: string) => `${base.replace(/\/$/, '')}/${String(p).replace(/^\//, '')}`;
-
-const friendLinks = links
-	.filter((item) => item.kind !== 'project')
-	.sort((a, b) => {
-		const order = { github: 0, bilibili: 1, project: 2 } as const;
-		return order[a.kind] - order[b.kind];
-	});
-const friendPageCount = Math.max(1, Math.ceil(friendLinks.length / FRIENDS_PAGE_SIZE));
-const friendPages = Array.from({ length: friendPageCount }, (_, index) =>
-	friendLinks.slice(index * FRIENDS_PAGE_SIZE, (index + 1) * FRIENDS_PAGE_SIZE)
-);
-type FriendCard = (typeof friendLinks)[number];
-type FriendPageItem = FriendCard | { __placeholder: true; id: string };
-const friendPagesFilled: FriendPageItem[][] = friendPages.map((items, pageIndex) => {
-	const missing = Math.max(0, FRIENDS_PAGE_SIZE - items.length);
-	const placeholders: FriendPageItem[] = Array.from({ length: missing }, (_, itemIndex) => ({
-		__placeholder: true,
-		id: `friend-placeholder-${pageIndex}-${itemIndex}`,
-	}));
-	return [...items, ...placeholders];
-});
-const projectLinks = links.filter((item) => item.kind === 'project');
+const linkGroupDefinitions: LinkGroupDefinition[] = [
+	{
+		id: 'profiles',
+		titleKey: 'links.profiles',
+		subtitleKey: 'links.profilesSubtitle',
+	},
+	{
+		id: 'web-effects',
+		titleKey: 'links.webEffects',
+		subtitleKey: 'links.webEffectsSubtitle',
+	},
+	{
+		id: 'inspiration',
+		titleKey: 'links.inspiration',
+		subtitleKey: 'links.inspirationSubtitle',
+	},
+	{
+		id: 'cross-platform',
+		titleKey: 'links.crossPlatform',
+		subtitleKey: 'links.crossPlatformSubtitle',
+	},
+];
+const linkGroups = linkGroupDefinitions
+	.map((definition) => ({ ...definition, items: links.filter((item) => item.group === definition.id) }))
+	.filter((group) => group.items.length > 0);
 ---
 
-<SiteLayout title={`GitHub Links | ${SITE_TITLE}`} description="Only the XGWNJE GitHub profile and the original DansBlog author GitHub profile are listed here.">
+<SiteLayout title={`Links & Inspiration | ${SITE_TITLE}`} description="Personal profiles and a curated reference library for web, cross-platform, and native visual effects.">
 	<Fragment slot="background">
 		<MeteorShower density={0.5} heightVh={42} />
 	</Fragment>
-		<main class="links-page mx-auto max-w-6xl px-4 py-12" transition:name="page-main" transition:animate="fade">
-			<PageHeading
-				eyebrow={T['links.eyebrow']}
-				eyebrowKey="links.eyebrow"
-				title={T['links.title']}
-				titleKey="links.title"
-				accent={T['links.accent']}
-				accentKey="links.accent"
-				subtitle={T['links.subtitle']}
-				subtitleKey="links.subtitle"
-			/>
+	<main class="links-page mx-auto max-w-6xl px-4 py-12" transition:name="page-main" transition:animate="fade">
+		<PageHeading
+			eyebrow={T['links.eyebrow']}
+			eyebrowKey="links.eyebrow"
+			title={T['links.title']}
+			titleKey="links.title"
+			accent={T['links.accent']}
+			accentKey="links.accent"
+			subtitle={T['links.subtitle']}
+			subtitleKey="links.subtitle"
+		/>
 
-			<section class="mt-8">
-				<div class="flex items-center justify-between gap-4">
-					<h2 class="flex items-center gap-2.5 text-sm font-semibold uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400">
-						<span class="h-px w-6 bg-gradient-to-r from-[rgb(180,126,36)] to-transparent dark:from-[rgb(226,190,110)]"></span>
-						<span data-i18n="links.friends">{T['links.friends']}</span>
-					</h2>
-					{friendPageCount > 1 && (
-						<div class="friends-pager inline-flex items-center gap-2 rounded-2xl border border-zinc-200/80 bg-white/80 p-1.5 shadow-[0_8px_24px_rgba(15,23,42,0.06)] backdrop-blur-md dark:border-zinc-800/80 dark:bg-zinc-950/70">
-							<button
-								type="button"
-								class="friends-pager-button inline-flex h-10 min-w-[72px] items-center justify-center rounded-xl px-3.5 text-sm font-medium text-zinc-700 transition-all duration-220 ease-[cubic-bezier(0.22,1,0.36,1)] hover:-translate-y-0.5 hover:bg-zinc-100/85 hover:text-zinc-900 hover:shadow-sm dark:text-zinc-200 dark:hover:bg-zinc-800/85 is-hidden"
-								data-friends-prev
-								aria-label={T['actions.prev']}
-								data-i18n-aria-label="actions.prev"
-							>
-								<span data-i18n="actions.prev">{T['actions.prev']}</span>
-							</button>
-							<span class="friends-pager-status min-w-[56px] text-center text-sm font-medium text-zinc-500 dark:text-zinc-400" data-friends-pagination-status>1 / {friendPageCount}</span>
-							<button
-								type="button"
-								class="friends-pager-button inline-flex h-10 min-w-[72px] items-center justify-center rounded-xl px-3.5 text-sm font-medium text-zinc-700 transition-all duration-220 ease-[cubic-bezier(0.22,1,0.36,1)] hover:-translate-y-0.5 hover:bg-zinc-100/85 hover:text-zinc-900 hover:shadow-sm dark:text-zinc-200 dark:hover:bg-zinc-800/85"
-								data-friends-next
-								aria-label={T['actions.next']}
-								data-i18n-aria-label="actions.next"
-							>
-								<span data-i18n="actions.next">{T['actions.next']}</span>
-							</button>
-						</div>
-					)}
-				</div>
-				<div class="mt-4">
-					<div
-						class="grid grid-cols-1 gap-6 opacity-100 transition-[opacity,transform] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] sm:grid-cols-2 lg:grid-cols-3"
-						data-friends-grid
-					>
-					</div>
-					<div class="hidden" data-friends-pages-store>
-						{
-							friendPagesFilled.map((pageItems, pageIndex) => (
-								<div data-friends-store-page={pageIndex}>
-									{
-										pageItems.map((item) => {
-											if ('__placeholder' in item) {
-												return (
-													<article
-														class="min-h-[210px] rounded-2xl border border-zinc-200 bg-white/90 p-5 opacity-0 pointer-events-none shadow-sm dark:border-zinc-800 dark:bg-zinc-950/80"
-														aria-hidden="true"
-													/>
-												);
-											}
-
-											const tags = item.tags ?? [];
-											const shown = tags.slice(0, MAX_TAGS);
-											const more = Math.max(tags.length - shown.length, 0);
-											const firstLetter = item.name.trim().charAt(0).toUpperCase() || 'L';
-											const githubAvatar = item.github ? `https://github.com/${item.github}.png?size=160` : null;
-											const avatarSrc = item.avatar
-  ? (item.avatar.startsWith('http://') || item.avatar.startsWith('https://'))
-    ? item.avatar
-    : withBase(item.avatar)
-  : githubAvatar;
-
-											return (
-												<article class="card-spotlight group relative min-h-[210px] rounded-2xl border border-zinc-200 bg-white/90 p-5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-zinc-300 hover:shadow-md dark:border-zinc-800 dark:bg-zinc-950/80 dark:hover:border-zinc-600">
-													<div class="flex min-w-0 items-start justify-between gap-3">
-														<div class="flex min-w-0 items-center gap-3">
-															{avatarSrc ? (
-																<img
-																	src={avatarSrc}
-																	alt={`${item.name} avatar`}
-																	class="h-11 w-11 rounded-full border border-zinc-200 object-cover dark:border-zinc-700"
-																	loading="lazy"
-																/>
-															) : (
-																<span class="inline-flex h-11 w-11 items-center justify-center rounded-full border border-zinc-200 bg-zinc-100 text-sm font-semibold text-zinc-700 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200">
-																	{firstLetter}
-																</span>
-															)}
-															<div class="min-w-0">
-																<h3 class="break-words text-base font-semibold text-zinc-900 dark:text-zinc-100">{item.name}</h3>
-															</div>
-														</div>
-														<div class="flex items-center gap-2">
-															{item.bilibili && (
-																<a
-																	href={item.bilibili}
-																	target="_blank"
-																	rel="noreferrer"
-																	class="icon-button inline-flex h-8 w-8 items-center justify-center rounded-xl border border-zinc-200 text-zinc-600 transition-colors hover:border-zinc-400 hover:text-zinc-900 dark:border-zinc-700 dark:text-zinc-300 dark:hover:border-zinc-500 dark:hover:text-zinc-100"
-																	aria-label={`${item.name} Bilibili`}
-																>
-																	<svg viewBox="0 0 24 24" class="h-4 w-4 fill-current" aria-hidden="true">
-																		<path d="M7.4 2.8a1 1 0 0 1 1.4 0L12 6l3.2-3.2a1 1 0 1 1 1.4 1.4L14.5 6.3h3.8A3.7 3.7 0 0 1 22 10v8.3A3.7 3.7 0 0 1 18.3 22H5.7A3.7 3.7 0 0 1 2 18.3V10a3.7 3.7 0 0 1 3.7-3.7h3.8L7.4 4.2a1 1 0 0 1 0-1.4ZM5.7 8.3A1.7 1.7 0 0 0 4 10v8.3c0 .9.8 1.7 1.7 1.7h12.6c.9 0 1.7-.8 1.7-1.7V10c0-.9-.8-1.7-1.7-1.7H5.7Zm1.8 3a1 1 0 0 1 1 1v3.4a1 1 0 1 1-2 0v-3.4a1 1 0 0 1 1-1Zm9 0a1 1 0 0 1 1 1v3.4a1 1 0 1 1-2 0v-3.4a1 1 0 0 1 1-1Z" />
-																	</svg>
-																	<span class="sr-only">Bilibili</span>
-																</a>
-															)}
-											{item.url && (
-												<a
-													href={item.url}
-													target="_blank"
-													rel="noreferrer"
-													class="apple-visit-button inline-flex items-center rounded-xl border border-zinc-200/70 bg-white/56 px-2.5 py-1.5 text-xs font-medium text-zinc-700 no-underline backdrop-blur-sm dark:border-zinc-700/75 dark:bg-zinc-950/36 dark:text-zinc-200"
-												>
-														<span class="apple-visit-label">
-														<span data-i18n="actions.visit">{T['actions.visit']}</span>
-														<span class="apple-visit-emoji" aria-hidden="true">↗</span>
-													</span>
-												</a>
-											)}
-														</div>
-													</div>
-
-													{item.description && (
-														<p class="friends-desc-clamp mt-4 break-words text-sm leading-6 text-zinc-600 dark:text-zinc-300">{item.description}</p>
-													)}
-
-													{tags.length > 0 && (
-														<div class="mt-4 flex flex-wrap gap-1.5">
-															{shown.map((tag) => (
-																<span class="inline-flex items-center rounded-full bg-zinc-100 px-2 py-0.5 text-xs text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
-																	{tag}
-																</span>
-															))}
-															{more > 0 && (
-																<span class="inline-flex items-center rounded-full bg-zinc-100 px-2 py-0.5 text-xs text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
-																	+{more}
-																</span>
-															)}
-														</div>
-													)}
-												</article>
-											);
-										})
-									}
-								</div>
-							))
-						}
-					</div>
-				</div>
-			</section>
-
-			{projectLinks.length > 0 && (
-				<section class="section-enter section-enter-delay-1 mt-14">
+		{
+			linkGroups.map((group, groupIndex) => (
+				<section class:list={['section-enter', groupIndex > 0 ? 'mt-14' : 'mt-8']}>
 					<div class="mb-4">
 						<h2 class="flex items-center gap-2.5 text-sm font-semibold uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400">
 							<span class="h-px w-6 bg-gradient-to-r from-[rgb(180,126,36)] to-transparent dark:from-[rgb(226,190,110)]"></span>
-							<span data-i18n="links.projects">{T['links.projects']}</span>
+							<span data-i18n={group.titleKey}>{T[group.titleKey]}</span>
 						</h2>
-						<p class="mt-2 text-sm text-zinc-500 dark:text-zinc-400" data-i18n="links.projectsSubtitle">{T['links.projectsSubtitle']}</p>
+						<p class="mt-2 text-sm text-zinc-500 dark:text-zinc-400" data-i18n={group.subtitleKey}>{T[group.subtitleKey]}</p>
 					</div>
-					<div class="mt-4 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+					<div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
 						{
-							projectLinks.map((item, idx) => {
-								const tags = item.tags ?? [];
-								const visibleTags = tags.slice(0, MAX_TAGS);
-								const firstLetter = item.name.trim().charAt(0).toUpperCase() || 'P';
-								const githubAvatar = item.github ? `https://github.com/${item.github}.png?size=160` : null;
-								const avatarSrc = item.avatar
-  ? (item.avatar.startsWith('http://') || item.avatar.startsWith('https://'))
-    ? item.avatar
-    : withBase(item.avatar)
-  : githubAvatar;
-
-								return (
-									<article data-reveal style={`--reveal-delay: ${(idx % 3) * 70}ms`} class="card-spotlight group relative rounded-2xl border border-zinc-200 bg-white/95 p-6 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-zinc-300 hover:shadow-md dark:border-zinc-800 dark:bg-zinc-950/85 dark:hover:border-zinc-600">
-										<div class="flex items-start justify-between gap-3">
-											<div class="flex items-center gap-3">
-												{avatarSrc ? (
-													<img
-														src={avatarSrc}
-														alt={`${item.name} avatar`}
-														class="h-11 w-11 rounded-full border border-zinc-200 object-cover dark:border-zinc-700"
-														loading="lazy"
-													/>
-												) : (
-													<span class="inline-flex h-11 w-11 items-center justify-center rounded-full border border-zinc-200 bg-zinc-100 text-sm font-semibold text-zinc-700 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200">
-														{firstLetter}
-													</span>
-												)}
-												<h3 class="text-lg font-semibold text-zinc-900 dark:text-zinc-100">{item.name}</h3>
-											</div>
-											{item.url && (
-												<a
-													href={item.url}
-													target="_blank"
-													rel="noreferrer"
-													class="apple-visit-button inline-flex items-center rounded-full border border-zinc-200/70 bg-white/56 px-3 py-1.5 text-sm font-medium text-zinc-700 no-underline backdrop-blur-sm dark:border-zinc-700/75 dark:bg-zinc-950/36 dark:text-zinc-200"
-												>
-													<span class="apple-visit-label">
-														<span data-i18n="actions.visit">{T['actions.visit']}</span>
-														<span class="apple-visit-emoji" aria-hidden="true">↗</span>
-													</span>
-												</a>
-											)}
-										</div>
-
-										{item.description && (
-											<p class="mt-4 text-sm leading-6 text-zinc-600 dark:text-zinc-300">{item.description}</p>
-										)}
-
-										{tags.length > 0 && (
-											<div class="mt-4 flex flex-wrap gap-2">
-												{visibleTags.map((tag) => (
-													<span class="inline-flex items-center rounded-md bg-zinc-100 px-2 py-1 text-xs text-zinc-600 dark:bg-zinc-900 dark:text-zinc-300">
-														{tag}
-													</span>
-												))}
-											</div>
-										)}
-									</article>
-								);
-							})
+							group.items.map((item, itemIndex) => (
+								<LinkCard item={item} base={base} visitLabel={T['actions.visit']} delay={(itemIndex % 3) * 70} />
+							))
 						}
 					</div>
 				</section>
-			)}
-		</main>
-		<script>
-			function initFriends() {
-				const prevButton = document.querySelector<HTMLButtonElement>('[data-friends-prev]');
-				const nextButton = document.querySelector<HTMLButtonElement>('[data-friends-next]');
-				const status = document.querySelector<HTMLElement>('[data-friends-pagination-status]');
-				const grid = document.querySelector<HTMLElement>('[data-friends-grid]');
-				const storePages = Array.from(document.querySelectorAll('[data-friends-store-page]'));
-				if (!grid || !storePages.length) return;
+			))
+		}
+	</main>
+	<style>
+		:global(.links-page [data-i18n='links.subtitle']),
+		:global(.links-page [data-link-card-title]),
+		:global(.links-page [data-link-card-description]) {
+			overflow-wrap: anywhere;
+			word-break: break-word;
+		}
 
-				let currentPage = 0;
-				let isTransitioning = false;
-				const lastPage = storePages.length - 1;
-				const animationDuration = 170;
-
-				const pageMarkup = (pageIndex: number) => {
-					const source = storePages[pageIndex];
-					return source ? source.innerHTML : '';
-				};
-
-				grid.innerHTML = pageMarkup(0);
-				grid.style.transform = 'translateY(0)';
-				grid.classList.remove('opacity-0');
-				grid.classList.add('opacity-100');
-
-				if (!prevButton || !nextButton || !status) return;
-
-				const syncButtons = () => {
-					const hasMultiplePages = storePages.length > 1;
-					const prevDisabled = isTransitioning || currentPage === 0 || !hasMultiplePages;
-					const nextDisabled = isTransitioning || currentPage === lastPage || !hasMultiplePages;
-					const prevVisible = currentPage > 0 && hasMultiplePages;
-
-					prevButton.classList.toggle('pointer-events-none', prevDisabled);
-					prevButton.classList.toggle('opacity-50', prevDisabled);
-					prevButton.classList.toggle('is-hidden', !prevVisible);
-					prevButton.setAttribute('aria-hidden', String(!prevVisible));
-					nextButton.classList.toggle('pointer-events-none', nextDisabled);
-					nextButton.classList.toggle('opacity-50', nextDisabled);
-					status.textContent = `${currentPage + 1} / ${storePages.length}`;
-				};
-
-				const switchPage = (targetPage: number) => {
-					if (isTransitioning) return;
-					if (targetPage < 0 || targetPage > lastPage || targetPage === currentPage) return;
-
-					isTransitioning = true;
-					syncButtons();
-
-					grid.style.transform = 'translateY(4px)';
-					grid.classList.remove('opacity-100');
-					grid.classList.add('opacity-0');
-
-					window.setTimeout(() => {
-						grid.innerHTML = pageMarkup(targetPage);
-						currentPage = targetPage;
-						syncButtons();
-
-						requestAnimationFrame(() => {
-							grid.style.transform = 'translateY(0)';
-							grid.classList.remove('opacity-0');
-							grid.classList.add('opacity-100');
-						});
-
-						window.setTimeout(() => {
-							isTransitioning = false;
-							syncButtons();
-						}, animationDuration);
-					}, animationDuration);
-				};
-
-				prevButton.addEventListener('click', () => {
-					switchPage(currentPage - 1);
-				});
-
-				nextButton.addEventListener('click', () => {
-					switchPage(currentPage + 1);
-				});
-
-				syncButtons();
-			}
-
-			// Initialize on page load
-			initFriends();
-
-			// Re-initialize on View Transitions
-			document.addEventListener('astro:page-load', initFriends);
-		</script>
-		<style>
-			.friends-pager {
-				overflow: clip;
-			}
-
-			.friends-pager-button {
-				transform-origin: center;
-			}
-
-			.friends-pager-button.is-hidden {
-				opacity: 0;
-				max-width: 0;
-				min-width: 0;
-				padding-inline: 0;
-				margin-inline: 0;
-				overflow: hidden;
-				transform: translateX(-6px) scale(0.96);
-				pointer-events: none;
-			}
-
-			.friends-desc-clamp {
-				display: -webkit-box;
-				-webkit-line-clamp: 3;
-				-webkit-box-orient: vertical;
-				overflow: hidden;
-			}
-
-			:global(.links-page [data-i18n='links.subtitle']),
-			:global(.links-page [data-friends-grid] h3),
-			:global(.links-page .friends-desc-clamp) {
-				overflow-wrap: anywhere;
-				word-break: break-word;
-			}
-
-			:global(.links-page [data-friends-grid] article),
-			:global(.links-page [data-friends-grid] article > div) {
-				min-width: 0;
-			}
-
-			@media (prefers-reduced-motion: reduce) {
-				.friends-pager-button {
-					transition: none !important;
-					transform: none !important;
-				}
-			}
-		</style>
+		:global(.links-page [data-link-card]) {
+			min-width: 0;
+		}
+	</style>
 </SiteLayout>

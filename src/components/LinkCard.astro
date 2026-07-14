@@ -1,0 +1,77 @@
+---
+import type { FriendLink } from '../data/links';
+
+interface Props {
+	item: FriendLink;
+	base: string;
+	visitLabel: string;
+	delay?: number;
+}
+
+const { item, base, visitLabel, delay = 0 } = Astro.props;
+const MAX_TAGS = 3;
+const tags = item.tags ?? [];
+const visibleTags = tags.slice(0, MAX_TAGS);
+const moreTags = Math.max(tags.length - visibleTags.length, 0);
+const firstLetter = item.name.trim().charAt(0).toUpperCase() || 'L';
+const githubAvatar = item.github ? `https://github.com/${item.github}.png?size=160` : null;
+const avatarSrc = item.avatar
+	? item.avatar.startsWith('http://') || item.avatar.startsWith('https://')
+		? item.avatar
+		: `${base.replace(/\/$/, '')}/${item.avatar.replace(/^\//, '')}`
+	: githubAvatar;
+---
+
+<article
+	data-link-card
+	data-reveal
+	style={`--reveal-delay: ${delay}ms`}
+	class="card-spotlight group relative min-h-[210px] rounded-2xl border border-zinc-200 bg-white/90 p-5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-zinc-300 hover:shadow-md dark:border-zinc-800 dark:bg-zinc-950/80 dark:hover:border-zinc-600"
+>
+	<div class="flex min-w-0 items-start justify-between gap-3">
+		<div class="flex min-w-0 items-center gap-3">
+			{avatarSrc ? (
+				<img
+					src={avatarSrc}
+					alt={`${item.name} logo`}
+					class="h-11 w-11 shrink-0 rounded-full border border-zinc-200 object-cover dark:border-zinc-700"
+					loading="lazy"
+				/>
+			) : (
+				<span class="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-zinc-200 bg-zinc-100 text-sm font-semibold text-zinc-700 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200">
+					{firstLetter}
+				</span>
+			)}
+			<h3 data-link-card-title class="min-w-0 break-words text-base font-semibold text-zinc-900 dark:text-zinc-100">{item.name}</h3>
+		</div>
+		<a
+			href={item.url}
+			target="_blank"
+			rel="noreferrer"
+			aria-label={`${visitLabel} ${item.name}`}
+			class="apple-visit-button inline-flex shrink-0 items-center rounded-xl border border-zinc-200/70 bg-white/56 px-2.5 py-1.5 text-xs font-medium text-zinc-700 no-underline backdrop-blur-sm dark:border-zinc-700/75 dark:bg-zinc-950/36 dark:text-zinc-200"
+		>
+			<span class="apple-visit-label">
+				<span data-i18n="actions.visit">{visitLabel}</span>
+				<span class="apple-visit-emoji" aria-hidden="true">↗</span>
+			</span>
+		</a>
+	</div>
+
+	{item.description && <p data-link-card-description class="mt-4 break-words text-sm leading-6 text-zinc-600 dark:text-zinc-300">{item.description}</p>}
+
+	{tags.length > 0 && (
+		<div class="mt-4 flex flex-wrap gap-1.5">
+			{visibleTags.map((tag) => (
+				<span class="inline-flex items-center rounded-full bg-zinc-100 px-2 py-0.5 text-xs text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
+					{tag}
+				</span>
+			))}
+			{moreTags > 0 && (
+				<span class="inline-flex items-center rounded-full bg-zinc-100 px-2 py-0.5 text-xs text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
+					+{moreTags}
+				</span>
+			)}
+		</div>
+	)}
+</article>

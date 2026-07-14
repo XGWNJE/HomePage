@@ -10,34 +10,46 @@ const assert = (condition, message) => {
 
 const names = [...source.matchAll(/name:\s*'([^']+)'/g)].map((match) => match[1]);
 const urls = [...source.matchAll(/url:\s*'([^']*)'/g)].map((match) => match[1]);
-const kinds = [...source.matchAll(/kind:\s*'([^']+)'/g)].map((match) => match[1]);
+const groups = [...source.matchAll(/group:\s*'([^']+)'/g)].map((match) => match[1]);
 
-assert(names.length === 2, `Expected exactly 2 links, found ${names.length}.`);
+assert(names.length === 14, `Expected exactly 14 links, found ${names.length}.`);
 assert(names.includes('XGWNJE'), 'Missing XGWNJE link.');
 assert(names.includes('Dancncn / Dan_Arnoux'), 'Missing original author GitHub link.');
-assert(urls.length === 2, `Expected exactly 2 URL fields, found ${urls.length}.`);
+assert(names.includes('Magic UI'), 'Missing Magic UI effect-library link.');
+assert(names.includes('Aceternity UI'), 'Missing Aceternity UI effect-library link.');
+assert(names.includes('Animata'), 'Missing Animata effect-library link.');
+assert(names.includes('Motion Primitives'), 'Missing Motion Primitives effect-library link.');
+assert(names.includes('Fancy Components'), 'Missing Fancy Components effect-library link.');
+assert(names.includes('Hover.dev'), 'Missing Hover.dev effect-library link.');
+assert(names.includes('Codrops'), 'Missing Codrops inspiration link.');
+assert(names.includes('21st.dev'), 'Missing 21st.dev inspiration link.');
+assert(names.includes('Rive'), 'Missing Rive cross-platform link.');
+assert(names.includes('Haze'), 'Missing Haze cross-platform link.');
+assert(names.includes('Pow'), 'Missing Pow cross-platform link.');
+assert(names.includes('Inferno'), 'Missing Inferno cross-platform link.');
+assert(urls.length === 14, `Expected exactly 14 URL fields, found ${urls.length}.`);
 assert(urls.includes('https://github.com/XGWNJE'), 'Missing XGWNJE GitHub URL.');
 assert(urls.includes('https://github.com/Dancncn'), 'Missing Dancncn GitHub URL.');
-assert(kinds.every((kind) => kind === 'github'), 'All remaining links should be GitHub links.');
-assert(!source.includes('bilibili:'), 'Links page should not keep Bilibili fields.');
-assert(!source.includes("kind: 'project'"), 'Links page should not keep project entries.');
-assert(!source.includes('项目'), 'GitHub-only link descriptions should not mention projects.');
-assert(pageSource.includes('{projectLinks.length > 0 && ('), 'Projects section should be hidden when empty.');
-assert(pageSource.includes('{friendPageCount > 1 && ('), 'Pager should be hidden when there is only one friends page.');
-assert(
-	pageSource.includes('if (!prevButton || !nextButton || !status) return;'),
-	'Friends grid should still render when pager controls are omitted.'
-);
-assert(!pageSource.includes('Friends & Projects'), 'Page metadata should no longer describe the page as friends and projects.');
-assert(!pageSource.includes('interesting projects'), 'Page metadata should not mention generic project recommendations.');
-assert(!i18nSource.includes("'links.accent': '与项目'"), 'Chinese links page heading should not mention projects.');
-assert(!i18nSource.includes("'links.accent': '& Projects'"), 'English links page heading should not mention projects.');
-assert(i18nSource.includes("'links.title': 'GitHub'"), 'Links page title should be GitHub-focused.');
-assert(i18nSource.includes("'links.friends': 'GitHub 主页'"), 'Chinese section label should describe GitHub profiles.');
-assert(i18nSource.includes("'links.friends': 'GitHub Profiles'"), 'English section label should describe GitHub profiles.');
+assert(new Set(groups).size === 4, `Expected 4 link groups, found ${new Set(groups).size}.`);
+for (const group of ['profiles', 'web-effects', 'inspiration', 'cross-platform']) {
+	assert(groups.includes(group), `Missing ${group} link group.`);
+}
+assert(!source.includes('bilibili:'), 'Links data should not keep unused Bilibili fields.');
+assert(!source.includes("kind: 'project'"), 'Links data should not keep obsolete project-only entries.');
+assert(pageSource.includes('linkGroupDefinitions'), 'Page should define ordered link groups.');
+assert(pageSource.includes("id: 'web-effects'"), 'Page should render the web effects group.');
+assert(pageSource.includes("id: 'inspiration'"), 'Page should render the inspiration group.');
+assert(pageSource.includes("id: 'cross-platform'"), 'Page should render the cross-platform group.');
+assert(pageSource.includes('<LinkCard'), 'Page should reuse the shared link card component.');
+assert(!pageSource.includes('data-friends-grid'), 'Page should not mix grouped links through the old friends pager.');
+assert(!pageSource.includes('Friends & Projects'), 'Page metadata should not describe the page as friends and projects.');
+assert(i18nSource.includes("'links.title': '链接'"), 'Chinese links page title should describe the broader links collection.');
+assert(i18nSource.includes("'links.title': 'Links'"), 'English links page title should describe the broader links collection.');
+assert(i18nSource.includes("'links.webEffects': '网页效果组件'"), 'Chinese web effects group label is missing.');
+assert(i18nSource.includes("'links.webEffects': 'Web Effect Components'"), 'English web effects group label is missing.');
 assert(pageSource.includes('links-page'), 'Links page should expose a page-level class for scoped responsive fixes.');
 assert(pageSource.includes('overflow-wrap: anywhere'), 'Links page should allow long bilingual text to wrap on mobile.');
-assert(pageSource.includes('word-break: break-word'), 'Links page should break long profile names or descriptions on mobile.');
+assert(pageSource.includes('word-break: break-word'), 'Links page should break long names or descriptions on mobile.');
 
 if (failures.length) {
 	console.error('[links-page] failed');
