@@ -120,6 +120,60 @@ CREATE TABLE IF NOT EXISTS outbox (
 );
 `,
 	},
+	{
+		version: 2,
+		sql: `
+CREATE TABLE IF NOT EXISTS user_permissions (
+	user_id TEXT NOT NULL,
+	permission TEXT NOT NULL,
+	granted_at INTEGER NOT NULL,
+	granted_by TEXT,
+	PRIMARY KEY (user_id, permission),
+	FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+	CHECK (permission IN ('manage_subscriptions'))
+);
+
+CREATE TABLE IF NOT EXISTS sensitive_sessions (
+	token_hash TEXT PRIMARY KEY,
+	user_id TEXT NOT NULL,
+	purpose TEXT NOT NULL,
+	created_at INTEGER NOT NULL,
+	expires_at INTEGER NOT NULL,
+	revoked_at INTEGER,
+	FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+	CHECK (purpose IN ('subscription-access'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_sensitive_sessions_user_purpose
+	ON sensitive_sessions(user_id, purpose, expires_at);
+
+CREATE TABLE IF NOT EXISTS subscription_reauth_challenges (
+	state_hash TEXT PRIMARY KEY,
+	verifier_hash TEXT NOT NULL,
+	user_id TEXT NOT NULL,
+	created_at INTEGER NOT NULL,
+	expires_at INTEGER NOT NULL,
+	used INTEGER NOT NULL DEFAULT 0,
+	FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_subscription_reauth_user
+	ON subscription_reauth_challenges(user_id, expires_at);
+
+CREATE TABLE IF NOT EXISTS subscription_audit_events (
+	id TEXT PRIMARY KEY,
+	user_id TEXT,
+	action TEXT NOT NULL,
+	result TEXT NOT NULL,
+	request_id TEXT NOT NULL UNIQUE,
+	created_at INTEGER NOT NULL,
+	FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_subscription_audit_created_at
+	ON subscription_audit_events(created_at);
+`,
+	},
 ];
 
 export const CURRENT_SCHEMA_VERSION = migrations.at(-1)?.version || 0;

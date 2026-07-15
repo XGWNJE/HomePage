@@ -63,13 +63,13 @@ export function toApiUser(row) {
 export function adminAuth(db, config, req) {
 	const token = bearerToken(req);
 	if (config.adminToken && token === config.adminToken) {
-		return { authorized: true, email: null, login: 'admin-token' };
+		return { authorized: true, email: null, login: 'admin-token', userId: null, source: 'admin-token' };
 	}
 	const user = findSessionUser(db, req);
-	if (user?.is_admin) return { authorized: true, email: user.email || null, login: user.login || null };
-	if (user?.login && config.adminGithubLogins.includes(user.login)) return { authorized: true, email: user.email || null, login: user.login };
+	if (user?.is_admin) return { authorized: true, email: user.email || null, login: user.login || null, userId: user.user_id, source: 'session' };
+	if (user?.login && config.adminGithubLogins.includes(user.login)) return { authorized: true, email: user.email || null, login: user.login, userId: user.user_id, source: 'session' };
 	if (user?.email && config.adminEmails.includes(String(user.email).toLowerCase())) {
-		return { authorized: true, email: user.email, login: user.login };
+		return { authorized: true, email: user.email, login: user.login, userId: user.user_id, source: 'session' };
 	}
-	return { authorized: false, email: null, login: null };
+	return { authorized: false, email: null, login: null, userId: null, source: null };
 }

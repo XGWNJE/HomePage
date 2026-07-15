@@ -1,11 +1,10 @@
-import { createHash } from 'node:crypto';
-
-import * as cookie from 'cookie';
-
+import { parseCookies, serializeSetCookie } from '../internal/cookies.js';
+import { exchangeGithubIdentity, githubAuthorizeUrl } from '../internal/github-oauth.js';
 import { isAllowedOrigin, setNoStoreHeaders } from '../internal/http.js';
 import { storeOutbox, trySendmail } from '../internal/messaging.js';
-import { base64Url, cleanEmail, cleanText, randomToken, safeEqual, syntheticGithubId } from '../internal/request.js';
-import { bearerToken, createSession } from '../internal/session.js';
+import { cleanEmail, cleanText, randomToken, safeEqual, syntheticGithubId } from '../internal/request.js';
+import { clearSensitiveSessionCookie, revokeAllSensitiveSessionsForUser } from '../internal/sensitive-session.js';
+import { bearerToken, createSession, findSessionUser } from '../internal/session.js';
 import { verifyTurnstile } from '../internal/turnstile.js';
 
 const OAUTH_STATE_COOKIE = '__Host-homepage_oauth_state';
@@ -24,16 +23,9 @@ export function registerAuthRoutes(app, { db, config, fetchImpl, checkRate }) {
 
 		const state = randomToken(24);
 		const verifier = randomToken(48);
-		const challenge = base64Url(createHash('sha256').update(verifier).digest());
 		const returnTo = sanitizeReturnTo(config, req.query.returnTo);
 		const redirectUri = `${config.baseUrl}/api/auth/github/callback`;
-		const authorize = new URL('https://github.com/login/oauth/authorize');
-		authorize.searchParams.set('client_id', config.githubClientId);
-		authorize.searchParams.set('redirect_uri', redirectUri);
-		authorize.searchParams.set('scope', 'read:user user:email');
-		authorize.searchParams.set('state', state);
-		authorize.searchParams.set('code_challenge', challenge);
-		authorize.searchParams.set('code_challenge_method', 'S256');
+		const authorize = githubAuthorizeUrl(config, { state, verifier, redirectUri });
 
 		setOauthCookie(res, OAUTH_STATE_COOKIE, state, config.baseUrl);
 		setOauthCookie(res, OAUTH_VERIFIER_COOKIE, verifier, config.baseUrl);
@@ -58,36 +50,11 @@ export function registerAuthRoutes(app, { db, config, fetchImpl, checkRate }) {
 				return res.redirect(config.frontendUrl);
 			}
 
-			const tokenPayload = new URLSearchParams({
-				client_id: config.githubClientId,
-				client_secret: config.githubClientSecret,
+			const ghUser = await exchangeGithubIdentity(config, fetchImpl, {
 				code,
-				code_verifier: verifier,
-				redirect_uri: `${config.baseUrl}/api/auth/github/callback`,
+				verifier,
+				redirectUri: `${config.baseUrl}/api/auth/github/callback`,
 			});
-			const tokenResponse = await fetchImpl('https://github.com/login/oauth/access_token', {
-				method: 'POST',
-				headers: {
-					accept: 'application/json',
-					'content-type': 'application/x-www-form-urlencoded',
-					'user-agent': 'homepage-api',
-				},
-				body: tokenPayload,
-			});
-			if (!tokenResponse.ok) throw new Error('GitHub token exchange failed');
-			const tokenData = await tokenResponse.json();
-			if (!tokenData.access_token) throw new Error('GitHub token missing');
-
-			const ghResponse = await fetchImpl('https://api.github.com/user', {
-				headers: {
-					accept: 'application/vnd.github+json',
-					authorization: `Bearer ${tokenData.access_token}`,
-					'user-agent': 'homepage-api',
-				},
-			});
-			if (!ghResponse.ok) throw new Error('GitHub user lookup failed');
-			const ghUser = await ghResponse.json();
-			if (!ghUser?.id || !ghUser?.login) throw new Error('GitHub user response invalid');
 
 			const now = Date.now();
 			const userId = `github:${ghUser.id}`;
@@ -139,7 +106,10 @@ export function registerAuthRoutes(app, { db, config, fetchImpl, checkRate }) {
 
 	app.post('/api/auth/logout', (req, res) => {
 		const token = bearerToken(req);
+		const user = findSessionUser(db, req);
 		if (token) db.prepare('DELETE FROM sessions WHERE id = ?').run(token);
+		if (user?.user_id) revokeAllSensitiveSessionsForUser(db, user.user_id);
+		clearSensitiveSessionCookie(res, config);
 		res.json({ ok: true });
 	});
 
@@ -213,18 +183,6 @@ function clearOauthCookies(res, baseUrl) {
 			maxAge: 0,
 		}));
 	}
-}
-
-function parseCookies(header) {
-	const parse = cookie.parse || cookie.parseCookie;
-	if (!parse) throw new Error('cookie parser is unavailable');
-	return parse(header || '');
-}
-
-function serializeSetCookie(name, value, options) {
-	if (cookie.serialize) return cookie.serialize(name, value, options);
-	if (cookie.stringifySetCookie) return cookie.stringifySetCookie({ name, value, ...options });
-	throw new Error('cookie serializer is unavailable');
 }
 
 function messagePage(config, message) {

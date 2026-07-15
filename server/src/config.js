@@ -1,5 +1,5 @@
 import { randomBytes } from 'node:crypto';
-import { join } from 'node:path';
+import { isAbsolute, join, win32 } from 'node:path';
 
 function splitList(value) {
 	return String(value || '')
@@ -33,6 +33,29 @@ export function loadConfig(env = process.env) {
 	if (nodeEnv === 'production' && devLogin) {
 		throw new Error('DEV_LOGIN cannot be enabled in production');
 	}
+	const subscriptionAccessEnabled = env.SUBSCRIPTION_ACCESS_ENABLED === 'true';
+	const subscriptionAccessFixture = env.SUBSCRIPTION_ACCESS_FIXTURE === 'true';
+	const subscriptionAccessRegistry = env.SUBSCRIPTION_ACCESS_REGISTRY || '';
+	const subscriptionAccessFixtureQr = env.SUBSCRIPTION_ACCESS_FIXTURE_QR || '';
+	const subscriptionAccessTtlSeconds = Number(env.SUBSCRIPTION_ACCESS_TTL_SECONDS || 300);
+	if (!Number.isInteger(subscriptionAccessTtlSeconds) || subscriptionAccessTtlSeconds < 60 || subscriptionAccessTtlSeconds > 300) {
+		throw new Error('SUBSCRIPTION_ACCESS_TTL_SECONDS must be an integer between 60 and 300');
+	}
+	if (nodeEnv === 'production' && subscriptionAccessFixture) {
+		throw new Error('Subscription fixture access cannot be enabled in production');
+	}
+	if (nodeEnv === 'production' && subscriptionAccessEnabled && (!env.GITHUB_CLIENT_ID || !env.GITHUB_CLIENT_SECRET)) {
+		throw new Error('GitHub OAuth must be configured when production subscription access is enabled');
+	}
+	if (subscriptionAccessFixture && !subscriptionAccessEnabled) {
+		throw new Error('SUBSCRIPTION_ACCESS_FIXTURE requires SUBSCRIPTION_ACCESS_ENABLED=true');
+	}
+	if (subscriptionAccessEnabled && !isAbsoluteOnAnyPlatform(subscriptionAccessRegistry)) {
+		throw new Error('SUBSCRIPTION_ACCESS_REGISTRY must be an absolute path when subscription access is enabled');
+	}
+	if (subscriptionAccessFixture && !isAbsoluteOnAnyPlatform(subscriptionAccessFixtureQr)) {
+		throw new Error('SUBSCRIPTION_ACCESS_FIXTURE_QR must be an absolute path in fixture mode');
+	}
 
 	return {
 		nodeEnv,
@@ -61,5 +84,14 @@ export function loadConfig(env = process.env) {
 		turnstileExpectedHostname: env.TURNSTILE_EXPECTED_HOSTNAME || new URL(frontendUrl).hostname,
 		serviceVersion: env.SERVICE_VERSION || '0.1.0',
 		serviceRevision: env.SERVICE_REVISION || env.GIT_COMMIT || 'unknown',
+		subscriptionAccessEnabled,
+		subscriptionAccessFixture,
+		subscriptionAccessRegistry,
+		subscriptionAccessFixtureQr,
+		subscriptionAccessTtlSeconds,
 	};
+}
+
+function isAbsoluteOnAnyPlatform(value) {
+	return typeof value === 'string' && Boolean(value) && (isAbsolute(value) || win32.isAbsolute(value));
 }

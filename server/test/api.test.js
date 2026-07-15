@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { after, before, test } from 'node:test';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -14,6 +14,7 @@ let db;
 
 function testConfig(overrides = {}) {
 	return {
+		nodeEnv: 'test',
 		baseUrl: 'http://127.0.0.1:0',
 		frontendUrl: 'https://xgwnje.cn',
 		allowedOrigins: ['https://xgwnje.cn'],
@@ -31,8 +32,33 @@ function testConfig(overrides = {}) {
 		turnstileSiteKey: overrides.turnstileSecretKey ? 'test-site-key' : '',
 		turnstileSecretKey: '',
 		turnstileExpectedHostname: 'xgwnje.cn',
+		subscriptionAccessEnabled: false,
+		subscriptionAccessFixture: false,
+		subscriptionAccessRegistry: '',
+		subscriptionAccessFixtureQr: '',
+		subscriptionAccessTtlSeconds: 300,
 		...overrides,
 	};
+}
+
+function grantSubscriptionPermission(targetDb, login) {
+	const user = targetDb.prepare('SELECT id FROM users WHERE login = ? LIMIT 1').get(login);
+	assert.ok(user?.id, 'test user must exist before permission is granted');
+	targetDb.prepare(
+		`INSERT INTO user_permissions (user_id, permission, granted_at, granted_by)
+		 VALUES (?, 'manage_subscriptions', ?, 'test')`
+	).run(user.id, Date.now());
+	return user.id;
+}
+
+function responseCookies(response) {
+	if (typeof response.headers.getSetCookie === 'function') return response.headers.getSetCookie();
+	const value = response.headers.get('set-cookie');
+	return value ? [value] : [];
+}
+
+function cookieHeader(cookies) {
+	return cookies.map((value) => value.split(';', 1)[0]).join('; ');
 }
 
 async function withIsolatedApp({ config = {}, fetchImpl }, callback) {
@@ -57,11 +83,24 @@ async function withIsolatedApp({ config = {}, fetchImpl }, callback) {
 			const body = contentType.includes('application/json') && text ? JSON.parse(text) : text;
 			return { response, body };
 		};
-		await callback({ request: isolatedRequest, db: isolatedDb });
+		await callback({ request: isolatedRequest, db: isolatedDb, baseUrl: isolatedBaseUrl });
 	} finally {
 		if (isolatedServer) await new Promise((resolve) => isolatedServer.close(resolve));
 		isolatedDb.close();
 		rmSync(isolatedDir, { recursive: true, force: true });
+	}
+}
+
+async function withSubscriptionFixture(callback) {
+	const fixtureDir = mkdtempSync(join(tmpdir(), 'homepage-subscription-api-test-'));
+	const registryPath = join(fixtureDir, 'subscription-access.v1.json');
+	const qrPath = join(fixtureDir, 'fixture-mobile-import.png');
+	writeFileSync(registryPath, readFileSync(new URL('./fixtures/subscription-access.v1.json', import.meta.url)));
+	writeFileSync(qrPath, Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00]));
+	try {
+		await callback({ registryPath, qrPath });
+	} finally {
+		rmSync(fixtureDir, { recursive: true, force: true });
 	}
 }
 
@@ -101,7 +140,7 @@ test('health endpoint reports service status', async () => {
 	assert.equal(body.service, 'homepage-api');
 	assert.equal(body.version, '0.1.0-test');
 	assert.equal(body.revision, 'test-revision');
-	assert.deepEqual(body.readiness, { database: 'ready', schemaVersion: 1, turnstile: 'disabled' });
+	assert.deepEqual(body.readiness, { database: 'ready', schemaVersion: 2, turnstile: 'disabled' });
 });
 
 test('health endpoint exposes enabled Turnstile readiness without revealing keys', async () => {
@@ -116,19 +155,19 @@ test('health endpoint exposes enabled Turnstile readiness without revealing keys
 });
 
 test('health endpoint rejects an unexpected database schema version', async () => {
-	db.exec('PRAGMA user_version = 2');
+	db.exec('PRAGMA user_version = 3');
 	try {
 		const { response, body } = await request('/health');
 		assert.equal(response.status, 503);
 		assert.equal(body.ok, false);
 		assert.deepEqual(body.readiness, {
 			database: 'schema-mismatch',
-			schemaVersion: 2,
-			expectedSchemaVersion: 1,
+			schemaVersion: 3,
+			expectedSchemaVersion: 2,
 			turnstile: 'disabled',
 		});
 	} finally {
-		db.exec('PRAGMA user_version = 1');
+		db.exec('PRAGMA user_version = 2');
 	}
 });
 
@@ -595,4 +634,262 @@ test('image uploads require auth and reject non-image files', async () => {
 	assert.equal(uploaded.status, 201);
 	assert.equal(body.ok, true);
 	assert.match(body.url, /^https:\/\/api\.xgwnje\.cn\/uploads\/img_/);
+});
+
+test('subscription API hides capability from unauthorized callers, ungranted admins, and ADMIN_TOKEN', async () => {
+	await withSubscriptionFixture(async ({ registryPath, qrPath }) => {
+		await withIsolatedApp({
+			config: {
+				nodeEnv: 'test',
+				subscriptionAccessEnabled: true,
+				subscriptionAccessFixture: true,
+				subscriptionAccessRegistry: registryPath,
+				subscriptionAccessFixtureQr: qrPath,
+			},
+		}, async ({ request: isolatedRequest, db: isolatedDb }) => {
+			const anonymous = await isolatedRequest('/api/admin/subscriptions/status');
+			assert.equal(anonymous.response.status, 403);
+			assert.deepEqual(anonymous.body, { error: 'Access denied' });
+
+			const tokenOnly = await isolatedRequest('/api/admin/subscriptions/status', {
+				headers: { authorization: 'Bearer test-admin-token' },
+			});
+			assert.equal(tokenOnly.response.status, 403);
+			assert.deepEqual(tokenOnly.body, { error: 'Access denied' });
+
+			const ordinaryLogin = await isolatedRequest('/api/auth/dev-login', {
+				method: 'POST',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ login: 'subscription-user', name: 'Subscription User' }),
+			});
+			isolatedDb.prepare("UPDATE users SET is_admin = 0 WHERE login = 'subscription-user'").run();
+			const ordinary = await isolatedRequest('/api/admin/subscriptions/status', {
+				headers: { authorization: `Bearer ${ordinaryLogin.body.token}` },
+			});
+			assert.equal(ordinary.response.status, 403);
+			assert.deepEqual(ordinary.body, { error: 'Access denied' });
+
+			const ungrantedAdmin = await isolatedRequest('/api/auth/dev-login', {
+				method: 'POST',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ login: 'ungranted-admin', name: 'Ungranted Admin' }),
+			});
+			const ungranted = await isolatedRequest('/api/admin/subscriptions/status', {
+				headers: { authorization: `Bearer ${ungrantedAdmin.body.token}` },
+			});
+			assert.equal(ungranted.response.status, 403);
+			assert.equal((await isolatedRequest('/api/admin/check', {
+				headers: { authorization: `Bearer ${ungrantedAdmin.body.token}` },
+			})).body.permissions.manageSubscriptions, false);
+		});
+	});
+});
+
+test('fixture subscription API requires an explicit short session and enforces lock, expiry, and cache boundaries', async () => {
+	await withSubscriptionFixture(async ({ registryPath, qrPath }) => {
+		const registry = JSON.parse(readFileSync(registryPath, 'utf8'));
+		await withIsolatedApp({
+			config: {
+				nodeEnv: 'test',
+				subscriptionAccessEnabled: true,
+				subscriptionAccessFixture: true,
+				subscriptionAccessRegistry: registryPath,
+				subscriptionAccessFixtureQr: qrPath,
+			},
+		}, async ({ request: isolatedRequest, baseUrl: isolatedBaseUrl, db: isolatedDb }) => {
+			const login = await isolatedRequest('/api/auth/dev-login', {
+				method: 'POST',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ login: 'subscription-admin', name: 'Subscription Admin' }),
+			});
+			const userId = grantSubscriptionPermission(isolatedDb, 'subscription-admin');
+			const headers = { authorization: `Bearer ${login.body.token}` };
+
+			const check = await isolatedRequest('/api/admin/check', { headers });
+			assert.equal(check.body.permissions.manageSubscriptions, true);
+
+			const status = await isolatedRequest('/api/admin/subscriptions/status', { headers });
+			assert.equal(status.response.status, 200);
+			assert.deepEqual(status.body, {
+				ok: true,
+				available: { desktop: true, mobile: true, mobileQr: true },
+				unlocked: false,
+				expiresAt: null,
+			});
+			assert.doesNotMatch(JSON.stringify(status.body), /sub\.xgwnje\.cn|\.yaml|fixture-mobile-import/);
+
+			const lockedReveal = await isolatedRequest('/api/admin/subscriptions/reveal', {
+				method: 'POST',
+				headers: { ...headers, origin: 'https://xgwnje.cn', 'content-type': 'application/json' },
+				body: JSON.stringify({ kind: 'desktop' }),
+			});
+			assert.equal(lockedReveal.response.status, 403);
+
+			const unlock = await isolatedRequest('/api/admin/subscriptions/unlock', {
+				method: 'POST',
+				headers: { ...headers, origin: 'https://xgwnje.cn', 'content-type': 'application/json' },
+				body: JSON.stringify({}),
+			});
+			assert.equal(unlock.response.status, 200);
+			assert.deepEqual(unlock.body, { ok: true, unlocked: true });
+			const sensitiveCookie = cookieHeader(responseCookies(unlock.response));
+			assert.match(sensitiveCookie, /homepage_subscription_access_dev=/);
+			const unlockedHeaders = { ...headers, cookie: sensitiveCookie };
+
+			const unlockedStatus = await isolatedRequest('/api/admin/subscriptions/status', { headers: unlockedHeaders });
+			assert.equal(unlockedStatus.body.unlocked, true);
+			assert.ok(unlockedStatus.body.expiresAt > Date.now());
+
+			const reveal = await isolatedRequest('/api/admin/subscriptions/reveal', {
+				method: 'POST',
+				headers: { ...unlockedHeaders, origin: 'https://xgwnje.cn', 'content-type': 'application/json' },
+				body: JSON.stringify({ kind: 'desktop' }),
+			});
+			assert.equal(reveal.response.status, 200);
+			assert.deepEqual(reveal.body, { ok: true, kind: 'desktop', value: registry.endpoints.desktop.url });
+			assert.equal(reveal.response.headers.get('cache-control'), 'private, no-store, max-age=0');
+			assert.equal(reveal.response.headers.get('pragma'), 'no-cache');
+			assert.equal(reveal.response.headers.get('x-content-type-options'), 'nosniff');
+
+			for (const options of [
+				{ headers: { ...unlockedHeaders, 'content-type': 'application/json' }, body: JSON.stringify({ kind: 'mobile' }) },
+				{ headers: { ...unlockedHeaders, origin: 'https://xgwnje.cn', 'content-type': 'application/json' }, body: JSON.stringify({ kind: 'unknown' }) },
+				{ headers: { ...unlockedHeaders, origin: 'https://xgwnje.cn', 'content-type': 'application/json' }, body: JSON.stringify({ kind: 'mobile', extra: true }) },
+				{ headers: { ...unlockedHeaders, origin: 'https://xgwnje.cn', 'content-type': 'application/json' }, body: `${JSON.stringify({ kind: 'mobile' })}${' '.repeat(300)}` },
+			]) {
+				const invalid = await isolatedRequest('/api/admin/subscriptions/reveal', { method: 'POST', ...options });
+				assert.ok([400, 403].includes(invalid.response.status));
+				assert.deepEqual(invalid.body, { error: 'Invalid request' });
+			}
+
+			const qrResponse = await fetch(`${isolatedBaseUrl}/api/admin/subscriptions/mobile-qr`, { headers: unlockedHeaders });
+			assert.equal(qrResponse.status, 200);
+			assert.equal(qrResponse.headers.get('content-type'), 'image/png');
+			assert.equal(qrResponse.headers.get('cache-control'), 'private, no-store, max-age=0');
+			const qr = Buffer.from(await qrResponse.arrayBuffer());
+			assert.deepEqual(qr.subarray(0, 8), Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]));
+
+			const auditText = JSON.stringify(isolatedDb.prepare(
+				'SELECT user_id, action, result, request_id, created_at FROM subscription_audit_events ORDER BY created_at'
+			).all());
+			assert.match(auditText, /reveal:desktop/);
+			assert.doesNotMatch(auditText, /sub\.xgwnje\.cn|\.yaml|clashmeta:/);
+
+			const lock = await isolatedRequest('/api/admin/subscriptions/lock', {
+				method: 'POST',
+				headers: { ...unlockedHeaders, origin: 'https://xgwnje.cn', 'content-type': 'application/json' },
+				body: JSON.stringify({}),
+			});
+			assert.equal(lock.response.status, 200);
+			assert.equal((await isolatedRequest('/api/admin/subscriptions/status', { headers: unlockedHeaders })).body.unlocked, false);
+
+			const unlockAgain = await isolatedRequest('/api/admin/subscriptions/unlock', {
+				method: 'POST',
+				headers: { ...headers, origin: 'https://xgwnje.cn', 'content-type': 'application/json' },
+				body: JSON.stringify({}),
+			});
+			const expiringCookie = cookieHeader(responseCookies(unlockAgain.response));
+			isolatedDb.prepare(
+				"UPDATE sensitive_sessions SET expires_at = ? WHERE user_id = ? AND purpose = 'subscription-access'"
+			).run(Date.now() - 1, userId);
+			assert.equal((await isolatedRequest('/api/admin/subscriptions/status', {
+				headers: { ...headers, cookie: expiringCookie },
+			})).body.unlocked, false);
+		});
+	});
+});
+
+test('GitHub reauthentication is one-time, identity-bound, and issues only a hashed short session', async () => {
+	await withSubscriptionFixture(async ({ registryPath, qrPath }) => {
+		let githubIdentityId = 9999;
+		const fetchImpl = async (url) => {
+			if (url === 'https://github.com/login/oauth/access_token') {
+				return new Response(JSON.stringify({ access_token: 'reauth-provider-token' }), {
+					status: 200,
+					headers: { 'content-type': 'application/json' },
+				});
+			}
+			if (url === 'https://api.github.com/user') {
+				return new Response(JSON.stringify({ id: githubIdentityId, login: 'subscription-owner' }), {
+					status: 200,
+					headers: { 'content-type': 'application/json' },
+				});
+			}
+			throw new Error('unexpected reauthentication request');
+		};
+
+		await withIsolatedApp({
+			fetchImpl,
+			config: {
+				subscriptionAccessEnabled: true,
+				subscriptionAccessFixture: false,
+				subscriptionAccessRegistry: registryPath,
+				subscriptionAccessFixtureQr: qrPath,
+			},
+		}, async ({ request: isolatedRequest, db: isolatedDb }) => {
+			const login = await isolatedRequest('/api/auth/dev-login', {
+				method: 'POST',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ login: 'subscription-owner', name: 'Subscription Owner' }),
+			});
+			const userId = grantSubscriptionPermission(isolatedDb, 'subscription-owner');
+			isolatedDb.prepare('UPDATE users SET github_id = ? WHERE id = ?').run(4242, userId);
+			const authHeaders = { authorization: `Bearer ${login.body.token}` };
+
+			const runReauth = async () => {
+				const start = await isolatedRequest('/api/admin/subscriptions/unlock', {
+					method: 'POST',
+					headers: { ...authHeaders, origin: 'https://xgwnje.cn', 'content-type': 'application/json' },
+					body: JSON.stringify({}),
+				});
+				assert.equal(start.response.status, 200);
+				assert.match(start.body.authorizeUrl, /^https:\/\/github\.com\/login\/oauth\/authorize\?/);
+				const authorize = new URL(start.body.authorizeUrl);
+				assert.equal(authorize.searchParams.get('prompt'), 'select_account');
+				assert.equal(authorize.searchParams.get('login'), 'subscription-owner');
+				const state = authorize.searchParams.get('state');
+				assert.ok(state);
+				const challengeCookie = cookieHeader(responseCookies(start.response));
+				assert.match(challengeCookie, /homepage_subscription_state_dev=/);
+				assert.match(challengeCookie, /homepage_subscription_verifier_dev=/);
+				return isolatedRequest(`/api/admin/subscriptions/unlock/callback?state=${encodeURIComponent(state)}&code=test-code`, {
+					headers: { cookie: challengeCookie },
+					redirect: 'manual',
+				});
+			};
+
+			const mismatch = await runReauth();
+			assert.equal(mismatch.response.status, 302);
+			assert.match(mismatch.response.headers.get('location') || '', /reauth=failed/);
+			assert.equal(isolatedDb.prepare('SELECT COUNT(*) AS count FROM sensitive_sessions').get().count, 0);
+
+			githubIdentityId = 4242;
+			const verified = await runReauth();
+			assert.equal(verified.response.status, 302);
+			assert.equal(verified.response.headers.get('location'), 'https://xgwnje.cn/admin/subscriptions/');
+			const sensitiveCookie = cookieHeader(responseCookies(verified.response));
+			assert.match(sensitiveCookie, /homepage_subscription_access_dev=/);
+			const stored = isolatedDb.prepare(
+				"SELECT token_hash, user_id, purpose, expires_at, revoked_at FROM sensitive_sessions WHERE user_id = ?"
+			).get(userId);
+			assert.equal(stored.user_id, userId);
+			assert.equal(stored.purpose, 'subscription-access');
+			assert.match(stored.token_hash, /^[0-9a-f]{64}$/);
+			assert.doesNotMatch(sensitiveCookie, new RegExp(stored.token_hash));
+
+			const status = await isolatedRequest('/api/admin/subscriptions/status', {
+				headers: { ...authHeaders, cookie: sensitiveCookie },
+			});
+			assert.equal(status.body.unlocked, true);
+
+			const logout = await isolatedRequest('/api/auth/logout', {
+				method: 'POST',
+				headers: { ...authHeaders, cookie: sensitiveCookie },
+			});
+			assert.equal(logout.response.status, 200);
+			assert.ok(isolatedDb.prepare(
+				"SELECT revoked_at FROM sensitive_sessions WHERE user_id = ? AND purpose = 'subscription-access'"
+			).get(userId).revoked_at);
+		});
+	});
 });

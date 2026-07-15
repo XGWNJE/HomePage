@@ -33,7 +33,7 @@
     "test:links": "node scripts/check-links-page.mjs",
     "test:i18n": "node scripts/check-ui-i18n.mjs",
     "test:about": "node scripts/check-about-page.mjs",
-    "test:admin": "node scripts/check-admin-page.mjs",
+		"test:admin": "node scripts/check-admin-page.mjs && node scripts/check-admin-subscriptions.mjs",
     "test:api": "npm --prefix server test",
     "verify": "npm test && npm run typecheck && npm run build && npm run test:api"
   },

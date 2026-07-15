@@ -58,3 +58,47 @@ test('frontend and explicit CORS values are normalized to URL origins', () => {
 	assert.equal(config.frontendUrl, 'https://xgwnje.cn');
 	assert.deepEqual(config.allowedOrigins, ['https://xgwnje.cn', 'https://admin.xgwnje.cn']);
 });
+
+test('subscription fixture access is explicit, bounded, and forbidden in production', () => {
+	const development = loadConfig({
+		NODE_ENV: 'development',
+		SUBSCRIPTION_ACCESS_ENABLED: 'true',
+		SUBSCRIPTION_ACCESS_FIXTURE: 'true',
+		SUBSCRIPTION_ACCESS_REGISTRY: 'C:\\fixtures\\subscription-access.v1.json',
+		SUBSCRIPTION_ACCESS_FIXTURE_QR: 'C:\\fixtures\\mobile-import.png',
+		SUBSCRIPTION_ACCESS_TTL_SECONDS: '120',
+	});
+	assert.equal(development.subscriptionAccessEnabled, true);
+	assert.equal(development.subscriptionAccessFixture, true);
+	assert.equal(development.subscriptionAccessTtlSeconds, 120);
+
+	assert.throws(() => loadConfig({
+		NODE_ENV: 'production',
+		SUBSCRIPTION_ACCESS_ENABLED: 'true',
+		SUBSCRIPTION_ACCESS_FIXTURE: 'true',
+		SUBSCRIPTION_ACCESS_REGISTRY: '/tmp/fixture.json',
+		SUBSCRIPTION_ACCESS_FIXTURE_QR: '/tmp/fixture.png',
+	}), /fixture access cannot be enabled in production/i);
+	assert.throws(() => loadConfig({
+		NODE_ENV: 'development',
+		SUBSCRIPTION_ACCESS_TTL_SECONDS: '301',
+	}), /60 and 300/);
+});
+
+test('production subscription access requires the existing GitHub reauthentication provider', () => {
+	assert.throws(() => loadConfig({
+		NODE_ENV: 'production',
+		SUBSCRIPTION_ACCESS_ENABLED: 'true',
+		SUBSCRIPTION_ACCESS_REGISTRY: '/var/lib/vps-proxies-subscription/access/homepage-admin.v1.json',
+	}), /GitHub OAuth must be configured/i);
+
+	const config = loadConfig({
+		NODE_ENV: 'production',
+		SUBSCRIPTION_ACCESS_ENABLED: 'true',
+		SUBSCRIPTION_ACCESS_REGISTRY: '/var/lib/vps-proxies-subscription/access/homepage-admin.v1.json',
+		GITHUB_CLIENT_ID: 'client-id',
+		GITHUB_CLIENT_SECRET: 'client-secret',
+	});
+	assert.equal(config.subscriptionAccessEnabled, true);
+	assert.equal(config.subscriptionAccessFixture, false);
+});

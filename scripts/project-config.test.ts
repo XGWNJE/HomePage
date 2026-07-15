@@ -65,7 +65,10 @@ test('the root package owns frontend tooling and delegates API commands to serve
 	assert.equal(packageJson.scripts['test:content-reset'], undefined);
 	assert.ok(packageJson.scripts.test);
 	assert.match(packageJson.scripts.test, /npm run test:admin/);
-	assert.equal(packageJson.scripts['test:admin'], 'node scripts/check-admin-page.mjs');
+	assert.equal(
+		packageJson.scripts['test:admin'],
+		'node scripts/check-admin-page.mjs && node scripts/check-admin-subscriptions.mjs',
+	);
 	assert.ok(packageJson.scripts.typecheck);
 	assert.match(packageJson.scripts.typecheck, /astro check/);
 	assert.ok(packageJson.scripts.verify);

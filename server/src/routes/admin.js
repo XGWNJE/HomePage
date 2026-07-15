@@ -1,10 +1,16 @@
 import { cleanText } from '../internal/request.js';
+import { canManageSubscriptions } from '../internal/permissions.js';
 import { adminAuth } from '../internal/session.js';
 
 export function registerAdminRoutes(app, { db, config }) {
 	app.get('/api/admin/check', (req, res) => {
 		const auth = adminAuth(db, config, req);
-		res.json({ isAdmin: auth.authorized, email: auth.email, login: auth.login });
+		res.json({
+			isAdmin: auth.authorized,
+			email: auth.email,
+			login: auth.login,
+			permissions: { manageSubscriptions: canManageSubscriptions(db, config, auth) },
+		});
 	});
 
 	app.get('/api/admin/stats', (req, res) => {

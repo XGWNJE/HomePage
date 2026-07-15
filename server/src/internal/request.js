@@ -6,10 +6,10 @@ const SUSPICIOUS_RE = /(https?:\/\/|www\.|telegram|whatsapp|casino|crypto|airdro
 
 export function createRateLimiter() {
 	const rateMap = new Map();
-	return (req, res, route, limit = RATE_LIMIT_PER_WINDOW) => {
+	return (req, res, route, limit = RATE_LIMIT_PER_WINDOW, identity = clientIp(req)) => {
 		const now = Date.now();
 		const bucket = Math.floor(now / RATE_LIMIT_WINDOW_MS);
-		const key = `${clientIp(req)}:${route}:${bucket}`;
+		const key = `${identity}:${route}:${bucket}`;
 		const count = rateMap.get(key) || 0;
 		if (count >= limit) {
 			res.status(429).json({ error: 'Too Many Requests' });

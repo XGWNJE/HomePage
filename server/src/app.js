@@ -5,6 +5,7 @@ import express from 'express';
 import { corsMiddleware } from './internal/http.js';
 import { createRateLimiter } from './internal/request.js';
 import { registerAdminRoutes } from './routes/admin.js';
+import { registerAdminSubscriptionRoutes } from './routes/admin-subscriptions.js';
 import { registerAuthRoutes } from './routes/auth.js';
 import { registerCommentRoutes } from './routes/comments.js';
 import { registerContactRoutes } from './routes/contact.js';
@@ -43,6 +44,7 @@ export function createApp({ db, config, fetchImpl = globalThis.fetch }) {
 	registerContactRoutes(app, context);
 	registerImageRoutes(app, context);
 	registerAdminRoutes(app, context);
+	registerAdminSubscriptionRoutes(app, context);
 
 	app.use((_req, res) => {
 		res.status(404).json({ error: 'Not Found' });

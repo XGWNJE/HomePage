@@ -24,6 +24,18 @@ import SiteLayout from '../../layouts/SiteLayout.astro';
 				</section>
 
 				<div class="mt-8 hidden space-y-10" data-admin-workspace>
+					<a
+						href="/admin/subscriptions/"
+						class="card-surface card-interactive hidden items-center justify-between gap-5 p-5 no-underline"
+						data-admin-subscriptions-link
+					>
+						<span>
+							<span class="block text-[11px] font-semibold uppercase tracking-[0.16em] text-amber-700 dark:text-amber-400">Private capability</span>
+							<span class="mt-1 block text-lg font-semibold text-zinc-900 dark:text-zinc-100">代理订阅</span>
+							<span class="mt-1 block text-sm leading-6 text-zinc-500 dark:text-zinc-400">按需复制桌面、移动与 CMFA 导入入口。</span>
+						</span>
+						<span class="shrink-0 text-sm font-medium text-zinc-500 dark:text-zinc-400" aria-hidden="true">进入 →</span>
+					</a>
 					<section aria-labelledby="admin-stats-heading">
 						<div class="mb-4 flex items-center justify-between gap-4">
 							<div>
@@ -98,6 +110,7 @@ import SiteLayout from '../../layouts/SiteLayout.astro';
 	const authState = root?.querySelector<HTMLElement>('[data-admin-auth-state]');
 	const authMessage = root?.querySelector<HTMLElement>('[data-admin-auth-message]');
 	const workspace = root?.querySelector<HTMLElement>('[data-admin-workspace]');
+	const subscriptionLink = root?.querySelector<HTMLElement>('[data-admin-subscriptions-link]');
 	const commentsRoot = root?.querySelector<HTMLElement>('[data-admin-comments]');
 	const contactsRoot = root?.querySelector<HTMLElement>('[data-admin-contact-messages]');
 	const outboxRoot = root?.querySelector<HTMLElement>('[data-admin-outbox]');
@@ -207,6 +220,8 @@ import SiteLayout from '../../layouts/SiteLayout.astro';
 		if (authState) authState.className = 'mt-7 rounded-2xl border border-emerald-200 bg-emerald-50/80 p-5 dark:border-emerald-900/60 dark:bg-emerald-950/25';
 		if (authMessage) authMessage.textContent = `管理员会话已验证${identity.login ? `：@${identity.login}` : ''}`;
 		workspace?.classList.remove('hidden');
+		subscriptionLink?.classList.toggle('hidden', !identity.permissions.manageSubscriptions);
+		subscriptionLink?.classList.toggle('flex', identity.permissions.manageSubscriptions);
 		try { await loadDashboard(); } catch { showFailure('管理数据加载失败。会话可能已过期，请重新登录后重试。'); }
 	};
 

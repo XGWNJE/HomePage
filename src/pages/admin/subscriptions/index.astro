@@ -1,0 +1,340 @@
+---
+import ModalShell from '../../../components/ModalShell.astro';
+import PageHeading from '../../../components/PageHeading.astro';
+import SiteLayout from '../../../layouts/SiteLayout.astro';
+---
+
+<SiteLayout title="代理订阅 | XGWNJE 管理台" description="受保护的代理订阅快捷入口。">
+	<Fragment slot="head">
+		<meta name="robots" content="noindex, nofollow" />
+	</Fragment>
+
+	<main class="page-shell page-fade-in py-10 md:py-14" data-subscription-root transition:name="page-main" transition:animate="fade">
+		<section class="mx-auto max-w-5xl">
+			<PageHeading
+				eyebrow="Operations / Private"
+				title="代理订阅"
+				accent="Access"
+				subtitle="只在需要时把单个入口写入剪贴板；页面不会展示、保存或记录订阅内容。"
+			>
+				<a slot="actions" href="/admin/" class="apple-meta-pill no-underline">
+					<span class="apple-meta-pill-label">返回管理台</span>
+				</a>
+			</PageHeading>
+
+			<section class="card-surface mt-8 p-5" data-subscription-auth-state aria-live="polite">
+				<p class="m-0 text-sm font-medium text-zinc-700 dark:text-zinc-300">正在检查当前会话…</p>
+			</section>
+
+			<section class="card-surface mt-6 hidden border-amber-200/80 p-5 dark:border-amber-900/60" data-subscription-lock-state aria-live="polite">
+				<div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+					<div>
+						<p class="m-0 text-sm font-semibold text-zinc-900 dark:text-zinc-100">敏感会话尚未解锁</p>
+						<p class="mt-1 text-sm leading-6 text-zinc-500 dark:text-zinc-400">完成身份验证后才可复制入口或打开二维码。</p>
+					</div>
+					<button type="button" class="apple-visit-button rounded-xl border border-zinc-200 px-4 py-2.5 text-sm font-medium dark:border-zinc-700" data-subscription-unlock>
+						<span class="apple-visit-label">验证身份</span>
+					</button>
+				</div>
+			</section>
+
+			<section class="card-surface mt-6 hidden border-emerald-200/80 p-5 dark:border-emerald-900/60" data-subscription-active-state aria-live="polite">
+				<div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+					<div>
+						<p class="m-0 text-sm font-semibold text-zinc-900 dark:text-zinc-100">敏感会话已临时解锁</p>
+						<p class="mt-1 text-sm leading-6 text-zinc-500 dark:text-zinc-400">会话最多持续 5 分钟；离开前可以立即锁定。</p>
+					</div>
+					<button type="button" class="apple-meta-pill justify-center" data-subscription-lock>
+						<span class="apple-meta-pill-label">立即锁定</span>
+					</button>
+				</div>
+			</section>
+
+			<div class="mt-8 hidden" data-subscription-workspace>
+				<div class="grid gap-4 md:grid-cols-3">
+					<article class="card-surface card-interactive flex min-w-0 flex-col p-5" data-subscription-card="desktop">
+						<p class="m-0 text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-400 dark:text-zinc-500">Desktop</p>
+						<h2 class="mt-2 text-xl font-semibold text-zinc-900 dark:text-zinc-100">桌面订阅</h2>
+						<p class="mt-2 flex-1 text-sm leading-6 text-zinc-500 dark:text-zinc-400">写入 Clash Verge Rev 使用的订阅入口。</p>
+						<p class="mt-4 text-xs font-medium text-zinc-400" data-subscription-availability>检查中</p>
+						<button type="button" class="apple-visit-button mt-4 rounded-xl border border-zinc-200 px-4 py-2.5 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700" data-subscription-copy="desktop" disabled>
+							<span class="apple-visit-label">复制桌面入口</span>
+						</button>
+					</article>
+
+					<article class="card-surface card-interactive flex min-w-0 flex-col p-5" data-subscription-card="mobile">
+						<p class="m-0 text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-400 dark:text-zinc-500">Mobile</p>
+						<h2 class="mt-2 text-xl font-semibold text-zinc-900 dark:text-zinc-100">移动订阅</h2>
+						<p class="mt-2 flex-1 text-sm leading-6 text-zinc-500 dark:text-zinc-400">写入 Clash Meta for Android 使用的订阅入口。</p>
+						<p class="mt-4 text-xs font-medium text-zinc-400" data-subscription-availability>检查中</p>
+						<button type="button" class="apple-visit-button mt-4 rounded-xl border border-zinc-200 px-4 py-2.5 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700" data-subscription-copy="mobile" disabled>
+							<span class="apple-visit-label">复制移动入口</span>
+						</button>
+					</article>
+
+					<article class="card-surface card-interactive flex min-w-0 flex-col p-5" data-subscription-card="cmfa-import">
+						<p class="m-0 text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-400 dark:text-zinc-500">CMFA</p>
+						<h2 class="mt-2 text-xl font-semibold text-zinc-900 dark:text-zinc-100">快捷导入</h2>
+						<p class="mt-2 flex-1 text-sm leading-6 text-zinc-500 dark:text-zinc-400">复制 CMFA 导入入口，或临时打开移动端二维码。</p>
+						<p class="mt-4 text-xs font-medium text-zinc-400" data-subscription-availability>检查中</p>
+						<div class="mt-4 grid gap-2 sm:grid-cols-2 md:grid-cols-1 lg:grid-cols-2">
+							<button type="button" class="apple-visit-button rounded-xl border border-zinc-200 px-3 py-2.5 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700" data-subscription-copy="cmfa-import" disabled>
+								<span class="apple-visit-label">复制导入入口</span>
+							</button>
+							<button type="button" class="apple-meta-pill justify-center disabled:cursor-not-allowed disabled:opacity-50" data-subscription-qr disabled>
+								<span class="apple-meta-pill-label">查看二维码</span>
+							</button>
+						</div>
+					</article>
+				</div>
+
+				<p class="mt-5 min-h-6 text-sm text-zinc-500 dark:text-zinc-400" data-subscription-feedback aria-live="polite"></p>
+			</div>
+		</section>
+	</main>
+
+	<ModalShell id="subscription-qr-modal" titleId="subscription-qr-title" contentClass="w-[min(92vw,28rem)]">
+		<div class="flex items-start justify-between gap-4">
+			<div>
+				<p class="m-0 text-[11px] font-semibold uppercase tracking-[0.16em] text-amber-700 dark:text-amber-400">Temporary view</p>
+				<h2 id="subscription-qr-title" class="mt-1 text-xl font-semibold text-zinc-900 dark:text-zinc-100">移动端导入二维码</h2>
+			</div>
+			<button type="button" class="rounded-lg border border-zinc-200 px-3 py-1.5 text-sm text-zinc-600 dark:border-zinc-700 dark:text-zinc-300" data-modal-close data-subscription-qr-close>关闭</button>
+		</div>
+		<div class="mt-5 flex min-h-64 items-center justify-center rounded-2xl bg-white p-4">
+			<img class="hidden h-auto w-full max-w-72" alt="移动端订阅导入二维码" data-subscription-qr-image />
+			<p class="text-sm text-zinc-500" data-subscription-qr-loading>正在读取二维码…</p>
+		</div>
+		<p class="mt-4 text-sm leading-6 text-zinc-500 dark:text-zinc-400">关闭弹窗或离开页面后，临时图片引用会立即释放。</p>
+	</ModalShell>
+</SiteLayout>
+
+<script>
+	import {
+		beginSubscriptionUnlock,
+		checkAdmin,
+		copySubscriptionValue,
+		createSubscriptionQrObjectUrl,
+		getSubscriptionStatus,
+		lockSubscriptionAccess,
+		revokeSubscriptionQrObjectUrl,
+		type SubscriptionStatus,
+		type SubscriptionKind,
+	} from '../../../lib/admin';
+
+	const initSubscriptionPage = () => {
+		const root = document.querySelector<HTMLElement>('[data-subscription-root]');
+		if (!root || root.dataset.subscriptionInitialized === 'true') return;
+		root.dataset.subscriptionInitialized = 'true';
+
+		const authState = root.querySelector<HTMLElement>('[data-subscription-auth-state]');
+		const workspace = root.querySelector<HTMLElement>('[data-subscription-workspace]');
+		const lockState = root.querySelector<HTMLElement>('[data-subscription-lock-state]');
+		const activeState = root.querySelector<HTMLElement>('[data-subscription-active-state]');
+		const feedback = root.querySelector<HTMLElement>('[data-subscription-feedback]');
+		const qrModal = document.getElementById('subscription-qr-modal');
+		const qrImage = qrModal?.querySelector<HTMLImageElement>('[data-subscription-qr-image]');
+		const qrLoading = qrModal?.querySelector<HTMLElement>('[data-subscription-qr-loading]');
+		let unlocked = false;
+		let lastAvailable = { desktop: false, mobile: false, mobileQr: false };
+		let qrObjectUrl: string | null = null;
+		let qrRequestId = 0;
+		let expiryTimer: number | null = null;
+
+		const setAuthMessage = (message: string, tone: 'default' | 'error' | 'success' = 'default') => {
+			if (!authState) return;
+			authState.replaceChildren();
+			const messageNode = document.createElement('p');
+			messageNode.className = 'm-0 text-sm font-medium';
+			messageNode.textContent = message;
+			authState.append(messageNode);
+			authState.className = 'card-surface mt-8 p-5';
+			if (tone === 'error') authState.classList.add('border-rose-200', 'text-rose-700', 'dark:border-rose-900/60', 'dark:text-rose-400');
+			else if (tone === 'success') authState.classList.add('border-emerald-200', 'text-emerald-700', 'dark:border-emerald-900/60', 'dark:text-emerald-400');
+			else authState.classList.add('text-zinc-700', 'dark:text-zinc-300');
+		};
+
+		const setFeedback = (message: string, error = false) => {
+			if (!feedback) return;
+			feedback.textContent = message;
+			feedback.className = error
+				? 'mt-5 min-h-6 text-sm text-rose-600 dark:text-rose-400'
+				: 'mt-5 min-h-6 text-sm text-emerald-700 dark:text-emerald-400';
+		};
+
+		const cleanupQr = () => {
+			qrRequestId += 1;
+			revokeSubscriptionQrObjectUrl(qrObjectUrl);
+			qrObjectUrl = null;
+			if (qrImage) {
+				qrImage.removeAttribute('src');
+				qrImage.classList.add('hidden');
+			}
+		};
+
+		const closeQr = () => {
+			cleanupQr();
+			qrModal?.classList.remove('opacity-100');
+			qrModal?.classList.add('opacity-0');
+			qrModal?.querySelector('[data-modal-content]')?.classList.remove('scale-100', 'opacity-100');
+			qrModal?.querySelector('[data-modal-content]')?.classList.add('scale-95', 'opacity-0');
+			qrModal?.setAttribute('aria-hidden', 'true');
+			window.setTimeout(() => qrModal?.classList.add('invisible'), 200);
+		};
+
+		const openQr = async () => {
+			if (!unlocked || !qrModal) return;
+			cleanupQr();
+			const requestId = qrRequestId;
+			qrLoading?.classList.remove('hidden');
+			qrModal.classList.remove('invisible', 'opacity-0');
+			qrModal.classList.add('opacity-100');
+			qrModal.querySelector('[data-modal-content]')?.classList.remove('scale-95', 'opacity-0');
+			qrModal.querySelector('[data-modal-content]')?.classList.add('scale-100', 'opacity-100');
+			qrModal.setAttribute('aria-hidden', 'false');
+			try {
+				const nextObjectUrl = await createSubscriptionQrObjectUrl();
+				if (requestId !== qrRequestId || qrModal.getAttribute('aria-hidden') !== 'false') {
+					revokeSubscriptionQrObjectUrl(nextObjectUrl);
+					return;
+				}
+				qrObjectUrl = nextObjectUrl;
+				if (qrImage) {
+					qrImage.src = qrObjectUrl;
+					qrImage.classList.remove('hidden');
+				}
+				qrLoading?.classList.add('hidden');
+			} catch {
+				closeQr();
+				setFeedback('二维码当前不可用，请稍后重试。', true);
+				try { await refreshStatus(); } catch {}
+			}
+		};
+
+		const renderAvailability = (available: { desktop: boolean; mobile: boolean; mobileQr: boolean }) => {
+			lastAvailable = available;
+			for (const card of root.querySelectorAll<HTMLElement>('[data-subscription-card]')) {
+				const kind = card.dataset.subscriptionCard;
+				const kindAvailable = kind === 'desktop' ? available.desktop : available.mobile;
+				const label = card.querySelector<HTMLElement>('[data-subscription-availability]');
+				if (label) label.textContent = kindAvailable ? '可用' : '暂不可用';
+				card.querySelectorAll<HTMLButtonElement>('[data-subscription-copy]').forEach((button) => {
+					button.disabled = !unlocked || !kindAvailable;
+				});
+			}
+			const qrButton = root.querySelector<HTMLButtonElement>('[data-subscription-qr]');
+			if (qrButton) qrButton.disabled = !unlocked || !available.mobileQr;
+		};
+
+		const applyStatus = (status: SubscriptionStatus) => {
+			if (expiryTimer !== null) window.clearTimeout(expiryTimer);
+			expiryTimer = null;
+			unlocked = status.unlocked;
+			workspace?.classList.remove('hidden');
+			lockState?.classList.toggle('hidden', unlocked);
+			activeState?.classList.toggle('hidden', !unlocked);
+			setAuthMessage(unlocked ? '敏感操作已临时解锁。' : '管理员权限已确认，仍需验证身份。', unlocked ? 'success' : 'default');
+			renderAvailability(status.available);
+			if (unlocked && status.expiresAt) {
+				const remaining = Math.max(0, status.expiresAt - Date.now() + 150);
+				expiryTimer = window.setTimeout(() => {
+					void refreshStatus().catch(() => setAuthMessage('敏感会话已结束，请重新验证身份。'));
+				}, remaining);
+			}
+		};
+
+		const refreshStatus = async () => {
+			const status = await getSubscriptionStatus();
+			if (!status.unlocked) cleanupQr();
+			applyStatus(status);
+			return status;
+		};
+
+		root.querySelectorAll<HTMLButtonElement>('[data-subscription-copy]').forEach((button) => {
+			button.addEventListener('click', async () => {
+				const kind = button.dataset.subscriptionCopy as SubscriptionKind | undefined;
+				if (!kind || !unlocked) return;
+				button.disabled = true;
+				try {
+					await copySubscriptionValue(kind);
+					setFeedback('已写入剪贴板；页面未保留入口内容。');
+				} catch {
+					setFeedback('复制失败，请确认会话仍然有效并允许剪贴板访问。', true);
+					try { await refreshStatus(); } catch {}
+				} finally {
+					button.disabled = !unlocked || !lastAvailable[kind === 'desktop' ? 'desktop' : 'mobile'];
+				}
+			});
+		});
+
+		root.querySelector('[data-subscription-qr]')?.addEventListener('click', openQr);
+		root.querySelector<HTMLButtonElement>('[data-subscription-unlock]')?.addEventListener('click', async (event) => {
+			const button = event.currentTarget as HTMLButtonElement;
+			button.disabled = true;
+			setFeedback('正在启动身份验证…');
+			try {
+				const result = await beginSubscriptionUnlock();
+				if (result.authorizeUrl) {
+					window.location.assign(result.authorizeUrl);
+					return;
+				}
+				await refreshStatus();
+				setFeedback('身份验证完成，敏感操作已临时解锁。');
+			} catch {
+				setFeedback('身份验证未完成，请稍后重试。', true);
+			} finally {
+				button.disabled = false;
+			}
+		});
+		root.querySelector<HTMLButtonElement>('[data-subscription-lock]')?.addEventListener('click', async (event) => {
+			const button = event.currentTarget as HTMLButtonElement;
+			button.disabled = true;
+			cleanupQr();
+			try {
+				await lockSubscriptionAccess();
+				await refreshStatus();
+				setFeedback('敏感会话已锁定。');
+			} catch {
+				setFeedback('锁定失败，请刷新页面确认状态。', true);
+			} finally {
+				button.disabled = false;
+			}
+		});
+		qrModal?.querySelector('[data-subscription-qr-close]')?.addEventListener('click', closeQr);
+
+		const initialize = async () => {
+			const identity = await checkAdmin();
+			if (!identity.isAdmin || !identity.permissions.manageSubscriptions) {
+				setAuthMessage('无法访问此管理能力。请返回管理台并确认当前登录会话。', 'error');
+				workspace?.classList.add('hidden');
+				return;
+			}
+			try {
+				await refreshStatus();
+				const params = new URLSearchParams(window.location.search);
+				if (params.get('reauth') === 'failed') {
+					setFeedback('身份验证失败或已过期，请重新尝试。', true);
+					params.delete('reauth');
+					const query = params.toString();
+					history.replaceState(history.state, '', `${window.location.pathname}${query ? `?${query}` : ''}${window.location.hash}`);
+				}
+			} catch {
+				setAuthMessage('此管理能力当前不可用。', 'error');
+				workspace?.classList.add('hidden');
+			}
+		};
+
+		const cleanup = () => {
+			cleanupQr();
+			if (expiryTimer !== null) window.clearTimeout(expiryTimer);
+			expiryTimer = null;
+		};
+		document.addEventListener('astro:before-swap', cleanup, { once: true });
+		window.addEventListener('pagehide', cleanup, { once: true });
+		void initialize();
+	};
+
+	document.addEventListener('astro:page-load', initSubscriptionPage);
+	if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initSubscriptionPage, { once: true });
+	else initSubscriptionPage();
+</script>
