@@ -72,7 +72,7 @@ export function registerAdminSubscriptionRoutes(app, { db, config, fetchImpl, ch
 				now + REAUTH_TTL_SECONDS * 1000,
 			);
 			setReauthCookies(res, config, state, verifier);
-			const redirectUri = `${config.baseUrl}/api/admin/subscriptions/unlock/callback`;
+			const redirectUri = `${config.baseUrl}/api/auth/github/callback`;
 			const authorizeUrl = githubAuthorizeUrl(config, {
 				state,
 				verifier,
@@ -87,11 +87,12 @@ export function registerAdminSubscriptionRoutes(app, { db, config, fetchImpl, ch
 		}
 	});
 
-	app.get('/api/admin/subscriptions/unlock/callback', async (req, res) => {
+	app.get('/api/auth/github/callback', async (req, res, next) => {
+		const names = reauthCookieNames(config);
+		const cookies = parseCookies(req.headers.cookie || '');
+		if (!cookies[names.state] && !cookies[names.verifier]) return next();
 		setSensitiveHeaders(res);
 		if (!checkRate(req, res, 'subscription-unlock-callback', 20)) return;
-		const cookies = parseCookies(req.headers.cookie || '');
-		const names = reauthCookieNames(config);
 		const state = String(req.query.state || '');
 		const code = String(req.query.code || '');
 		const cookieState = cookies[names.state] || '';
@@ -123,7 +124,7 @@ export function registerAdminSubscriptionRoutes(app, { db, config, fetchImpl, ch
 			).run(row.state_hash);
 			if (Number(consumed.changes || 0) !== 1) throw new Error('reauthentication challenge already consumed');
 
-			const redirectUri = `${config.baseUrl}/api/admin/subscriptions/unlock/callback`;
+			const redirectUri = `${config.baseUrl}/api/auth/github/callback`;
 			const ghUser = await exchangeGithubIdentity(config, fetchImpl, { code, verifier, redirectUri });
 			const user = db.prepare('SELECT github_id FROM users WHERE id = ? LIMIT 1').get(row.user_id);
 			if (!user?.github_id || !safeEqual(String(user.github_id), String(ghUser.id))) {

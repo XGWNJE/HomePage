@@ -847,12 +847,13 @@ test('GitHub reauthentication is one-time, identity-bound, and issues only a has
 				const authorize = new URL(start.body.authorizeUrl);
 				assert.equal(authorize.searchParams.get('prompt'), 'select_account');
 				assert.equal(authorize.searchParams.get('login'), 'subscription-owner');
+				assert.equal(new URL(authorize.searchParams.get('redirect_uri')).pathname, '/api/auth/github/callback');
 				const state = authorize.searchParams.get('state');
 				assert.ok(state);
 				const challengeCookie = cookieHeader(responseCookies(start.response));
 				assert.match(challengeCookie, /homepage_subscription_state_dev=/);
 				assert.match(challengeCookie, /homepage_subscription_verifier_dev=/);
-				return isolatedRequest(`/api/admin/subscriptions/unlock/callback?state=${encodeURIComponent(state)}&code=test-code`, {
+				return isolatedRequest(`/api/auth/github/callback?state=${encodeURIComponent(state)}&code=test-code`, {
 					headers: { cookie: challengeCookie },
 					redirect: 'manual',
 				});

@@ -37,6 +37,9 @@ export function createApp({ db, config, fetchImpl = globalThis.fetch }) {
 	app.use(corsMiddleware(config));
 
 	registerHealthRoutes(app, context);
+	// The GitHub OAuth App exposes one callback. The subscription dispatcher
+	// handles only requests carrying its own cookies and otherwise falls through.
+	registerAdminSubscriptionRoutes(app, context);
 	registerAuthRoutes(app, context);
 	registerProfileRoutes(app, context);
 	registerViewRoutes(app, context);
@@ -44,7 +47,6 @@ export function createApp({ db, config, fetchImpl = globalThis.fetch }) {
 	registerContactRoutes(app, context);
 	registerImageRoutes(app, context);
 	registerAdminRoutes(app, context);
-	registerAdminSubscriptionRoutes(app, context);
 
 	app.use((_req, res) => {
 		res.status(404).json({ error: 'Not Found' });
