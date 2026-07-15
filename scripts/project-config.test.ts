@@ -129,6 +129,7 @@ test('the project release skill preserves production safety gates', async () => 
 		'utf8',
 	);
 	const contentPublisher = await readFile(path.resolve('scripts/publish-content.ps1'), 'utf8');
+	const fullPublisher = await readFile(path.resolve('scripts/publish-full.ps1'), 'utf8');
 	const remoteFrontend = await readFile(
 		path.resolve('.agents/skills/deploy-homepage/scripts/deploy-frontend.sh'),
 		'utf8',
@@ -161,6 +162,7 @@ test('the project release skill preserves production safety gates', async () => 
 	assert.match(contentPublisher, /StrictHostKeyChecking=yes/);
 	assert.match(contentPublisher, /-Mode AfterChange -Scope homepage,homepage-api/);
 	assert.match(contentPublisher, /Invoke-Remote -Command \$rollback/);
+	assert.match(fullPublisher, /'package\.json', 'package-lock\.json', 'scripts', 'src', 'test'/);
 	assert.match(remoteFrontend, /grep -F "  \$archive" SHA256SUMS \| sha256sum -c -/);
 	assert.match(remoteFrontend, /grep -F "  \$manifest" SHA256SUMS \| sha256sum -c -/);
 	assert.match(remoteFrontend, /rollback_on_error/);

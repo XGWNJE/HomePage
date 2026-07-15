@@ -154,7 +154,7 @@ $apiArchivePath = Join-Path $artifactDir $apiArchiveName
 $manifestPath = Join-Path $artifactDir $manifestName
 $sumsPath = Join-Path $artifactDir 'SHA256SUMS'
 Invoke-Native -FilePath 'tar.exe' -Arguments @('-czf', $frontendArchivePath, '-C', $distRoot, '.') | Out-Null
-Invoke-Native -FilePath 'tar.exe' -Arguments @('-czf', $apiArchivePath, '-C', (Join-Path $projectRoot 'server'), 'package.json', 'package-lock.json', 'src', 'test') | Out-Null
+Invoke-Native -FilePath 'tar.exe' -Arguments @('-czf', $apiArchivePath, '-C', (Join-Path $projectRoot 'server'), 'package.json', 'package-lock.json', 'scripts', 'src', 'test') | Out-Null
 
 $files = @(Get-ChildItem -LiteralPath $distRoot -Recurse -File)
 $fileCount = $files.Count
