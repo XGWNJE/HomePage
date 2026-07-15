@@ -163,6 +163,8 @@ test('the project release skill preserves production safety gates', async () => 
 	assert.match(contentPublisher, /-Mode AfterChange -Scope homepage,homepage-api/);
 	assert.match(contentPublisher, /Invoke-Remote -Command \$rollback/);
 	assert.match(fullPublisher, /'package\.json', 'package-lock\.json', 'scripts', 'src', 'test'/);
+	assert.match(fullPublisher, /-Command \$maintainCommand/);
+	assert.match(fullPublisher, /@\('anytls','homepage','homepage-api','visionguard'\)/);
 	assert.match(remoteFrontend, /grep -F "  \$archive" SHA256SUMS \| sha256sum -c -/);
 	assert.match(remoteFrontend, /grep -F "  \$manifest" SHA256SUMS \| sha256sum -c -/);
 	assert.match(remoteFrontend, /rollback_on_error/);

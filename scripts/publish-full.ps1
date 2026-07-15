@@ -191,6 +191,8 @@ $frontendRollback = "bash $(ConvertTo-BashLiteral "$remoteStaging/deploy-fronten
 $apiPrepare = "bash $(ConvertTo-BashLiteral "$remoteStaging/deploy-api.sh") prepare $($apiArgs -join ' ')"
 $apiActivate = "bash $(ConvertTo-BashLiteral "$remoteStaging/deploy-api.sh") activate $($apiArgs -join ' ')"
 $apiRollback = "bash $(ConvertTo-BashLiteral "$remoteStaging/deploy-api.sh") rollback $($apiArgs -join ' ')"
+$escapedMaintainScript = $maintainScript.Replace("'", "''")
+$maintainCommand = "& '$escapedMaintainScript' -Mode AfterChange -Scope @('anytls','homepage','homepage-api','visionguard')"
 
 $apiActivated = $false
 $frontendActivated = $false
@@ -208,13 +210,13 @@ try {
     Test-PublicUrl -Url ("https://xgwnje.cn/__full-release-probe-$releaseId") -ExpectedStatus 404
     Test-ApiHealth -Revision $head
     Test-PublicUrl -Url 'https://visionguard.xgwnje.cn/' -ExpectedStatus 404
-    powershell.exe -NoProfile -ExecutionPolicy Bypass -File $maintainScript -Mode AfterChange -Scope anytls,homepage,homepage-api,visionguard | Out-Host
+    powershell.exe -NoProfile -ExecutionPolicy Bypass -Command $maintainCommand | Out-Host
     if ($LASTEXITCODE -ne 0) { throw 'Server-infra AfterChange failed.' }
     Invoke-Remote -Command "rm -rf $(ConvertTo-BashLiteral $remoteStaging)" | Out-Null
 } catch {
     if ($frontendActivated) { Invoke-Remote -Command $frontendRollback | Out-Host }
     if ($apiActivated) { Invoke-Remote -Command $apiRollback | Out-Host }
-    powershell.exe -NoProfile -ExecutionPolicy Bypass -File $maintainScript -Mode AfterChange -Scope anytls,homepage,homepage-api,visionguard | Out-Host
+    powershell.exe -NoProfile -ExecutionPolicy Bypass -Command $maintainCommand | Out-Host
     throw
 }
 
