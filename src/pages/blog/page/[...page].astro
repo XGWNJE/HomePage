@@ -63,9 +63,7 @@ const pageDescription = page.currentPage === 1
 					subtitle={T['blog.subtitle']}
 					subtitleKey="blog.subtitle"
 				>
-					<div class="mt-6 overflow-x-auto pb-1">
-						<BlogViewTabs current="latest" />
-					</div>
+					<BlogViewTabs slot="actions" current="latest" />
 				</PageHeading>
 
 				<ul class="mt-8 grid gap-4">

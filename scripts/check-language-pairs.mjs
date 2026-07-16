@@ -11,7 +11,8 @@ const entries = readdirSync(contentDir)
 		const frontmatter = text.startsWith('---') ? text.split('---', 3)[1] ?? '' : '';
 		const lang = readField(frontmatter, 'lang') || inferLang(id);
 		const group = readField(frontmatter, 'group') || id.replace(/-(cn|en)$/, '');
-		return { id, lang, group };
+		const draft = /^draft:\s*true\s*$/im.test(frontmatter);
+		return { id, lang, group, draft };
 	});
 
 const problems = [];
@@ -32,6 +33,7 @@ for (const [key, ids] of groupLangCounts) {
 }
 
 for (const entry of entries) {
+	if (entry.draft) continue;
 	if (entry.lang !== 'cn' && entry.lang !== 'en') continue;
 	const targetLang = entry.lang === 'cn' ? 'en' : 'cn';
 	const directTargetId = entry.id.replace(/-(cn|en)$/, `-${targetLang}`);

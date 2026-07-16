@@ -56,7 +56,6 @@ npm run publish:content
 ## 核心能力
 
 - 静态优先的首页、文章、标签、精选、链接与关于页面
-- 普通博客中的“消化”分类：承接经过人工审核的项目经验文章
 - 中英文文章配对、语言切换、独立 RSS 订阅
 - 桌面与移动端目录、相关文章、代码块和图片预览
 - GitHub OAuth、邮箱登录、评论、浏览量、联系表单与用户设置
@@ -84,7 +83,6 @@ flowchart LR
 | 目标 | 位置 |
 | --- | --- |
 | 文章内容 | `src/content/blog/` |
-| Journal 文章来源 | `src/content/human-agency/`、[消费与预览说明](./docs/human-agency.zh-CN.md) |
 | 页面与组件 | `src/pages/`、`src/components/` |
 | 全局样式 | `src/styles/global.css`、`src/styles/tokens.css`、`src/styles/polish.css` |
 | 后端源码 | `server/` |

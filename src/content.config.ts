@@ -1,10 +1,10 @@
 import { defineCollection } from 'astro:content';
 import { z } from 'astro/zod';
-import { blogWithJournalLoader } from './content/blogWithJournalLoader';
+import { glob } from 'astro/loaders';
 
 const blog = defineCollection({
-	// Load normal Markdown/MDX plus approved Journal entries adapted as ordinary posts.
-	loader: blogWithJournalLoader(),
+	// Load Markdown and MDX files in the `src/content/blog/` directory.
+	loader: glob({ base: './src/content/blog', pattern: '**/*.{md,mdx}' }),
 	// Type-check frontmatter using a schema
 	schema: ({ image }) =>
 		z.object({

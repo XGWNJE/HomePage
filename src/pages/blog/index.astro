@@ -94,9 +94,7 @@ const currentView = isImportant ? 'important' : isArchive ? 'archive' : 'latest'
 					subtitle={T['blog.subtitle']}
 					subtitleKey="blog.subtitle"
 				>
-					<div class="mt-6 overflow-x-auto pb-1">
-						<BlogViewTabs current={currentView} />
-					</div>
+					<BlogViewTabs slot="actions" current={currentView} />
 				</PageHeading>
 
 				<div class="mt-8 min-h-[24rem]">

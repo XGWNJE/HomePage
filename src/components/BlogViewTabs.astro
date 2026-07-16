@@ -1,8 +1,7 @@
 ---
 import { DEFAULT_UI_LANG, getUiText } from '../data/i18n';
-import { getPublishedPosts } from '../utils/publishedPosts';
 
-type BlogView = 'important' | 'latest' | 'digested' | 'archive';
+type BlogView = 'important' | 'latest' | 'archive';
 
 interface Props {
 	current: BlogView;
@@ -11,15 +10,11 @@ interface Props {
 const { current } = Astro.props;
 const BASE = import.meta.env.BASE_URL;
 const T = getUiText(DEFAULT_UI_LANG);
-const hasDigestedPosts = (await getPublishedPosts()).some((post) => post.data.category === '消化');
-const tabs: { id: BlogView; href: string; labelKey: 'blog.important' | 'blog.latest' | 'blog.digested' | 'blog.archive'; label: string }[] = [
+const tabs: { id: BlogView; href: string; labelKey: 'blog.important' | 'blog.latest' | 'blog.archive'; label: string }[] = [
 	{ id: 'important', href: `${BASE}blog/important/`, labelKey: 'blog.important', label: T['blog.important'] },
 	{ id: 'latest', href: `${BASE}blog/`, labelKey: 'blog.latest', label: T['blog.latest'] },
 	{ id: 'archive', href: `${BASE}blog/archive/`, labelKey: 'blog.archive', label: T['blog.archive'] },
 ];
-if (hasDigestedPosts) {
-	tabs.splice(2, 0, { id: 'digested', href: `${BASE}blog/digested/`, labelKey: 'blog.digested', label: T['blog.digested'] });
-}
 ---
 
 <div
@@ -34,15 +29,13 @@ if (hasDigestedPosts) {
 			<a
 				href={tab.href}
 				class:list={[
-					'apple-float-chip relative inline-flex items-center justify-center gap-1.5 rounded-xl px-2 py-2 text-sm font-medium transition-all duration-200 md:gap-2 md:px-3',
+					'apple-float-chip relative inline-flex items-center justify-center rounded-xl px-2 py-2 text-sm font-medium transition-all duration-200 md:gap-2 md:px-3',
 					active
 						? 'bg-zinc-900/6 text-zinc-900 shadow-[0_6px_18px_rgba(15,23,42,0.08)] dark:bg-white/10 dark:text-white'
 						: 'text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200',
 				]}
 				role="tab"
 				aria-selected={active}
-				aria-label={tab.label}
-				data-i18n-aria-label={tab.labelKey}
 			>
 				<span class="apple-float-label">
 					{tab.id === 'important' && (
@@ -60,13 +53,7 @@ if (hasDigestedPosts) {
 							<path stroke-linecap="round" stroke-linejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
 						</svg>
 					)}
-					{tab.id === 'digested' && (
-						<svg viewBox="0 0 24 24" class="h-4 w-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-							<path stroke-linecap="round" stroke-linejoin="round" d="M5 4.75h10.5A3.5 3.5 0 0 1 19 8.25V19H8.5A3.5 3.5 0 0 1 5 15.5V4.75Z" />
-							<path stroke-linecap="round" stroke-linejoin="round" d="M8.5 19A3.5 3.5 0 0 1 5 15.5M9 9h6M9 13h4" />
-						</svg>
-					)}
-					<span data-i18n={tab.labelKey}>{tab.label}</span>
+					<span class="hidden md:inline" data-i18n={tab.labelKey}>{tab.label}</span>
 				</span>
 			</a>
 		);
