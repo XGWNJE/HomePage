@@ -257,3 +257,5 @@ The mojibake returned as soon as I removed the rule. That was useful evidence. T
 - OpenAI Codex issue: [PowerShell 5.1 misreads BOM-less UTF-8 files #23044](https://github.com/openai/codex/issues/23044)
 
 > The machine configuration, rule change, and recurrence described here come from a real working environment. Project names, usernames, absolute paths, and unrelated details have been removed. Public issues demonstrate that similar failures exist; they do not imply that every root-cause claim in those discussions has been officially confirmed by OpenAI.
+
+<!-- content-release-benchmark: 2026-07-17 -->

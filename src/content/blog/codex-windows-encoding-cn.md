@@ -264,3 +264,5 @@ git diff -- .\README.md
 - OpenAI Codex Issue：[PowerShell 5.1 默认代码页导致 UTF-8 文件误读 #23044](https://github.com/openai/codex/issues/23044)
 
 > 文中的本机配置、规则变化和复发现象来自实际工作环境；项目名、用户名、绝对路径及无关内容已省略。公开 Issue 用于证明同类问题存在，不代表其中的全部根因分析都已得到 OpenAI 官方确认。
+
+<!-- content-release-benchmark: 2026-07-17 -->
