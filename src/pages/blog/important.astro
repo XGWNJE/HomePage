@@ -37,7 +37,9 @@ const importantPosts = allPosts
 					subtitle={T['blog.importantSubtitle']}
 					subtitleKey="blog.importantSubtitle"
 				>
-					<BlogViewTabs slot="actions" current="important" />
+					<div class="mt-6 overflow-x-auto pb-1">
+						<BlogViewTabs current="important" />
+					</div>
 				</PageHeading>
 
 				<div class="mt-8 min-h-[24rem]">

@@ -4,14 +4,16 @@
 
 HomePage 由一个静态前端和一个独立 API 组成：
 
-- Astro 在构建期读取 `src/content/blog/`，输出静态文件。
+- Astro 的组合 blog loader 在构建期读取 `src/content/blog/` 和正式导入的 `src/content/human-agency/`，统一输出普通博客静态页面。
 - Nginx 在 `xgwnje.cn` 提供静态页面。
 - 浏览器直接请求 `api.xgwnje.cn` 上的 Node.js API。
 - API 使用 SQLite 保存结构化数据，并使用独立持久目录保存上传文件。
 
 ```mermaid
 flowchart TB
-  Content["Markdown / MDX"] --> Astro["Astro content build"]
+  Content["Markdown / MDX"] --> BlogLoader["Composite blog loader"]
+  Agency["Approved Journal JSON"] --> BlogLoader["Composite blog loader"]
+  BlogLoader --> Astro["Astro content build"]
   Astro --> Dist["Static dist"]
   Browser["Browser"] --> Nginx["Nginx"]
   Nginx --> Dist
@@ -29,6 +31,9 @@ flowchart TB
 | --- | --- |
 | `src/content.config.ts` | 内容 schema |
 | `src/content/blog/` | 双语文章源文件 |
+| `src/content/human-agency/` | 已批准发布并正式导入的 Journal 文章源记录 |
+| `src/content/humanAgencyLoader.ts` | 正式记录与显式 Journal 预览包的隔离验证器 |
+| `src/content/blogWithJournalLoader.ts` | 将 Markdown 与 Journal 记录合并为普通 blog collection |
 | `src/pages/` | Astro 路由 |
 | `src/components/` | 页面组件和浏览器交互 |
 | `src/layouts/BlogPost.astro` | 文章详情布局 |
@@ -45,6 +50,17 @@ flowchart TB
 2. 内容 schema 校验 frontmatter。
 3. Astro 构建页面、RSS 和 Sitemap。
 4. `dist/` 作为不可变静态 release 发布。
+
+### Journal 经验文章
+
+1. Codex-Journal 在私有工作区核验事实、推断、人类增益与隐私风险。
+2. 人工批准到 `approved-preview` 后，HomePage 可以通过显式 `JOURNAL_PREVIEW_PACKAGE` 在普通博客组件中预览。
+3. loader 独立验证交换 Schema、批准状态和条目/包两层哈希，再将公开正文映射为 `category: 消化` 的普通博客文章。
+4. 文章出现在 `/blog/digested/` 和 `/blog/<slug>/`，复用普通博客卡片、正文、RSS、归档和相关文章能力；不再存在独立展示板块。
+5. 普通构建不读取外部包；只有 `approved-publish` 包能由显式 `journal:import --apply` 写入正式内容目录。
+5. 中文认知节点可以独立存在；深度博客继续遵守现有 `group` 配对规则。
+
+交换包不包含原始观察 ID、私有 claim、绝对路径、内部地址或审核事件。HomePage 不承担私有证据加工职责。
 
 ### 登录与交互
 

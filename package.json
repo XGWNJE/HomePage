@@ -23,7 +23,7 @@
     "preview": "astro preview",
     "astro": "astro",
     "typecheck": "astro check && tsc --noEmit",
-    "test": "npm run test:unit && npm run test:content && npm run test:brand && npm run test:ui-reuse && npm run test:header && npm run test:links && npm run test:i18n && npm run test:about && npm run test:admin",
+    "test": "npm run test:unit && npm run test:content && npm run test:brand && npm run test:ui-reuse && npm run test:header && npm run test:links && npm run test:i18n && npm run test:about && npm run test:human-agency && npm run test:admin",
     "test:unit": "tsx --test scripts/*.test.ts",
     "test:content": "node scripts/check-language-pairs.mjs",
     "test:content-release": "tsx --test scripts/content-release.test.ts scripts/asset-budget.test.ts",
@@ -33,9 +33,14 @@
     "test:links": "node scripts/check-links-page.mjs",
     "test:i18n": "node scripts/check-ui-i18n.mjs",
     "test:about": "node scripts/check-about-page.mjs",
-		"test:admin": "node scripts/check-admin-page.mjs && node scripts/check-admin-subscriptions.mjs",
+    "test:human-agency": "tsx --test scripts/human-agency-contract.test.ts scripts/human-agency-import.test.ts && node scripts/check-human-agency-pages.mjs",
+    "test:admin": "node scripts/check-admin-page.mjs && node scripts/check-admin-subscriptions.mjs",
     "test:api": "npm --prefix server test",
-    "verify": "npm test && npm run typecheck && npm run build && npm run test:api"
+    "human-agency:typegen": "tsx scripts/generate-human-agency-types.ts",
+    "human-agency:check-types": "tsx scripts/check-human-agency-types.ts",
+    "journal:preview": "tsx scripts/journal-preview.ts",
+    "journal:import": "tsx scripts/journal-import.ts",
+    "verify": "npm run human-agency:check-types && npm test && npm run typecheck && npm run build && npm run test:api"
   },
   "dependencies": {
     "@astrojs/markdown-remark": "^7.2.1",
@@ -43,6 +48,8 @@
     "@astrojs/rss": "^4.0.19",
     "@astrojs/sitemap": "^3.7.3",
     "@tailwindcss/vite": "^4.3.2",
+    "ajv": "8.20.0",
+    "ajv-formats": "3.0.1",
     "astro": "^7.0.7",
     "sharp": "^0.34.5",
     "tailwindcss": "^4.3.2"
@@ -52,6 +59,7 @@
     "@tailwindcss/typography": "^0.5.20",
     "@types/hast": "^3.0.5",
     "@types/mdast": "^4.0.4",
+    "json-schema-to-typescript": "15.0.4",
     "tsx": "^4.23.0",
     "typescript": "^6.0.3",
     "vite": "^8.1.4"

@@ -60,7 +60,9 @@ const archiveData = Object.entries(postsByYearMonth)
 					subtitle={T['blog.archiveSubtitle']}
 					subtitleKey="blog.archiveSubtitle"
 				>
-					<BlogViewTabs slot="actions" current="archive" />
+					<div class="mt-6 overflow-x-auto pb-1">
+						<BlogViewTabs current="archive" />
+					</div>
 				</PageHeading>
 
 				<div class="mt-8 min-h-[24rem]">

@@ -1,0 +1,30 @@
+{
+  "schema_version": "1.0.0",
+  "package_version": 1,
+  "package_id": "fixture-bad-hash",
+  "approval_status": "approved-preview",
+  "generated_at": "2026-07-16T00:00:00.000Z",
+  "entries": [
+    {
+      "id": "fixture-entry",
+      "slug": "fixture-entry",
+      "revision": 1,
+      "kind": "research-question",
+      "language": "zh-CN",
+      "cognition_status": "unresolved",
+      "title": "测试条目",
+      "core_question": "什么仍未解决？",
+      "human_gain": ["识别未知"],
+      "mental_model": "未解决问题必须显式存在。",
+      "delegable_capabilities": ["资料整理"],
+      "retained_capabilities": ["决定研究方向"],
+      "transfer_scenarios": ["研究议程"],
+      "evidence": [],
+      "open_questions": ["下一步是什么？"],
+      "body_markdown": "仍未解决。",
+      "related_blog_groups": [],
+      "entry_hash": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+    }
+  ],
+  "content_hash": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+}

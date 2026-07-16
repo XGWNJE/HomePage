@@ -19,6 +19,8 @@ npm run dev -- --host 127.0.0.1
 
 需要联调登录、评论、浏览量或联系表单时，再按 [后端开发](./backend-development.md) 启动本地 API。
 
+需要预览或导入 Codex-Journal 的经验文章时，使用 [Journal 文章消费与预览说明](./human-agency.zh-CN.md)。文章会复用普通博客样式并进入“消化”筛选；预览包不会自动进入普通构建，正式导入也不属于文章 `ContentOnly` 通道。
+
 ## 发布文章
 
 文章位于 `src/content/blog/`。同一主题的中文和英文版本分别使用 `-cn`、`-en` 文件名，并共享同一个 `group`：
