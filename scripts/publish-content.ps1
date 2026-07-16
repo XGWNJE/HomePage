@@ -2,13 +2,18 @@
 param(
     [switch]$PlanOnly,
     [switch]$BenchmarkOnly,
-    [string]$ServerInfraRoot = 'D:\ObjectCode\Server-infra'
+    [string]$ServerInfraRoot = 'D:\ObjectCode\Server-infra',
+    [string]$ProjectRoot = ''
 )
 
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 
-$projectRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
+$projectRoot = if ([string]::IsNullOrWhiteSpace($ProjectRoot)) {
+    (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
+} else {
+    (Resolve-Path -LiteralPath $ProjectRoot).Path
+}
 $serverEnvPath = Join-Path $ServerInfraRoot 'server.local.env'
 $maintainScript = Join-Path $ServerInfraRoot 'scripts\maintain.ps1'
 $remoteHelper = Join-Path $projectRoot '.agents\skills\deploy-homepage\scripts\deploy-frontend.sh'
@@ -107,16 +112,30 @@ function Start-CapturedProcess {
 }
 
 function Complete-CapturedProcess {
-    param([Parameter(Mandatory)]$Handle)
+    param(
+        [Parameter(Mandatory)]$Handle,
+        [Parameter(Mandatory)][string]$Phase
+    )
     $Handle.Process.WaitForExit()
     $stdout = $Handle.StandardOutput.GetAwaiter().GetResult()
     $stderr = $Handle.StandardError.GetAwaiter().GetResult()
     $exitCode = $Handle.Process.ExitCode
     $Handle.Process.Dispose()
     if ($exitCode -ne 0) {
-        throw "Process failed with exit code $exitCode. $($stderr.Trim())"
+        $details = @($stderr.Trim(), $stdout.Trim()) | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
+        throw "$Phase failed with exit code $exitCode.$(if ($details.Count -gt 0) { " $($details -join ' ')" })"
     }
     return [pscustomobject]@{ StandardOutput = $stdout; StandardError = $stderr }
+}
+
+function Send-ProcessInput {
+    param(
+        [Parameter(Mandatory)]$Handle,
+        [Parameter(Mandatory)][AllowEmptyString()][string]$Value
+    )
+
+    $Handle.Process.StandardInput.Write($Value.Replace("`r", ''))
+    $Handle.Process.StandardInput.Close()
 }
 
 function Write-Utf8NoBom {
@@ -196,6 +215,14 @@ $sshArgs = @(
     '-p', $server['SSH_PORT'],
     '-i', $server['SSH_KEY_PATH']
 )
+$scpArgs = @(
+    '-q',
+    '-o', 'BatchMode=yes',
+    '-o', 'ConnectTimeout=10',
+    '-o', 'StrictHostKeyChecking=yes',
+    '-P', $server['SSH_PORT'],
+    '-i', $server['SSH_KEY_PATH']
+)
 $snapshotCommand = @'
 set -eu
 available_kb="$(df -Pk /var/www | awk 'NR == 2 {print $4}')"
@@ -214,7 +241,8 @@ done
 '@
 
 $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
-$snapshotHandle = Start-CapturedProcess -FilePath 'ssh.exe' -Arguments ($sshArgs + @($sshTarget, $snapshotCommand))
+$snapshotHandle = Start-CapturedProcess -FilePath 'ssh.exe' -Arguments ($sshArgs + @($sshTarget, 'bash', '-s')) -RedirectInput
+Send-ProcessInput -Handle $snapshotHandle -Value $snapshotCommand
 $buildFailure = $null
 if (-not $PlanOnly) {
     try {
@@ -225,7 +253,7 @@ if (-not $PlanOnly) {
         $buildFailure = $_
     }
 }
-$snapshotResult = Complete-CapturedProcess -Handle $snapshotHandle
+$snapshotResult = Complete-CapturedProcess -Handle $snapshotHandle -Phase 'Production snapshot'
 if ($buildFailure) { throw $buildFailure }
 
 $snapshotParts = [regex]::Split($snapshotResult.StandardOutput, '(?m)^__TREE_TSV__\r?$', 2)
@@ -413,14 +441,16 @@ $remoteArticleChecks = @($articleRoutes | ForEach-Object {
 $remotePublicChecks = @($articleRoutes | ForEach-Object {
     "curl --fail --silent --show-error --output /dev/null --max-time 10 $(ConvertTo-BashLiteral ('https://xgwnje.cn' + [string]$_))"
 }) -join "`n"
+$remoteBundlePath = "/tmp/$bundleName"
 $remoteCommand = @"
 set -Eeuo pipefail
 staging=/tmp/homepage-release-$releaseId
 release_dir=/var/www/xgwnje-home.releases/$releaseId
 bundle=`$staging/$bundleName
 mkdir -p "`$staging"
-cat > "`$bundle"
-test "`$(sha256sum "`$bundle" | awk '{print `$1}')" = '$bundleSha'
+uploaded_bundle=$(ConvertTo-BashLiteral $remoteBundlePath)
+test "`$(sha256sum "`$uploaded_bundle" | awk '{print `$1}')" = '$bundleSha'
+mv "`$uploaded_bundle" "`$bundle"
 tar -xzf "`$bundle" -C "`$staging"
 exec 9>/tmp/xgwnje-home-frontend-release.lock
 flock -n 9 || { printf 'Another frontend release is active.\n' >&2; exit 75; }
@@ -432,7 +462,7 @@ rollback_on_error() {
     if test "`$activated" = 1 && test -x "`$release_dir/deploy-frontend.sh"; then
         bash "`$release_dir/deploy-frontend.sh" rollback $($quotedArgs -join ' ') || true
     fi
-    rm -rf "`$staging"
+    rm -rf "`$staging" "`$uploaded_bundle"
     exit "`$status"
 }
 trap rollback_on_error ERR
@@ -446,26 +476,28 @@ trap - ERR
 printf 'CONTENT_ACTIVE release=%s previous=%s\n' '$releaseId' '$previousRelease'
 "@
 
-$uploadHandle = Start-CapturedProcess -FilePath 'ssh.exe' -Arguments ($sshArgs + @($sshTarget, $remoteCommand)) -RedirectInput
-$bundleStream = [System.IO.File]::OpenRead($bundlePath)
-try {
-    $bundleStream.CopyTo($uploadHandle.Process.StandardInput.BaseStream)
-} finally {
-    $uploadHandle.Process.StandardInput.Close()
-    $bundleStream.Dispose()
-}
-$remoteResult = Complete-CapturedProcess -Handle $uploadHandle
+$uploadStarted = $stopwatch.Elapsed.TotalSeconds
+Invoke-Native -FilePath 'scp.exe' -Arguments ($scpArgs + @($bundlePath, "$sshTarget`:$remoteBundlePath")) | Out-Null
+$uploadSeconds = $stopwatch.Elapsed.TotalSeconds - $uploadStarted
+$activateStarted = $stopwatch.Elapsed.TotalSeconds
+$uploadHandle = Start-CapturedProcess -FilePath 'ssh.exe' -Arguments ($sshArgs + @($sshTarget, 'bash', '-s')) -RedirectInput
+Send-ProcessInput -Handle $uploadHandle -Value $remoteCommand
+$remoteResult = Complete-CapturedProcess -Handle $uploadHandle -Phase 'Remote content activation'
+$activateSeconds = $stopwatch.Elapsed.TotalSeconds - $activateStarted
 if ($remoteResult.StandardOutput) { $remoteResult.StandardOutput.Trim() | Out-Host }
 
 $rollbackCommand = "bash /var/www/xgwnje-home.releases/$releaseId/deploy-frontend.sh rollback $($quotedArgs -join ' ')"
 $publishedSeconds = $stopwatch.Elapsed.TotalSeconds
 try {
+    $afterChangeStarted = $stopwatch.Elapsed.TotalSeconds
     Invoke-AfterChange
+    $afterChangeSeconds = $stopwatch.Elapsed.TotalSeconds - $afterChangeStarted
 } catch {
     $verificationFailure = $_
     try {
-        $rollbackHandle = Start-CapturedProcess -FilePath 'ssh.exe' -Arguments ($sshArgs + @($sshTarget, $rollbackCommand))
-        $rollbackResult = Complete-CapturedProcess -Handle $rollbackHandle
+        $rollbackHandle = Start-CapturedProcess -FilePath 'ssh.exe' -Arguments ($sshArgs + @($sshTarget, 'bash', '-s')) -RedirectInput
+        Send-ProcessInput -Handle $rollbackHandle -Value $rollbackCommand
+        $rollbackResult = Complete-CapturedProcess -Handle $rollbackHandle -Phase 'Content rollback'
         if ($rollbackResult.StandardOutput) { $rollbackResult.StandardOutput.Trim() | Out-Host }
         Invoke-AfterChange
     } catch {
@@ -482,6 +514,10 @@ $stopwatch.Stop()
     previousRelease = $previousRelease
     publishedSeconds = [math]::Round($publishedSeconds, 2)
     totalSeconds = [math]::Round($stopwatch.Elapsed.TotalSeconds, 2)
+    buildAndBundleSeconds = [math]::Round($buildAndBundleSeconds, 2)
+    uploadSeconds = [math]::Round($uploadSeconds, 2)
+    activateSeconds = [math]::Round($activateSeconds, 2)
+    afterChangeSeconds = [math]::Round($afterChangeSeconds, 2)
     changedOutputFiles = $changedOutputPaths.Count
     deletedOutputFiles = $deletedOutputPaths.Count
     bundleBytes = (Get-Item -LiteralPath $bundlePath).Length

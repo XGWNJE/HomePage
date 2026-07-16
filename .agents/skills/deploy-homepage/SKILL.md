@@ -25,7 +25,7 @@ description: Release HomePage through a one-command content fast lane, a lightwe
 npm run publish:content
 ```
 
-该命令自动完成内容配对、图片预算、一次生产构建、变更范围拒绝、差量制品/manifest/SHA-256、单次 SSH 上传与切换、文章路由验收、失败回滚与 `Server-infra AfterChange`。`npm run content:release:plan` 只看范围，`npm run content:release:benchmark` 构建差量制品但不上线。文章发布仍在本地构建完整静态站，但只传变化文件；它不会部署 API、修改 Nginx、运行 API 测试或执行全站浏览器矩阵。
+该命令自动完成内容配对、图片预算、一次生产构建、变更范围拒绝、差量制品/manifest/SHA-256、独立制品上传、远端原子切换、文章路由验收、失败回滚与 `Server-infra AfterChange`。远端 Bash 通过标准输入执行，不依赖 Windows SSH 对嵌套引号的传递。`npm run content:release:plan` 只看范围，`npm run content:release:benchmark` 构建差量制品但不上线。文章发布仍在本地构建完整静态站，但只传变化文件；它不会部署 API、修改 Nginx、运行 API 测试或执行全站浏览器矩阵。
 
 先检查相对上一生产 revision 的变更路径与当前工作区；确认没有高风险路径后，纯前端发布运行：
 
