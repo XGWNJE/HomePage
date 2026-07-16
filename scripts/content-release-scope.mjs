@@ -1,8 +1,10 @@
+import { parseFrontmatter } from '@astrojs/markdown-remark';
+import { spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-const CONTENT_PATTERN = /^src\/content\/blog\/.+\.mdx?$/i;
+const CONTENT_PATTERN = /^src\/content\/blog\/[^/]+\.md$/i;
 const ASSET_PATTERN = /^public\/image\/blog\//i;
 
 export function normalizeReleasePath(filePath) {
@@ -41,25 +43,27 @@ export function getContentReleaseRoutes(contentFiles, projectRoot = process.cwd(
 	]);
 	for (const filePath of contentFiles.map(normalizeReleasePath)) {
 		const source = readFileSync(path.resolve(projectRoot, filePath), 'utf8');
-		const frontmatter = source.startsWith('---') ? source.split('---', 3)[1] ?? '' : '';
-		if (/^draft:\s*true\s*$/im.test(frontmatter)) continue;
+		const frontmatter = parseFrontmatter(source).frontmatter;
+		if (frontmatter.draft === true) continue;
 
 		const articleId = path.basename(filePath).replace(/\.mdx?$/i, '');
 		routes.add(`/blog/${articleId}/`);
-		for (const tag of readInlineList(frontmatter, 'tags')) {
-			routes.add(`/tags/${tag.trim().toLowerCase()}/`);
+		for (const tag of Array.isArray(frontmatter.tags) ? frontmatter.tags : []) {
+			if (typeof tag === 'string' && tag.trim()) {
+				routes.add(`/tags/${encodeURIComponent(tag.trim().toLowerCase())}/`);
+			}
 		}
 	}
 	return [...routes];
 }
 
-function readInlineList(frontmatter, field) {
-	const match = frontmatter.match(new RegExp(`^${field}:\\s*\\[([^\\]]*)\\]`, 'im'));
-	if (!match) return [];
-	return match[1]
-		.split(',')
-		.map((value) => value.trim().replace(/^['"]|['"]$/g, ''))
-		.filter(Boolean);
+export function findPublishedArticlesTurnedDraft(entries) {
+	return entries
+		.filter(({ previousSource, currentSource }) => (
+			parseFrontmatter(previousSource).frontmatter.draft !== true &&
+			parseFrontmatter(currentSource).frontmatter.draft === true
+		))
+		.map(({ path: filePath }) => filePath);
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
@@ -68,5 +72,26 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
 	const routes = classification.eligible
 		? getContentReleaseRoutes(classification.contentFiles)
 		: [];
-	process.stdout.write(JSON.stringify({ ...classification, routes }));
+	const revision = process.env.CONTENT_RELEASE_PRODUCTION_REVISION;
+	const comparisons = [];
+	if (classification.eligible && revision) {
+		for (const filePath of classification.contentFiles) {
+			const previous = spawnSync('git', ['show', `${revision}:${filePath}`], {
+				cwd: process.cwd(),
+				encoding: 'utf8',
+			});
+			if (previous.error) throw previous.error;
+			if (previous.status !== 0) continue;
+			comparisons.push({
+				path: filePath,
+				previousSource: previous.stdout,
+				currentSource: readFileSync(path.resolve(filePath), 'utf8'),
+			});
+		}
+	}
+	process.stdout.write(JSON.stringify({
+		...classification,
+		routes,
+		publishedToDraft: findPublishedArticlesTurnedDraft(comparisons),
+	}));
 }

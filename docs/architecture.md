@@ -63,9 +63,9 @@ flowchart TB
 
 后端代码使用版本化 release；SQLite、上传文件和运行环境配置独立持久化。切换或回滚代码 release 时不得覆盖数据目录。
 
-### 文章发布是受限的完整静态 release
+### 文章发布是受限的静态差量 release
 
-文章更新会同时改变首页、博客列表、标签、RSS 与 Sitemap，因此生产端不增量覆盖单篇 HTML。`ContentOnly` 快速通道从线上 release manifest 取得生产 revision，只允许文章和 `public/image/blog/` 差异，通过后构建完整 `dist/` 并执行版本化原子切换。它不部署 API、不修改 Nginx；范围不纯或内容门禁失败时升级到普通前端或完整审查。
+文章更新会同时改变首页、博客列表、标签、RSS 与 Sitemap，因此本地仍生成完整 `dist/`。`ContentOnly` 快速通道从线上 release manifest 取得生产 revision，只允许普通 Markdown 文章和 `public/image/blog/` 差异；随后只上传新旧构建之间变化的静态文件，在服务器重建完整版本并原子切换。它不部署 API、不修改 Nginx；范围不纯或内容门禁失败时升级到普通前端或完整审查。
 
 ### 后台使用当前管理员会话
 

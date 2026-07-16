@@ -1,6 +1,7 @@
 [CmdletBinding()]
 param(
     [switch]$PlanOnly,
+    [switch]$BenchmarkOnly,
     [string]$ServerInfraRoot = 'D:\ObjectCode\Server-infra'
 )
 
@@ -12,6 +13,7 @@ $serverEnvPath = Join-Path $ServerInfraRoot 'server.local.env'
 $maintainScript = Join-Path $ServerInfraRoot 'scripts\maintain.ps1'
 $remoteHelper = Join-Path $projectRoot '.agents\skills\deploy-homepage\scripts\deploy-frontend.sh'
 $outputRoot = Join-Path $projectRoot 'output\content-release'
+$utf8NoBom = [System.Text.UTF8Encoding]::new($false)
 
 function Read-DotEnv {
     param([Parameter(Mandatory)][string]$Path)
@@ -50,6 +52,78 @@ function ConvertTo-BashLiteral {
     return [string]::Concat($singleQuote, $Value.Replace([string]$singleQuote, $escapedQuote), $singleQuote)
 }
 
+function ConvertTo-WindowsArgument {
+    param([Parameter(Mandatory)][AllowEmptyString()][string]$Value)
+    if ($Value.Length -gt 0 -and $Value -notmatch '[\s"]') { return $Value }
+
+    $builder = [System.Text.StringBuilder]::new()
+    [void]$builder.Append('"')
+    $backslashes = 0
+    foreach ($character in $Value.ToCharArray()) {
+        if ($character -eq '\') {
+            $backslashes++
+            continue
+        }
+        if ($character -eq '"') {
+            [void]$builder.Append(('\' * (($backslashes * 2) + 1)))
+            [void]$builder.Append('"')
+            $backslashes = 0
+            continue
+        }
+        if ($backslashes -gt 0) {
+            [void]$builder.Append(('\' * $backslashes))
+            $backslashes = 0
+        }
+        [void]$builder.Append($character)
+    }
+    if ($backslashes -gt 0) { [void]$builder.Append(('\' * ($backslashes * 2))) }
+    [void]$builder.Append('"')
+    return $builder.ToString()
+}
+
+function Start-CapturedProcess {
+    param(
+        [Parameter(Mandatory)][string]$FilePath,
+        [Parameter(Mandatory)][string[]]$Arguments,
+        [switch]$RedirectInput
+    )
+
+    $startInfo = [System.Diagnostics.ProcessStartInfo]::new()
+    $startInfo.FileName = $FilePath
+    $startInfo.Arguments = (($Arguments | ForEach-Object { ConvertTo-WindowsArgument $_ }) -join ' ')
+    $startInfo.UseShellExecute = $false
+    $startInfo.CreateNoWindow = $true
+    $startInfo.RedirectStandardOutput = $true
+    $startInfo.RedirectStandardError = $true
+    $startInfo.RedirectStandardInput = $RedirectInput.IsPresent
+    $process = [System.Diagnostics.Process]::new()
+    $process.StartInfo = $startInfo
+    if (-not $process.Start()) { throw "Unable to start $FilePath" }
+    return [pscustomobject]@{
+        Process = $process
+        StandardOutput = $process.StandardOutput.ReadToEndAsync()
+        StandardError = $process.StandardError.ReadToEndAsync()
+    }
+}
+
+function Complete-CapturedProcess {
+    param([Parameter(Mandatory)]$Handle)
+    $Handle.Process.WaitForExit()
+    $stdout = $Handle.StandardOutput.GetAwaiter().GetResult()
+    $stderr = $Handle.StandardError.GetAwaiter().GetResult()
+    $exitCode = $Handle.Process.ExitCode
+    $Handle.Process.Dispose()
+    if ($exitCode -ne 0) {
+        throw "Process failed with exit code $exitCode. $($stderr.Trim())"
+    }
+    return [pscustomobject]@{ StandardOutput = $stdout; StandardError = $stderr }
+}
+
+function Write-Utf8NoBom {
+    param([Parameter(Mandatory)][string]$Path, [Parameter(Mandatory)][AllowEmptyString()][string]$Value)
+    [System.IO.File]::WriteAllText($Path, $Value, $utf8NoBom)
+}
+
 function Get-GitStatusPaths {
     $paths = @()
     foreach ($line in @(& git -C $projectRoot status --porcelain=v1)) {
@@ -64,47 +138,55 @@ function Get-GitStatusPaths {
     return $paths
 }
 
-function Test-PublicUrl {
-    param(
-        [Parameter(Mandatory)][string]$Url,
-        [int]$ExpectedStatus = 200
-    )
-
-    $status = (& curl.exe --silent --show-error --location --output NUL --write-out '%{http_code}' --max-time 15 $Url).Trim()
-    if ($LASTEXITCODE -ne 0 -or $status -ne [string]$ExpectedStatus) {
-        throw "Probe failed: $Url expected $ExpectedStatus, received $status"
-    }
+function Convert-RouteToDistPath {
+    param([Parameter(Mandatory)][string]$Route)
+    if ($Route -eq '/') { return 'index.html' }
+    if ($Route.EndsWith('/')) { return ($Route.Trim('/') + '/index.html') }
+    return $Route.Trim('/')
 }
 
-if (-not (Test-Path -LiteralPath $serverEnvPath -PathType Leaf)) {
-    throw "Missing server inventory: $serverEnvPath"
+function Invoke-AfterChange {
+    Invoke-Native -FilePath 'powershell.exe' -Arguments @(
+        '-NoProfile',
+        '-ExecutionPolicy', 'Bypass',
+        '-File', $maintainScript,
+        '-Mode', 'AfterChange',
+        '-Scope', 'homepage'
+    ) | Out-Host
 }
-if (-not (Test-Path -LiteralPath $maintainScript -PathType Leaf)) {
-    throw "Missing Server-infra maintenance entrypoint: $maintainScript"
-}
-if (-not (Test-Path -LiteralPath $remoteHelper -PathType Leaf)) {
-    throw "Missing remote deployment helper: $remoteHelper"
+
+foreach ($path in @($serverEnvPath, $maintainScript, $remoteHelper)) {
+    if (-not (Test-Path -LiteralPath $path -PathType Leaf)) { throw "Required release file is missing: $path" }
 }
 
 $gitRoot = (& git -C $projectRoot rev-parse --show-toplevel).Trim()
 if ([System.IO.Path]::GetFullPath($gitRoot) -ne [System.IO.Path]::GetFullPath($projectRoot)) {
     throw "Unexpected Git root: $gitRoot"
 }
-
+Set-Location -LiteralPath $projectRoot
 $workingPaths = @(Get-GitStatusPaths)
 if ($workingPaths.Count -gt 0) {
     throw "Content publishing requires a clean worktree. Commit the article and its images first. Dirty paths: $($workingPaths -join ', ')"
 }
 
+$branch = (& git -C $projectRoot branch --show-current).Trim()
+$head = (& git -C $projectRoot rev-parse HEAD).Trim()
+$headShort = (& git -C $projectRoot rev-parse --short=7 HEAD).Trim()
+if (-not $PlanOnly -and -not $BenchmarkOnly -and $branch -ne 'main') {
+    throw "Content publishing requires the main branch. Current branch: $branch"
+}
+if (-not $PlanOnly -and -not $BenchmarkOnly) {
+    $upstream = (& git -C $projectRoot rev-parse '@{u}').Trim()
+    if ($LASTEXITCODE -ne 0 -or $upstream -ne $head) {
+        throw "Push the committed article before publishing. Local HEAD: $head; tracked upstream: $upstream"
+    }
+}
+
 $server = Read-DotEnv -Path $serverEnvPath
 $requiredKeys = @('VPS_IP', 'SSH_USER', 'SSH_PORT', 'SSH_KEY_PATH')
 $missingKeys = @($requiredKeys | Where-Object { -not $server.ContainsKey($_) -or [string]::IsNullOrWhiteSpace($server[$_]) })
-if ($missingKeys.Count -gt 0) {
-    throw "Server inventory is missing required keys: $($missingKeys -join ', ')"
-}
-if (-not (Test-Path -LiteralPath $server['SSH_KEY_PATH'] -PathType Leaf)) {
-    throw "SSH key does not exist: $($server['SSH_KEY_PATH'])"
-}
+if ($missingKeys.Count -gt 0) { throw "Server inventory is missing required keys: $($missingKeys -join ', ')" }
+if (-not (Test-Path -LiteralPath $server['SSH_KEY_PATH'] -PathType Leaf)) { throw 'Configured SSH key does not exist.' }
 
 $sshTarget = "$($server['SSH_USER'])@$($server['VPS_IP'])"
 $sshArgs = @(
@@ -114,194 +196,302 @@ $sshArgs = @(
     '-p', $server['SSH_PORT'],
     '-i', $server['SSH_KEY_PATH']
 )
-$scpArgs = @(
-    '-o', 'BatchMode=yes',
-    '-o', 'ConnectTimeout=10',
-    '-o', 'StrictHostKeyChecking=yes',
-    '-P', $server['SSH_PORT'],
-    '-i', $server['SSH_KEY_PATH']
-)
-
-function Invoke-Remote {
-    param([Parameter(Mandatory)][string]$Command)
-    return Invoke-Native -FilePath 'ssh.exe' -Arguments ($sshArgs + @($sshTarget, $Command.Replace("`r", '')))
-}
-
-$metadataCommand = @'
+$snapshotCommand = @'
 set -eu
+available_kb="$(df -Pk /var/www | awk 'NR == 2 {print $4}')"
+test "$available_kb" -ge 262144
 release_id="$(basename "$(readlink -f /var/www/xgwnje-home.releases/current)")"
 manifest="$(find "/var/www/xgwnje-home.releases/${release_id}" -maxdepth 1 -type f -name 'release-manifest-*.json' | head -n 1)"
+site="/var/www/xgwnje-home.releases/${release_id}/site"
 test -n "$manifest"
+test -d "$site"
 cat "$manifest"
+printf '\n__TREE_TSV__\n'
+cd "$site"
+find . -type f -printf '%P\n' | LC_ALL=C sort | while IFS= read -r relative; do
+    printf '%s\t%s\t%s\n' "$(sha256sum "$relative" | awk '{print $1}')" "$(stat -c '%s' "$relative")" "$relative"
+done
 '@
-$production = ((Invoke-Remote -Command $metadataCommand) -join "`n") | ConvertFrom-Json
+
+$stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
+$snapshotHandle = Start-CapturedProcess -FilePath 'ssh.exe' -Arguments ($sshArgs + @($sshTarget, $snapshotCommand))
+$buildFailure = $null
+if (-not $PlanOnly) {
+    try {
+        Invoke-Native -FilePath 'node.exe' -Arguments @((Join-Path $projectRoot 'scripts\check-language-pairs.mjs')) | Out-Host
+        Invoke-Native -FilePath (Join-Path $projectRoot 'node_modules\.bin\astro.cmd') -Arguments @('build') | Out-Host
+        Invoke-Native -FilePath 'node.exe' -Arguments @((Join-Path $projectRoot 'scripts\ensure-sitemap-xml.mjs')) | Out-Host
+    } catch {
+        $buildFailure = $_
+    }
+}
+$snapshotResult = Complete-CapturedProcess -Handle $snapshotHandle
+if ($buildFailure) { throw $buildFailure }
+
+$snapshotParts = [regex]::Split($snapshotResult.StandardOutput, '(?m)^__TREE_TSV__\r?$', 2)
+if ($snapshotParts.Count -ne 2) { throw 'Unable to parse the production release snapshot.' }
+$production = $snapshotParts[0].Trim() | ConvertFrom-Json
 $productionRevision = [string]$production.revision
 $previousRelease = [string]$production.releaseId
+if ($productionRevision -notmatch '^[a-f0-9]{40}$') { throw 'Production manifest contains an invalid Git revision.' }
+if ($previousRelease -notmatch '^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$') { throw 'Production manifest contains an invalid release ID.' }
 
 & git -C $projectRoot cat-file -e "$productionRevision`^{commit}"
-if ($LASTEXITCODE -ne 0) {
-    throw "Production revision is not available locally: $productionRevision"
-}
-
+if ($LASTEXITCODE -ne 0) { throw "Production revision is not available locally: $productionRevision" }
 $changedPaths = @(& git -C $projectRoot diff --name-only "$productionRevision..HEAD")
+$deletedArticles = @($changedPaths | Where-Object {
+    $_ -match '^src/content/blog/.+\.md$' -and
+    -not (Test-Path -LiteralPath (Join-Path $projectRoot $_) -PathType Leaf)
+})
+if ($deletedArticles.Count -gt 0) {
+    throw "Article deletion is not supported by the daily fast lane: $($deletedArticles -join ', ')"
+}
 $env:CONTENT_RELEASE_PATHS_JSON = ConvertTo-Json -Compress -InputObject $changedPaths
+$env:CONTENT_RELEASE_PRODUCTION_REVISION = $productionRevision
 try {
     $scopeJson = (& node (Join-Path $projectRoot 'scripts\content-release-scope.mjs')) -join "`n"
     if ($LASTEXITCODE -ne 0) { throw 'Content release scope classifier failed.' }
     $scope = $scopeJson | ConvertFrom-Json
 } finally {
     Remove-Item Env:CONTENT_RELEASE_PATHS_JSON -ErrorAction SilentlyContinue
+    Remove-Item Env:CONTENT_RELEASE_PRODUCTION_REVISION -ErrorAction SilentlyContinue
 }
-
 if (-not $scope.eligible) {
-    $rejected = @($scope.rejectedPaths) -join ', '
-    throw "Content fast lane rejected this release. Only src/content/blog/** and public/image/blog/** are allowed. Rejected: $rejected"
+    throw "Fast content release accepts only ordinary Markdown and public/image/blog assets. Rejected: $(@($scope.rejectedPaths) -join ', ')"
 }
-
-Push-Location $projectRoot
-try {
-    Invoke-Native -FilePath 'npm.cmd' -Arguments @('run', 'content:check') | Out-Host
-} finally {
-    Pop-Location
+if (@($scope.publishedToDraft).Count -gt 0) {
+    throw "The daily fast lane cannot turn a published article back into a draft: $(@($scope.publishedToDraft) -join ', ')"
 }
-
-$distRoot = Join-Path $projectRoot 'dist'
-foreach ($route in @($scope.routes)) {
-    $relative = if ($route -eq '/') { 'index.html' } elseif ($route.EndsWith('/')) { Join-Path $route.Trim('/') 'index.html' } else { $route.Trim('/') }
-    if (-not (Test-Path -LiteralPath (Join-Path $distRoot $relative) -PathType Leaf)) {
-        throw "Built content route is missing: $route ($relative)"
+$articleRoutes = @($scope.routes | Where-Object { $_ -match '^/blog/.+/$' })
+if ($articleRoutes.Count -eq 0) { throw 'Fast content release requires at least one non-draft article.' }
+foreach ($asset in @($scope.assetFiles)) {
+    $assetPath = Join-Path $projectRoot ([string]$asset)
+    if (Test-Path -LiteralPath $assetPath -PathType Leaf) {
+        $assetBytes = (Get-Item -LiteralPath $assetPath).Length
+        if ($assetBytes -gt 1MB) { throw "Blog asset exceeds the one-megabyte fast-lane limit: $asset" }
     }
 }
 
-$head = (& git -C $projectRoot rev-parse HEAD).Trim()
-$headShort = (& git -C $projectRoot rev-parse --short=7 HEAD).Trim()
-$releaseId = "$((Get-Date).ToUniversalTime().ToString('yyyyMMddTHHmmssZ'))-content-$headShort"
-$artifactDir = Join-Path $outputRoot $releaseId
-
 if ($PlanOnly) {
     [ordered]@{
-        mode = 'ContentOnly'
+        mode = 'ContentOnlyDelta'
         planOnly = $true
         productionRelease = $previousRelease
         productionRevision = $productionRevision
         revision = $head
         changedPaths = @($scope.paths)
-        routes = @($scope.routes)
+        articleRoutes = $articleRoutes
+        skipped = @('full test suite', 'API tests', 'browser QA', 'full dist upload')
     } | ConvertTo-Json -Depth 5
     exit 0
 }
 
-$branch = (& git -C $projectRoot branch --show-current).Trim()
-if ($branch -ne 'main') {
-    throw "Content publishing requires the main branch. Current branch: $branch"
-}
-$remoteMainLine = @(& git -C $projectRoot ls-remote --heads origin refs/heads/main) | Select-Object -First 1
-if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($remoteMainLine)) {
-    throw 'Unable to resolve origin/main before content publishing.'
-}
-$remoteMainRevision = ($remoteMainLine -split '\s+')[0]
-if ($remoteMainRevision -ne $head) {
-    throw "Push the committed article to origin/main before publishing. Local HEAD: $head; origin/main: $remoteMainRevision"
+$distRoot = Join-Path $projectRoot 'dist'
+foreach ($route in $articleRoutes) {
+    $relative = Convert-RouteToDistPath -Route ([uri]::UnescapeDataString([string]$route))
+    if (-not (Test-Path -LiteralPath (Join-Path $distRoot $relative) -PathType Leaf)) {
+        throw "Built article route is missing: $route ($relative)"
+    }
 }
 
+$releaseId = "$((Get-Date).ToUniversalTime().ToString('yyyyMMddTHHmmssZ'))-content-$headShort"
+$artifactDir = Join-Path $outputRoot $releaseId
 New-Item -ItemType Directory -Path $artifactDir -Force | Out-Null
+$baselinePath = Join-Path $artifactDir 'BASELINE_TREE.tsv'
+Write-Utf8NoBom -Path $baselinePath -Value $snapshotParts[1].TrimStart("`r", "`n")
+$deltaJson = ((Invoke-Native -FilePath 'node.exe' -Arguments @(
+    (Join-Path $projectRoot 'scripts\content-delta.mjs'),
+    '--root', $distRoot,
+    '--baseline', $baselinePath
+)) -join "`n") | ConvertFrom-Json
+$changedOutputPaths = @($deltaJson.delta.changedPaths)
+$deletedOutputPaths = @($deltaJson.delta.deletedPaths)
+if ($changedOutputPaths.Count -eq 0 -and $deletedOutputPaths.Count -eq 0) {
+    throw 'The build produced no public file changes.'
+}
 
-Test-PublicUrl -Url 'https://xgwnje.cn/'
-Test-PublicUrl -Url 'https://api.xgwnje.cn/health'
+$changedListPath = Join-Path $artifactDir 'CHANGED_FILES'
+$deletedListPath = Join-Path $artifactDir 'DELETED_FILES'
+Write-Utf8NoBom -Path $changedListPath -Value (($changedOutputPaths -join "`n") + "`n")
+Write-Utf8NoBom -Path $deletedListPath -Value $(if ($deletedOutputPaths.Count -gt 0) { ($deletedOutputPaths -join "`n") + "`n" } else { '' })
 
-$archiveName = "homepage-frontend-$releaseId.tar.gz"
+$deltaArchiveName = "homepage-frontend-delta-$releaseId.tar.gz"
 $manifestName = "release-manifest-$releaseId.json"
-$archivePath = Join-Path $artifactDir $archiveName
+$bundleName = "homepage-content-bundle-$releaseId.tar.gz"
+$deltaArchivePath = Join-Path $artifactDir $deltaArchiveName
 $manifestPath = Join-Path $artifactDir $manifestName
 $sumsPath = Join-Path $artifactDir 'SHA256SUMS'
+$helperArtifactPath = Join-Path $artifactDir 'deploy-frontend.sh'
+Copy-Item -LiteralPath $remoteHelper -Destination $helperArtifactPath
+Invoke-Native -FilePath 'tar.exe' -Arguments @(
+    '-czf', $deltaArchivePath,
+    '-C', $distRoot,
+    '-T', $changedListPath
+) | Out-Null
 
-Invoke-Native -FilePath 'tar.exe' -Arguments @('-czf', $archivePath, '-C', $distRoot, '.') | Out-Null
-$files = @(Get-ChildItem -LiteralPath $distRoot -Recurse -File)
-$fileCount = $files.Count
-$totalBytes = ($files | Measure-Object Length -Sum).Sum
-$archiveSha = (Get-FileHash -LiteralPath $archivePath -Algorithm SHA256).Hash.ToLowerInvariant()
-$indexSha = (Get-FileHash -LiteralPath (Join-Path $distRoot 'index.html') -Algorithm SHA256).Hash.ToLowerInvariant()
-
+$deltaArchiveSha = (Get-FileHash -LiteralPath $deltaArchivePath -Algorithm SHA256).Hash.ToLowerInvariant()
 $manifest = [ordered]@{
     releaseId = $releaseId
-    scope = 'content-only'
+    scope = 'content-only-delta'
     revision = $head
     productionBaseRevision = $productionRevision
     branch = $branch
     gitStatus = 'clean'
     builtAtUtc = (Get-Date).ToUniversalTime().ToString('o')
     changedPaths = @($scope.paths)
-    affectedRoutes = @($scope.routes)
-    environment = [ordered]@{
-        node = (& node --version).Trim()
-        npm = (& npm --version).Trim()
+    affectedRoutes = @($articleRoutes)
+    publishPolicy = [ordered]@{
+        format = 'plain-markdown'
+        browserQa = $false
+        apiTests = $false
+        fullDistUpload = $false
     }
     frontend = [ordered]@{
-        archive = $archiveName
-        sha256 = $archiveSha
-        fileCount = $fileCount
-        totalBytes = $totalBytes
-        indexSha256 = $indexSha
+        archive = $deltaArchiveName
+        sha256 = $deltaArchiveSha
+        changedFileCount = $changedOutputPaths.Count
+        deletedFileCount = $deletedOutputPaths.Count
+        changedBytes = (Get-Item -LiteralPath $deltaArchivePath).Length
+        fileCount = [int]$deltaJson.current.fileCount
+        totalBytes = [int64]$deltaJson.current.totalBytes
+        indexSha256 = [string]$deltaJson.current.indexSha256
+        treeSha256 = [string]$deltaJson.current.treeSha256
     }
     backend = [ordered]@{
         deployed = $false
         currentRevision = [string]$production.backend.currentRevision
     }
 }
-$utf8NoBom = [System.Text.UTF8Encoding]::new($false)
-[System.IO.File]::WriteAllText($manifestPath, ($manifest | ConvertTo-Json -Depth 8), $utf8NoBom)
-$manifestSha = (Get-FileHash -LiteralPath $manifestPath -Algorithm SHA256).Hash.ToLowerInvariant()
-$sumText = "$archiveSha  $archiveName`n$manifestSha  $manifestName`n"
-[System.IO.File]::WriteAllText($sumsPath, $sumText, $utf8NoBom)
+Write-Utf8NoBom -Path $manifestPath -Value ($manifest | ConvertTo-Json -Depth 8)
+$sumFiles = @($deltaArchivePath, $manifestPath, $changedListPath, $deletedListPath, $helperArtifactPath)
+$sumLines = foreach ($sumFile in $sumFiles) {
+    "$((Get-FileHash -LiteralPath $sumFile -Algorithm SHA256).Hash.ToLowerInvariant())  $([System.IO.Path]::GetFileName($sumFile))"
+}
+Write-Utf8NoBom -Path $sumsPath -Value (($sumLines -join "`n") + "`n")
 
-$remoteStaging = "/tmp/homepage-release-$releaseId"
-Invoke-Remote -Command "set -eu; mkdir -p $(ConvertTo-BashLiteral $remoteStaging)" | Out-Host
-Invoke-Native -FilePath 'scp.exe' -Arguments ($scpArgs + @(
-    $archivePath,
-    $manifestPath,
-    $sumsPath,
-    $remoteHelper,
-    "$sshTarget`:$remoteStaging/"
-)) | Out-Host
+$bundlePath = Join-Path $artifactDir $bundleName
+Invoke-Native -FilePath 'tar.exe' -Arguments @(
+    '-czf', $bundlePath,
+    '-C', $artifactDir,
+    $deltaArchiveName,
+    $manifestName,
+    'SHA256SUMS',
+    'CHANGED_FILES',
+    'DELETED_FILES',
+    'deploy-frontend.sh'
+) | Out-Null
+$bundleSha = (Get-FileHash -LiteralPath $bundlePath -Algorithm SHA256).Hash.ToLowerInvariant()
+$buildAndBundleSeconds = $stopwatch.Elapsed.TotalSeconds
 
-$helperPath = "$remoteStaging/deploy-frontend.sh"
-$quoted = @($releaseId, $archiveSha, [string]$fileCount, [string]$totalBytes, $indexSha, $previousRelease) | ForEach-Object { ConvertTo-BashLiteral $_ }
-$prepare = "bash $(ConvertTo-BashLiteral $helperPath) prepare $($quoted -join ' ')"
-$activate = "bash $(ConvertTo-BashLiteral $helperPath) activate $($quoted -join ' ')"
-$rollback = "bash $(ConvertTo-BashLiteral $helperPath) rollback $($quoted -join ' ')"
-
-$activated = $false
-try {
-    Invoke-Remote -Command $prepare | Out-Host
-    Invoke-Remote -Command $activate | Out-Host
-    $activated = $true
-
-    foreach ($route in @($scope.routes)) {
-        Test-PublicUrl -Url ("https://xgwnje.cn" + $route)
-    }
-    Test-PublicUrl -Url 'https://api.xgwnje.cn/health'
-    Test-PublicUrl -Url ("https://xgwnje.cn/__content-release-probe-$releaseId") -ExpectedStatus 404
-
-    powershell.exe -NoProfile -ExecutionPolicy Bypass -File $maintainScript -Mode AfterChange -Scope homepage,homepage-api | Out-Host
-    if ($LASTEXITCODE -ne 0) { throw 'Server-infra AfterChange failed.' }
-    Invoke-Remote -Command "rm -rf $(ConvertTo-BashLiteral $remoteStaging)" | Out-Null
-} catch {
-    if ($activated) {
-        Invoke-Remote -Command $rollback | Out-Host
-        powershell.exe -NoProfile -ExecutionPolicy Bypass -File $maintainScript -Mode AfterChange -Scope homepage,homepage-api | Out-Host
-    }
-    throw
+if ($BenchmarkOnly) {
+    [ordered]@{
+        mode = 'ContentOnlyDelta'
+        benchmarkOnly = $true
+        releaseId = $releaseId
+        buildAndBundleSeconds = [math]::Round($buildAndBundleSeconds, 2)
+        changedOutputFiles = $changedOutputPaths.Count
+        deletedOutputFiles = $deletedOutputPaths.Count
+        bundleBytes = (Get-Item -LiteralPath $bundlePath).Length
+        fullDistBytes = [int64]$deltaJson.current.totalBytes
+    } | ConvertTo-Json -Depth 5
+    exit 0
 }
 
+$quotedArgs = @(
+    $releaseId,
+    $deltaArchiveSha,
+    [string]$deltaJson.current.fileCount,
+    [string]$deltaJson.current.totalBytes,
+    [string]$deltaJson.current.indexSha256,
+    $previousRelease,
+    [string]$deltaJson.current.treeSha256
+) | ForEach-Object { ConvertTo-BashLiteral $_ }
+$remoteArticleChecks = @($articleRoutes | ForEach-Object {
+    $relative = Convert-RouteToDistPath -Route ([uri]::UnescapeDataString([string]$_))
+    "test -f /var/www/xgwnje-home/$(ConvertTo-BashLiteral $relative)"
+}) -join "`n"
+$remotePublicChecks = @($articleRoutes | ForEach-Object {
+    "curl --fail --silent --show-error --output /dev/null --max-time 10 $(ConvertTo-BashLiteral ('https://xgwnje.cn' + [string]$_))"
+}) -join "`n"
+$remoteCommand = @"
+set -Eeuo pipefail
+staging=/tmp/homepage-release-$releaseId
+release_dir=/var/www/xgwnje-home.releases/$releaseId
+bundle=`$staging/$bundleName
+mkdir -p "`$staging"
+cat > "`$bundle"
+test "`$(sha256sum "`$bundle" | awk '{print `$1}')" = '$bundleSha'
+tar -xzf "`$bundle" -C "`$staging"
+exec 9>/tmp/xgwnje-home-frontend-release.lock
+flock -n 9 || { printf 'Another frontend release is active.\n' >&2; exit 75; }
+export HOMEPAGE_FRONTEND_LOCK_HELD=1
+test "`$(basename "`$(readlink -f /var/www/xgwnje-home.releases/current)")" = $(ConvertTo-BashLiteral $previousRelease)
+activated=0
+rollback_on_error() {
+    status=`$?
+    if test "`$activated" = 1 && test -x "`$release_dir/deploy-frontend.sh"; then
+        bash "`$release_dir/deploy-frontend.sh" rollback $($quotedArgs -join ' ') || true
+    fi
+    rm -rf "`$staging"
+    exit "`$status"
+}
+trap rollback_on_error ERR
+bash "`$staging/deploy-frontend.sh" prepare-delta $($quotedArgs -join ' ')
+bash "`$staging/deploy-frontend.sh" activate $($quotedArgs -join ' ')
+activated=1
+$remoteArticleChecks
+$remotePublicChecks
+rm -rf "`$staging"
+trap - ERR
+printf 'CONTENT_ACTIVE release=%s previous=%s\n' '$releaseId' '$previousRelease'
+"@
+
+$uploadHandle = Start-CapturedProcess -FilePath 'ssh.exe' -Arguments ($sshArgs + @($sshTarget, $remoteCommand)) -RedirectInput
+$bundleStream = [System.IO.File]::OpenRead($bundlePath)
+try {
+    $bundleStream.CopyTo($uploadHandle.Process.StandardInput.BaseStream)
+} finally {
+    $uploadHandle.Process.StandardInput.Close()
+    $bundleStream.Dispose()
+}
+$remoteResult = Complete-CapturedProcess -Handle $uploadHandle
+if ($remoteResult.StandardOutput) { $remoteResult.StandardOutput.Trim() | Out-Host }
+
+$rollbackCommand = "bash /var/www/xgwnje-home.releases/$releaseId/deploy-frontend.sh rollback $($quotedArgs -join ' ')"
+$publishedSeconds = $stopwatch.Elapsed.TotalSeconds
+try {
+    Invoke-AfterChange
+} catch {
+    $verificationFailure = $_
+    try {
+        $rollbackHandle = Start-CapturedProcess -FilePath 'ssh.exe' -Arguments ($sshArgs + @($sshTarget, $rollbackCommand))
+        $rollbackResult = Complete-CapturedProcess -Handle $rollbackHandle
+        if ($rollbackResult.StandardOutput) { $rollbackResult.StandardOutput.Trim() | Out-Host }
+        Invoke-AfterChange
+    } catch {
+        throw "Post-release verification failed and rollback also failed. Verification: $verificationFailure Rollback: $_"
+    }
+    throw $verificationFailure
+}
+$stopwatch.Stop()
+
 [ordered]@{
-    mode = 'ContentOnly'
+    mode = 'ContentOnlyDelta'
     releaseId = $releaseId
     revision = $head
     previousRelease = $previousRelease
-    archiveSha256 = $archiveSha
-    manifestSha256 = $manifestSha
+    publishedSeconds = [math]::Round($publishedSeconds, 2)
+    totalSeconds = [math]::Round($stopwatch.Elapsed.TotalSeconds, 2)
+    changedOutputFiles = $changedOutputPaths.Count
+    deletedOutputFiles = $deletedOutputPaths.Count
+    bundleBytes = (Get-Item -LiteralPath $bundlePath).Length
+    fullDistBytes = [int64]$deltaJson.current.totalBytes
+    deltaArchiveSha256 = $deltaArchiveSha
+    bundleSha256 = $bundleSha
+    manifestSha256 = (Get-FileHash -LiteralPath $manifestPath -Algorithm SHA256).Hash.ToLowerInvariant()
+    treeSha256 = [string]$deltaJson.current.treeSha256
     backup = "/var/www/xgwnje-home.backup-$releaseId"
-    rollback = "bash /var/www/xgwnje-home.releases/$releaseId/deploy-frontend.sh rollback $releaseId $archiveSha $fileCount $totalBytes $indexSha $previousRelease"
-    changedPaths = @($scope.paths)
-    verifiedRoutes = @($scope.routes)
+    rollback = $rollbackCommand
+    verifiedRoutes = $articleRoutes
+    skipped = @('full test suite', 'API tests', 'browser QA', 'full dist upload')
 } | ConvertTo-Json -Depth 6

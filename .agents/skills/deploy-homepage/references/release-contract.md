@@ -2,7 +2,7 @@
 
 ## 发布档位
 
-- `ContentOnly`：文章快速通道，仅允许 `src/content/blog/**` 与 `public/image/blog/**`；从线上 manifest 的生产 revision 到本地 `HEAD` 之间出现其他路径时拒绝发布。
+- `ContentOnly`：文章快速通道，仅允许 `src/content/blog/*.md` 与 `public/image/blog/**`；嵌套文章、`.mdx`、文章删除、公开文章转草稿，或从线上 manifest 的生产 revision 到本地 `HEAD` 之间出现其他路径时拒绝发布。
 - `FastFrontend`：默认前端档位，适用于影响边界清晰的页面和视觉资产变更。
 - `FullAudit`：用户明确要求软件审查、完整验收、全局或端到端验证时使用；后端、认证、数据库、migration、依赖锁、构建配置、部署脚本、共享基础组件或基础设施变更也必须使用。
 - 轻量门禁失败、变更路径无法可靠归类或线上表现异常时，立即停止并升级 `FullAudit`，不得降低检查逃避失败。
@@ -11,17 +11,17 @@
 
 1. 确认当前仓库、分支、Git 状态、相对上一生产 revision 的变更路径和用户授权范围；不得混入无关改动。
 2. 从 `D:\ObjectCode\Server-infra\server.local.env` 读取连接信息并实时核对目标主机身份与磁盘空间，不得记录秘密值。
-3. 上传后核对本次制品 SHA-256；没有匹配不得解包或切换。
+3. 上传后先核对传输包 SHA-256，再核对包内文件 SHA-256；没有匹配不得执行包内脚本、重建或切换。
 4. 使用版本化 release、manifest、backup、`current`/`previous` 和失败回滚；不得原地覆盖现有文件。
-5. 发布后运行 `D:\ObjectCode\Server-infra\scripts\maintain.ps1 -Mode AfterChange -Scope homepage,homepage-api`，确认无新增 drift 或 unreachable。
+5. 发布后运行 `D:\ObjectCode\Server-infra\scripts\maintain.ps1 -Mode AfterChange -Scope homepage`，确认前端没有新增 drift 或 unreachable；未改动的 API 不重复巡检。
 
 ## ContentOnly 门禁与验收
 
 1. 要求干净工作区；读取生产 release manifest 的 revision，使用 `git diff <production-revision>..HEAD` 判定完整发布差异，不依赖操作者手填范围。
-2. 运行语言配对、文章/图片发布契约和生产构建；草稿不生成公开文章路由。
-3. 即使只更新一篇文章，也发布完整 `dist/`，使首页、博客、标签、RSS 与 Sitemap 原子保持一致；不得原地覆盖单篇 HTML。
+2. 运行语言配对、文章/图片发布契约和一次生产构建；草稿不生成公开文章路由。
+3. 比较线上完整静态树和本地 `dist/`，只上传变化文件。服务器复制上一 release 后应用变化与删除，核对文件数、总字节、入口哈希和完整树哈希；版本目录与线上目录不得共享可被运行时写入的 inode，也不得原地覆盖单篇 HTML。
 4. 后端、SQLite、上传目录、环境文件与 Nginx 保持不变。
-5. 验证所有变更文章路由、相关标签、首页、博客、RSS、Sitemap、API health 与随机 404；失败立即恢复静态 backup。
+5. 切换后只验证本次公开文章路由并运行 `Server-infra AfterChange`；失败立即恢复静态 backup。首页、博客、标签、RSS 与 Sitemap 由完整树哈希保证与已通过构建的本地产物一致，不重复逐页探测。
 
 ## FastFrontend 门禁与验收
 
@@ -56,7 +56,7 @@
 
 1. 解包到新的临时目录，核对 `index.html`、文件数、总字节数和入口 SHA-256。
 2. 将现有 `/var/www/xgwnje-home` 改名为带 `release_id` 的 backup，再把新目录改名为正式目录；设置失败陷阱恢复旧目录。
-3. `ContentOnly` 验证源站与公网的变更文章、相关标签、首页、博客、RSS、Sitemap、API health 和随机 404；`FastFrontend` 验证首页、受影响路由、API health 和随机 404；`FullAudit` 追加全部公共入口与后台。
+3. `ContentOnly` 验证公网变更文章；`FastFrontend` 验证首页、受影响路由、API health 和随机 404；`FullAudit` 追加全部公共入口与后台。
 4. 前端失败时删除未启用的新目录并恢复 backup；后端已健康时不要无理由连带回滚后端。
 
 ## Nginx 例外流程
@@ -71,7 +71,7 @@
 
 ## 最终验收与清理
 
-- `ContentOnly` 默认以构建和 HTTP 路由验收为主；文章含自定义交互、嵌入或特殊布局时再用浏览器检查。`FastFrontend` 用 Codex 内置浏览器检查受影响页面；`FullAudit` 用真实 Chrome 做桌面与移动端运行态验收。断图检查忽略空 `src` 占位，但任何非空失败 URL 都必须调查。
-- 两档都重新确认 `current`/`previous`、前端入口哈希、API readiness 与 404；`FullAudit` 追加 `nginx -t`、服务状态和各项目基线。
+- `ContentOnly` 只接受普通 Markdown，不做浏览器验收；自定义交互、嵌入或特殊布局升级 `FastFrontend`。`FastFrontend` 用 Codex 内置浏览器检查受影响页面；`FullAudit` 用真实 Chrome 做桌面与移动端运行态验收。断图检查忽略空 `src` 占位，但任何非空失败 URL 都必须调查。
+- 三档都重新确认 `current`/`previous` 与前端入口哈希；`FastFrontend` 追加 API readiness 与 404，`FullAudit` 再追加 `nginx -t`、服务状态和各项目基线。
 - 仅删除明确属于本次 `release_id` 的临时 tar、探针和本地临时目录；保留生产 release、数据库 backup、前端 backup 和 Nginx backup。
 - 最终摘要必须列出：档位、范围、release ID、revision、脏工作区状态、manifest/制品哈希、备份、切换结果、Nginx 变更、已运行与跳过的浏览器/接口验证、回滚命令入口、遗留问题。

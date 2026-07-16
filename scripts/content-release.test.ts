@@ -5,19 +5,57 @@ import path from 'node:path';
 import test from 'node:test';
 import {
 	classifyContentReleasePaths,
+	findPublishedArticlesTurnedDraft,
 	getContentReleaseRoutes,
 } from './content-release-scope.mjs';
 
 test('content release scope accepts posts and dedicated blog assets only', () => {
 	const result = classifyContentReleasePaths([
 		'src\\content\\blog\\release-cn.md',
-		'src/content/blog/release-en.mdx',
+		'src/content/blog/release-en.md',
 		'public/image/blog/release/hero.webp',
 	]);
 
 	assert.equal(result.eligible, true);
 	assert.deepEqual(result.rejectedPaths, []);
 	assert.equal(result.contentFiles.length, 2);
+});
+
+test('fast content release rejects MDX because components require frontend verification', () => {
+	const result = classifyContentReleasePaths([
+		'src/content/blog/release-cn.md',
+		'src/content/blog/release-en.mdx',
+	]);
+
+	assert.equal(result.eligible, false);
+	assert.deepEqual(result.rejectedPaths, ['src/content/blog/release-en.mdx']);
+});
+
+test('fast content release rejects nested posts to keep route handling predictable', () => {
+	const result = classifyContentReleasePaths([
+		'src/content/blog/release-cn.md',
+		'src/content/blog/category/release-en.md',
+	]);
+
+	assert.equal(result.eligible, false);
+	assert.deepEqual(result.rejectedPaths, ['src/content/blog/category/release-en.md']);
+});
+
+test('published articles cannot be hidden by changing frontmatter to draft', () => {
+	const changed = findPublishedArticlesTurnedDraft([
+		{
+			path: 'src/content/blog/published-cn.md',
+			previousSource: '---\ndraft: false\n---\n',
+			currentSource: '---\ndraft: true # intentionally hidden\n---\n',
+		},
+		{
+			path: 'src/content/blog/already-draft-cn.md',
+			previousSource: '---\ndraft: true\n---\n',
+			currentSource: '---\ndraft: true\n---\n',
+		},
+	]);
+
+	assert.deepEqual(changed, ['src/content/blog/published-cn.md']);
 });
 
 test('content release scope rejects frontend, deployment, and server changes', () => {
@@ -42,7 +80,7 @@ test('content release routes cover published articles, tags, feeds, and indexes'
 	await mkdir(blog, { recursive: true });
 	await writeFile(
 		path.join(blog, 'release-cn.md'),
-		'---\ntitle: Release\ntags: ["Engineering", "Notes"]\ndraft: false\n---\n',
+		'---\ntitle: Release\ntags: ["Engineering", "Human AI"]\ndraft: false\n---\n',
 		'utf8',
 	);
 	await writeFile(
@@ -59,7 +97,7 @@ test('content release routes cover published articles, tags, feeds, and indexes'
 	assert(routes.includes('/'));
 	assert(routes.includes('/blog/'));
 	assert(routes.includes('/tags/engineering/'));
-	assert(routes.includes('/tags/notes/'));
+	assert(routes.includes('/tags/human%20ai/'));
 	assert(routes.includes('/rss-en.xml'));
 	assert(routes.includes('/feed-zh.xml'));
 	assert(routes.includes('/sitemap.xml'));

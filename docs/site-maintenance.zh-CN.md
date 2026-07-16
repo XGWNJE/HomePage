@@ -62,7 +62,7 @@ Codex-Journal 只会在用户明确点击“发到主页”后，向 `src/conten
 
 - 常规文章使用 `.md`；内容源不是 JSON。`.mdx` 只在需要导入 Astro 文章组件、原生 HTML 或构建期计算数据时使用。
 - 站点已支持 GitHub 风格表格、任务列表、语言标注的代码块、`NOTE` / `TIP` / `IMPORTANT` / `WARNING` / `CAUTION` 提示框，以及正文图片预览。
-- 可复用的 MDX 组件放在 `src/components/article/`。首次新增或修改组件属于前端改动，不能走 `ContentOnly`；组件已上线后，单独新增 `.mdx` 文章仍可按内容范围判定发布。
+- 可复用的 MDX 组件放在 `src/components/article/`。`.mdx` 会进入普通前端发布；`ContentOnly` 只接受不包含组件逻辑的 `.md`。
 - 参考 [`mdx-content-showcase-cn.mdx`](../src/content/blog/mdx-content-showcase-cn.mdx) 与英文配对文章。Mermaid、公式渲染、视频/PDF 嵌入和第三方交互图表目前不是已接通能力；先实现集中组件并验收，再在文章中复用。
 
 ### 文章效果的决策顺序
@@ -71,8 +71,8 @@ Codex-Journal 只会在用户明确点击“发到主页”后，向 `src/conten
 
 | 路径 | 适合情况 | 主要限制 | 发布影响 |
 | --- | --- | --- | --- |
-| Markdown 基础样式 | 标题、列表、表格、任务清单、代码、引用、提示框、普通图片 | 不适合复杂信息布局和交互 | `.md` / `.mdx` 均可走 `ContentOnly` |
-| 已有 MDX 组件 | 指标概览、步骤时间线、静态柱状图、方案对比 | 受现有 Props 和布局能力约束 | 只改文章时仍走 `ContentOnly` |
+| Markdown 基础样式 | 标题、列表、表格、任务清单、代码、引用、提示框、普通图片 | 不适合复杂信息布局和交互 | `.md` 可走 `ContentOnly` |
+| 已有 MDX 组件 | 指标概览、步骤时间线、静态柱状图、方案对比 | 受现有 Props 和布局能力约束 | 普通前端发布 |
 | 扩展已有组件 | 现有组件只缺一个可复用状态、字段或 slot | 需要代码验证，并影响所有调用方 | 前端发布；不能走 `ContentOnly` |
 | 静态图片 | 一次性、内容固定、装饰性强或制作成图明显更省成本的图表与示意图 | 不会自动适配数据、主题和语言；可访问性较弱 | 图片放在文章专用目录时可走 `ContentOnly` |
 | 新建组件 | 会重复使用，或必须数据驱动、交互、响应式、主题适配、多语言和可访问语义 | 开发、测试和长期维护成本最高 | 前端发布；组件上线后后续文章可快速复用 |
@@ -87,24 +87,24 @@ Codex-Journal 只会在用户明确点击“发到主页”后，向 `src/conten
 
 ### 文章快速通道
 
-文章写作与本地预览完成后，提交文章及其专用图片。工作区必须干净，先检查发布计划，再推送可恢复的源码并上线：
+文章写作与本地预览完成后，提交并推送文章及其专用图片。工作区干净且 `main` 已同步时，发布只需要一个命令：
 
 ```powershell
-npm run content:release:plan
-git push origin main
 npm run publish:content
 ```
 
-`content:release:plan` 从线上当前 release manifest 读取生产 revision，比较它到本地 `HEAD` 的完整差异，运行语言配对、图片预算与生产构建，但不改变线上状态。确认计划后，将该提交推送到 `origin/main`；`publish:content` 会确认本地 `HEAD` 与远端一致，再自动完成制品、哈希、上传、原子切换、定点验收、失败回滚和 `Server-infra AfterChange`。
+`publish:content` 从线上当前 release manifest 读取生产 revision，自动拒绝夹带的工程改动，并发完成线上快照和本地静态构建。它只上传新旧 `dist/` 之间的变化文件，通过一次 SSH 完成校验、完整版本重建和原子切换；成功后只探测本次文章地址并运行 `Server-infra AfterChange`。无需 API 测试、全站浏览器检查、Nginx 检查或完整前端上传。
+
+`npm run content:release:plan` 只查看范围，不构建、不上线；`npm run content:release:benchmark` 构建并生成差量制品，但不上传。单篇普通文章的目标是约 10 秒完成公开切换，实际时间仍受本机构建和 SSH 网络影响，命令会分别输出切换时间和总耗时。
 
 快速通道只接受：
 
-- `src/content/blog/**`
+- `src/content/blog/*.md`
 - `public/image/blog/**`
 
-出现页面、组件、样式、依赖、部署脚本或后端差异时会拒绝。此时先把这些工程变更按 `FastFrontend` 或 `FullAudit` 正常发布，建立新的生产 revision，再单独发布文章。
+嵌套文章、`.mdx`、页面、组件、样式、依赖、部署脚本或后端差异都会被拒绝。此时按 `FastFrontend` 或 `FullAudit` 正常发布；文章删除和“已公开文章改回草稿”也不走日常快速通道。
 
-即使只更新一篇文章，也必须重新生成完整 `dist/`：首页最新文章、博客列表、标签、RSS 与 Sitemap 都依赖内容集合。快速通道省掉的是无关的 API 部署、Nginx 检查、全站浏览器矩阵和后端测试，不是原子发布与回滚保护。
+即使只更新一篇文章，本地也会重新生成完整 `dist/`：首页最新文章、博客列表、标签、RSS 与 Sitemap 都依赖内容集合。上传时只传变化文件，服务器复制上一版本并应用差异，再核对文件数、总字节、入口哈希和整棵文件树哈希。快速通道省掉的是无关验证与传输，不是原子发布和回滚保护。
 
 ## UI 与导航
 
@@ -144,7 +144,7 @@ npm run verify
 
 发布分为三档：
 
-- `ContentOnly`：仅文章与文章专用图片；运行 `npm run publish:content`，自动判定范围并验收所有受影响内容路由。
+- `ContentOnly`：仅普通 Markdown 文章与文章专用图片；运行 `npm run publish:content`，差量上传并验收本次文章地址。
 - `FastFrontend`（默认）：用于影响边界清晰的静态页面和视觉资产。运行 UI 复用约束、类型检查和生产构建，只发布前端，并验收 API health、首页、404 与受影响路由。
 - `FullAudit`：用户明确要求软件审查、完整验收、全局或端到端验证，或变更触及后端、认证、数据库、依赖锁、构建配置、部署脚本或基础设施时使用。运行 `npm ci`、后端依赖安装、`npm run verify`、服务与其他项目基线检查及完整浏览器矩阵。
 
