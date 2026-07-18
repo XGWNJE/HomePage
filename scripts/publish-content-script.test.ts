@@ -23,3 +23,13 @@ test('content release separates bundle upload and reports phase timings', async 
 	assert.match(source, /activateSeconds =/u);
 	assert.match(source, /afterChangeSeconds =/u);
 });
+
+test('content and benchmark releases keep the direct one-build article hot path', async () => {
+	const source = await readFile(scriptUrl, 'utf8');
+
+	assert.match(source, /if \(-not \$PlanOnly\)[\s\S]*?scripts\\check-language-pairs\.mjs/u);
+	assert.match(source, /node_modules\\\.bin\\astro\.cmd[\s\S]*?@\('build'\)/u);
+	assert.match(source, /scripts\\ensure-sitemap-xml\.mjs/u);
+	assert.equal(source.match(/node_modules\\\.bin\\astro\.cmd/gu)?.length, 1);
+	assert.doesNotMatch(source, /preflight\.ps1|-Mode', 'ContentOnly'|test:content-release|npm run verify/u);
+});

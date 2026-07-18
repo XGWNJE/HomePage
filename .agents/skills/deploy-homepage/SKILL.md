@@ -10,7 +10,7 @@ description: Release HomePage through a one-command content fast lane, a lightwe
 ## 1. 确认授权与范围
 
 - 只有用户明确要求上线、发布或回滚时才改变生产环境。
-- 默认只发布实际变更的部分。仅包含 `src/content/blog/*.md` 与 `public/image/blog/**` 的文章变更使用 `ContentOnly`；嵌套文章、`.mdx` 和其他纯静态前端变更使用 `FastFrontend`。不得为了沿用旧流程顺带发布未变更的 `server/`。
+- 默认只发布实际变更的部分。仅包含 `src/content/blog/*.md` 与 `public/image/blog/**` 中 `avif/gif/jpeg/jpg/png/webp` 图片的文章变更使用 `ContentOnly`；嵌套文章、`.mdx`、其他格式资产和其他纯静态前端变更使用 `FastFrontend`。不得为了沿用旧流程顺带发布未变更的 `server/`。
 - 用户明确要求“软件审查”“完整验收”“全局验证”“端到端验证”时使用 `FullAudit`。
 - 变更涉及 `server/`、认证、数据库、migration、依赖锁、构建配置、部署脚本、Nginx/DNS/端口/证书/防火墙，或影响边界不清楚、轻量门禁失败时，即使用户未点名也升级 `FullAudit`。
 - 不自动 commit、push、tag 或创建 Release。
@@ -25,7 +25,7 @@ description: Release HomePage through a one-command content fast lane, a lightwe
 npm run publish:content
 ```
 
-该命令自动完成内容配对、图片预算、一次生产构建、变更范围拒绝、差量制品/manifest/SHA-256、独立制品上传、远端原子切换、文章路由验收、失败回滚与 `Server-infra AfterChange`。远端 Bash 通过标准输入执行，不依赖 Windows SSH 对嵌套引号的传递。`npm run content:release:plan` 只看范围，`npm run content:release:benchmark` 构建差量制品但不上线。文章发布仍在本地构建完整静态站，但只传变化文件；它不会部署 API、修改 Nginx、运行 API 测试或执行全站浏览器矩阵。
+该命令自动完成内容配对、一次生产构建、变更范围拒绝、差量制品/manifest/SHA-256、独立制品上传、远端原子切换、文章路由验收、失败回滚与 `Server-infra AfterChange`。远端 Bash 通过标准输入执行，不依赖 Windows SSH 对嵌套引号的传递。`npm run content:release:plan` 只看范围，`npm run content:release:benchmark` 构建差量制品但不上线。文章发布仍在本地构建完整静态站，但只传变化文件；它不会部署 API、修改 Nginx、运行 API 测试或执行全站浏览器矩阵。
 
 先检查相对上一生产 revision 的变更路径与当前工作区；确认没有高风险路径后，纯前端发布运行：
 
@@ -49,9 +49,9 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .agents/skills/deploy-homepa
 npm run publish:full
 ```
 
-该命令要求干净的 `main` 和已推送的 `origin/main`。它会重新执行 `npm ci`、完整门禁、前端与 API 制品哈希校验、后端生产依赖/测试/审计、SQLite 在线备份与 migration probe，再按 API、静态站顺序原子切换；任一发布验收失败会回滚已切换的部分。
+该命令要求干净的 `main` 和已推送的 `origin/main`，没有跳过 preflight 的正式参数。它会重新执行 `npm ci`、完整门禁、前端与 API 制品哈希校验、后端生产依赖/测试/审计、SQLite 在线备份与 migration probe，再按 API、静态站顺序原子切换。API 切换前会核对 systemd 实际解析的 data/db/uploads/port 配置，停服务后创建即时 pre-migration 快照；新版本失败时只有在新服务完全停止后才原子恢复数据库、权限、环境和旧指针，并验证旧 revision/readiness。
 
-若用户明确授权脏工作区，在脚本命令添加 `-AllowDirty`。脚本只检查 `D:\ObjectCode\Server-infra\server.local.env` 的必需键，不输出秘密。`-SkipVerify` 仅用于同一次发布中已经通过门禁后的只读身份复核，不得作为绕过门禁的首次调用。
+若用户明确授权脏工作区，在单独运行 preflight 时添加 `-AllowDirty`。脚本只检查 `D:\ObjectCode\Server-infra\server.local.env` 的 `VPS_IP`、`SSH_USER`、`SSH_PORT`、`SSH_KEY_PATH` 和密钥文件存在性，不输出秘密；正式 preflight 不提供跳过验证参数。
 
 ## 3. 生成可追踪制品
 
@@ -61,7 +61,7 @@ npm run publish:full
 
 ## 4. 分阶段发布
 
-严格按发布契约中的当前档位执行。每一步先上传到新路径并验证，再切换 `current`/正式目录；版本化制品、SHA-256、备份、原子切换、回滚入口和 `Server-infra AfterChange` 在三个档位都不可省略。只有发布后端时才执行数据库、上传目录和环境文件备份。
+严格按发布契约中的当前档位执行。每一步先上传到新路径并验证，再切换 `current`/正式目录；版本化制品、SHA-256、备份、原子切换、回滚入口和 `Server-infra AfterChange` 在三个档位都不可省略。只有发布后端时才执行数据库、上传目录和环境文件备份；数据库恢复前还必须保留停止状态下的当前数据库与 sidecar，不能让回滚覆盖成为不可逆操作。
 
 ## 5. 验收与交付
 

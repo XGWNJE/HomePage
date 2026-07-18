@@ -9,6 +9,7 @@ import {
 	rm,
 	writeFile,
 } from 'node:fs/promises';
+import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import { collectTreeManifest, diffTreeManifests } from './content-delta.mjs';
@@ -45,8 +46,7 @@ async function sha256(filePath: string) {
 }
 
 test('delta frontend helper reconstructs, activates, and rolls back an immutable release', { timeout: 30_000 }, async () => {
-	await mkdir(path.resolve('output'), { recursive: true });
-	const root = await mkdtemp(path.resolve('output', 'frontend-delta-test-'));
+	const root = await mkdtemp(path.join(os.tmpdir(), 'homepage-frontend-delta-test-'));
 	try {
 		const previousTree = path.join(root, 'previous-tree');
 		const currentTree = path.join(root, 'current-tree');

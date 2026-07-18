@@ -3,7 +3,6 @@ param(
     [ValidateSet('ContentOnly', 'FastFrontend', 'FullAudit')]
     [string]$Mode = 'FastFrontend',
     [switch]$AllowDirty,
-    [switch]$SkipVerify,
     [string]$ServerInfraRoot = 'D:\ObjectCode\Server-infra'
 )
 
@@ -34,34 +33,43 @@ if (-not (Test-Path -LiteralPath $serverEnvPath -PathType Leaf)) {
     throw "Missing server inventory: $serverEnvPath"
 }
 
-$envText = Get-Content -LiteralPath $serverEnvPath -Encoding UTF8 -Raw
-$requiredServerKeys = @('VPS_IP', 'SSH_USER', 'SSH_PORT', 'SSH_PASSWORD')
-$missingKeys = @($requiredServerKeys | Where-Object { $envText -notmatch "(?m)^$([regex]::Escape($_))=" })
+$serverValues = @{}
+foreach ($line in Get-Content -LiteralPath $serverEnvPath -Encoding UTF8) {
+    if ($line -notmatch '^([^#=]+)=(.*)$') { continue }
+    $key = $matches[1].Trim()
+    $value = $matches[2].Trim()
+    if ($value.Length -ge 2 -and (($value.StartsWith('"') -and $value.EndsWith('"')) -or ($value.StartsWith("'") -and $value.EndsWith("'")))) {
+        $value = $value.Substring(1, $value.Length - 2)
+    }
+    $serverValues[$key] = $value
+}
+$requiredServerKeys = @('VPS_IP', 'SSH_USER', 'SSH_PORT', 'SSH_KEY_PATH')
+$missingKeys = @($requiredServerKeys | Where-Object { -not $serverValues.ContainsKey($_) -or [string]::IsNullOrWhiteSpace($serverValues[$_]) })
 if ($missingKeys.Count -gt 0) {
     throw "Server inventory is missing required keys: $($missingKeys -join ', ')"
+}
+if (-not (Test-Path -LiteralPath $serverValues['SSH_KEY_PATH'] -PathType Leaf)) {
+    throw 'Configured SSH key does not exist.'
 }
 
 Push-Location $projectRoot
 try {
-    $verificationCommands = @()
-    if (-not $SkipVerify) {
-        $verificationCommands = switch ($Mode) {
-            'ContentOnly' { @('npm run content:check') }
-            'FullAudit' { @('npm run verify') }
-            default {
-                @(
-                    'npm run test:ui-reuse',
-                    'npm run typecheck',
-                    'npm run build'
-                )
-            }
+    $verificationCommands = switch ($Mode) {
+        'ContentOnly' { @('npm run content:check') }
+        'FullAudit' { @('npm run verify') }
+        default {
+            @(
+                'npm run test:ui-reuse',
+                'npm run typecheck',
+                'npm run build'
+            )
         }
+    }
 
-        foreach ($command in $verificationCommands) {
-            & cmd.exe /d /s /c $command
-            if ($LASTEXITCODE -ne 0) {
-                throw "$command failed with exit code $LASTEXITCODE"
-            }
+    foreach ($command in $verificationCommands) {
+        & cmd.exe /d /s /c $command
+        if ($LASTEXITCODE -ne 0) {
+            throw "$command failed with exit code $LASTEXITCODE"
         }
     }
 
@@ -76,7 +84,7 @@ try {
         npm = (& npm --version).Trim()
         serverInventory = $serverEnvPath
         serverKeysPresent = $requiredServerKeys
-        verification = if ($SkipVerify) { 'skipped' } else { 'passed' }
+        verification = 'passed'
         verificationCommands = $verificationCommands
     }
     $result | ConvertTo-Json -Depth 4

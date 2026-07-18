@@ -93,16 +93,16 @@ Codex-Journal 只会在用户明确点击“发到主页”后，向 `src/conten
 npm run publish:content
 ```
 
-`publish:content` 从线上当前 release manifest 读取生产 revision，自动拒绝夹带的工程改动，并发完成线上快照和本地静态构建。它只上传新旧 `dist/` 之间的变化文件，通过一次 SSH 完成校验、完整版本重建和原子切换；成功后只探测本次文章地址并运行 `Server-infra AfterChange`。无需 API 测试、全站浏览器检查、Nginx 检查或完整前端上传。
+`publish:content` 从线上当前 release manifest 读取生产 revision，自动拒绝夹带的工程改动，并发完成线上快照和本地静态构建。它只上传新旧 `dist/` 之间的变化文件，通过一次 SSH 完成校验、完整版本重建和原子切换；成功后只探测本次文章地址并运行 `Server-infra AfterChange`。发布脚本回归测试保留在开发与 CI，不进入每次文章上线；日常发文无需 API 测试、全站浏览器检查、Nginx 检查或完整前端上传。
 
 `npm run content:release:plan` 只查看范围，不构建、不上线；`npm run content:release:benchmark` 构建并生成差量制品，但不上传。单篇普通文章的目标是约 10 秒完成公开切换，实际时间仍受本机构建和 SSH 网络影响，命令会分别输出切换时间和总耗时。
 
 快速通道只接受：
 
 - `src/content/blog/*.md`
-- `public/image/blog/**`
+- `public/image/blog/**` 下的 `avif`、`gif`、`jpeg`、`jpg`、`png`、`webp` 图片
 
-嵌套文章、`.mdx`、页面、组件、样式、依赖、部署脚本或后端差异都会被拒绝。此时按 `FastFrontend` 或 `FullAudit` 正常发布；文章删除和“已公开文章改回草稿”也不走日常快速通道。
+嵌套文章、`.mdx`、不在白名单内的图片/其他资产、页面、组件、样式、依赖、部署脚本或后端差异都会被拒绝。此时按 `FastFrontend` 或 `FullAudit` 正常发布；文章删除和“已公开文章改回草稿”也不走日常快速通道。
 
 即使只更新一篇文章，本地也会重新生成完整 `dist/`：首页最新文章、博客列表、标签、RSS 与 Sitemap 都依赖内容集合。上传时只传变化文件，服务器复制上一版本并应用差异，再核对文件数、总字节、入口哈希和整棵文件树哈希。快速通道省掉的是无关验证与传输，不是原子发布和回滚保护。
 
@@ -144,7 +144,7 @@ npm run verify
 
 发布分为三档：
 
-- `ContentOnly`：仅普通 Markdown 文章与文章专用图片；运行 `npm run publish:content`，差量上传并验收本次文章地址。
+- `ContentOnly`：仅普通 Markdown 文章与白名单格式的文章专用图片；运行 `npm run publish:content`，差量上传并验收本次文章地址。
 - `FastFrontend`（默认）：用于影响边界清晰的静态页面和视觉资产。运行 UI 复用约束、类型检查和生产构建，只发布前端，并验收 API health、首页、404 与受影响路由。
 - `FullAudit`：用户明确要求软件审查、完整验收、全局或端到端验证，或变更触及后端、认证、数据库、依赖锁、构建配置、部署脚本或基础设施时使用。运行 `npm ci`、后端依赖安装、`npm run verify`、服务与其他项目基线检查及完整浏览器矩阵。
 
@@ -154,7 +154,7 @@ npm run verify
 npm run publish:full
 ```
 
-它要求干净的 `main` 已与 `origin/main` 一致，并会重新执行完整门禁，生成前端与 API 的版本化制品，校验哈希，创建 SQLite 在线备份和 migration probe，再原子切换 API 与静态站。任一线上验收失败时会恢复本次已切换的部分；不会修改 Nginx。
+它要求干净的 `main` 已与 `origin/main` 一致，并会无跳过地重新执行完整门禁，生成前端与 API 的版本化制品，校验哈希，检查后端运行配置，创建 SQLite 在线 probe 副本和迁移前后完整报告，再原子切换 API 与静态站。API 激活会停服务后创建 SQLite 与 uploads 的一致恢复点；API helper 自身激活失败时才自动恢复。API 一旦本机健康并提交，后续公网、前端或 AfterChange 失败不会自动回退数据库，而是回滚受影响前端并报告需要继续处理的部分发布；不会修改 Nginx。
 
 三个档位都必须生成版本化 release 和可追溯 manifest，校验 SHA-256、文件数量与入口哈希，保留 `current`/`previous` 和 backup，原子切换并提供回滚入口。轻量化只减少与改动无关的验证，不省略制品完整性与回滚保护。
 

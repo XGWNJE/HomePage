@@ -5,7 +5,7 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 const CONTENT_PATTERN = /^src\/content\/blog\/[^/]+\.md$/i;
-const ASSET_PATTERN = /^public\/image\/blog\//i;
+const ASSET_PATTERN = /^public\/image\/blog\/.+\.(?:avif|gif|jpe?g|png|webp)$/i;
 
 export function normalizeReleasePath(filePath) {
 	return filePath.replaceAll('\\', '/').replace(/^\.\//, '');

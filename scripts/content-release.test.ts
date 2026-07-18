@@ -41,6 +41,33 @@ test('fast content release rejects nested posts to keep route handling predictab
 	assert.deepEqual(result.rejectedPaths, ['src/content/blog/category/release-en.md']);
 });
 
+test('fast content release accepts only supported web image formats', () => {
+	const accepted = classifyContentReleasePaths([
+		'src/content/blog/release-cn.md',
+		'public/image/blog/release/cover.avif',
+		'public/image/blog/release/animation.gif',
+		'public/image/blog/release/photo.jpeg',
+		'public/image/blog/release/photo.jpg',
+		'public/image/blog/release/diagram.png',
+		'public/image/blog/release/hero.webp',
+	]);
+	const rejected = classifyContentReleasePaths([
+		'src/content/blog/release-cn.md',
+		'public/image/blog/release/source.svg',
+		'public/image/blog/release/archive.tiff',
+		'public/image/blog/release/metadata.json',
+	]);
+
+	assert.equal(accepted.eligible, true);
+	assert.equal(accepted.assetFiles.length, 6);
+	assert.equal(rejected.eligible, false);
+	assert.deepEqual(rejected.rejectedPaths, [
+		'public/image/blog/release/archive.tiff',
+		'public/image/blog/release/metadata.json',
+		'public/image/blog/release/source.svg',
+	]);
+});
+
 test('published articles cannot be hidden by changing frontmatter to draft', () => {
 	const changed = findPublishedArticlesTurnedDraft([
 		{

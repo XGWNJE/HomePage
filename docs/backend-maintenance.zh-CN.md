@@ -51,9 +51,12 @@ npm test
 - `package-lock.json` 与 release 一起上传。
 - 持久数据目录和环境配置没有被打包进 release。
 - 目标 Node 版本与依赖兼容。
+- 新 release 必须通过 `npm ci --omit=dev` 安装 Sharp 的目标平台二进制；不得使用 `--omit=optional` 或跳过安装脚本，并应在目标服务器执行一次真实图片解码测试。
 - `NODE_ENV=production` 且 `DEV_LOGIN=false`；生产环境禁止开放开发登录入口。
 - Turnstile 只能成对启用：前端构建的 `PUBLIC_TURNSTILE_SITE_KEY` 必须与后端受限环境的 `TURNSTILE_SITE_KEY` 相同，同时配置对应的 `TURNSTILE_SECRET_KEY`；三者都留空则保持兼容模式。`TURNSTILE_EXPECTED_HOSTNAME` 必须与生产前端主机名一致。
 - `SERVICE_VERSION` 与 `SERVICE_REVISION` 能追溯到当前 release；不得放入密钥或用户数据。
+- 发布脚本从 `homepage-api.service` 当前 `MainPID` 的进程环境读取真实运行值，并调用新 release 的配置加载器；有效的 data dir、database path、uploads dir 和 port 必须匹配 `/opt/homepage-api/data`、`/opt/homepage-api/data/homepage-api.sqlite`、`/opt/homepage-api/data/uploads` 和 `8787`。任何缺失、解析错误或偏离硬编码部署假设都在备份和切换前失败关闭，且不得输出其他环境值。
+- 上传限制由 `UPLOAD_MAX_FILE_BYTES`、`UPLOAD_MAX_PIXELS`、`UPLOAD_MAX_FRAMES`、`UPLOAD_USER_QUOTA_BYTES`、`UPLOAD_RATE_LIMIT_PER_USER`、`UPLOAD_RATE_LIMIT_PER_IP`、`UPLOAD_RATE_LIMIT_WINDOW_MS` 和 `UPLOAD_MAX_CONCURRENT_DECODES` 控制；临时目录与恢复隔离区必须位于公开 uploads 之外、同一文件系统并保持 `0700`。服务启动时会清理中断的临时文件，并把无数据库记录的 API 管理文件移入恢复隔离区，维护者确认无用后才能删除。
 - 启用订阅管理时，`SUBSCRIPTION_ACCESS_ENABLED=true`、`SUBSCRIPTION_ACCESS_REGISTRY` 指向受保护的绝对路径，TTL 为 `60..300` 秒，且 GitHub OAuth 配置完整；生产禁止 `SUBSCRIPTION_ACCESS_FIXTURE=true`。
 
 ## SQLite 一致性备份
@@ -75,7 +78,7 @@ tar -C /opt/homepage-api/data -czf "$backup_dir/uploads.tar.gz" uploads
 ### 停写备份
 
 1. 停止 `homepage-api.service`，确认进程退出。
-2. 将 SQLite、WAL/SHM 和 uploads 作为一个数据集复制到受限备份目录。
+2. 将 SQLite、WAL/SHM 和 uploads 作为一个数据集复制到受限备份目录；恢复数据库前也必须先停止服务并确认 `MainPID=0`。
 3. 校验备份文件存在且大小合理。
 4. 启动服务并验证 `/health`。
 
@@ -84,13 +87,12 @@ tar -C /opt/homepage-api/data -czf "$backup_dir/uploads.tar.gz" uploads
 ## 切换 release
 
 1. 读取 `current` 的真实目标并让 `previous` 指向它。
-2. 让 `current` 指向已安装、已测试的新 release。
-3. 重启 `homepage-api.service`。
+2. 停止 `homepage-api.service` 并确认进程退出，在旧代码仍由 `current` 指向时创建即时 pre-migration SQLite 快照，记录数据库数字 owner/group 和 mode。
+3. 让 `current` 指向已安装、已测试的新 release，再启动服务；不得通过运行中的服务直接覆盖数据库。
 4. 验证 health、登录、评论读取和上传静态访问。
 5. 检查服务日志与 Nginx API 错误日志。
 
 ```bash
-systemctl restart homepage-api
 systemctl status homepage-api --no-pager
 journalctl -u homepage-api -n 100 --no-pager
 curl -fsS https://api.xgwnje.cn/health
@@ -102,18 +104,22 @@ curl -fsS https://api.xgwnje.cn/health
 
 ## 回滚
 
-代码回滚流程：
+仅在明确确认旧代码兼容当前 schema 和数据时，人工代码回滚流程为：
 
 1. 确认 `previous` 指向上一个健康 release。
-2. 将 `current` 切回 `previous`。
-3. 重启服务并重复健康与功能检查。
+2. 停止服务并确认 `MainPID=0`，再将 `current` 切回 `previous`。
+3. 启动旧服务并重复 revision、readiness 与功能检查。
 4. 保留失败 release 和日志用于复盘。
 
-SQLite schema 变化可能让旧代码不兼容。回滚前检查本次 release 是否修改 schema：
+每次 FullAudit 的 migration probe 都基于 SQLite 在线一致性副本，迁移前后分别保存 `integrity_check`、完整用户 schema 和全部当前持久表计数；该副本不与同时写入中的 uploads 组成恢复集。旧 schema 对象缺失、旧表计数变化、完整性失败或 schema version 不匹配都会阻止激活；真正的数据库与 uploads 一致恢复点在激活停服后创建。
 
-- 兼容时只回滚代码。
-- 不兼容时停止服务，恢复与该 release 对应的一致性数据库和上传备份，再启动。
-- 不允许在不理解 schema 差异时直接覆盖生产数据库。
+SQLite schema 变化可能让旧代码不兼容。发布脚本的即时失败回滚流程是：
+
+- 停止新服务并确认 `MainPID=0`，不得在数据库使用中覆盖。
+- 覆盖前先把停止状态下的当前 SQLite 及现存 WAL/SHM/journal 保存到本次 release 备份下的 `rollback-current-*` 目录；当前 uploads 目录也必须整体移入该目录。随后成对恢复激活时的 SQLite 与 uploads 硬链接快照，确保引用一致并让新版本期间的数据仍可人工取回。
+- 删除新进程留下的 `-wal`、`-shm`、`-journal`，将停服务后创建的 pre-migration 快照复制到数据库同目录的临时文件，恢复原 owner/group/mode 后用同文件系统 `mv` 原子替换。
+- 恢复旧环境文件和 `current`，再启动旧服务并验证旧 revision 与 database readiness；验证未通过时保持失败状态并人工处理，不得报告回滚成功。
+- 该即时快照对应激活时点。若新版本已正常运行并产生新业务数据，不得直接执行会回到该时点的回滚命令；应先评估 schema 和新增数据，制定单独的数据迁移/恢复方案。
 
 ## 日常检查
 

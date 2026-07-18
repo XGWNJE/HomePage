@@ -1,6 +1,5 @@
 [CmdletBinding()]
 param(
-    [switch]$SkipPreflight,
     [string]$ServerInfraRoot = 'D:\ObjectCode\Server-infra'
 )
 
@@ -99,11 +98,9 @@ if ([string]::IsNullOrWhiteSpace($remoteMain) -or $remoteMain -ne $head) {
     throw "Push main before production release. Local HEAD: $head; origin/main: $remoteMain"
 }
 
-if (-not $SkipPreflight) {
-    Invoke-Native -FilePath 'npm.cmd' -Arguments @('ci') | Out-Host
-    Invoke-Native -FilePath 'npm.cmd' -Arguments @('ci', '--prefix', 'server') | Out-Host
-    Invoke-Native -FilePath 'powershell.exe' -Arguments @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', $preflightScript, '-Mode', 'FullAudit') | Out-Host
-}
+Invoke-Native -FilePath 'npm.cmd' -Arguments @('ci') | Out-Host
+Invoke-Native -FilePath 'npm.cmd' -Arguments @('ci', '--prefix', 'server') | Out-Host
+Invoke-Native -FilePath 'powershell.exe' -Arguments @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', $preflightScript, '-Mode', 'FullAudit', '-ServerInfraRoot', $ServerInfraRoot) | Out-Host
 
 $server = Read-DotEnv -Path $serverEnvPath
 $requiredKeys = @('VPS_IP', 'SSH_USER', 'SSH_PORT', 'SSH_KEY_PATH')
@@ -190,7 +187,6 @@ $frontendActivate = "bash $(ConvertTo-BashLiteral "$remoteStaging/deploy-fronten
 $frontendRollback = "bash $(ConvertTo-BashLiteral "$remoteStaging/deploy-frontend.sh") rollback $($frontendArgs -join ' ')"
 $apiPrepare = "bash $(ConvertTo-BashLiteral "$remoteStaging/deploy-api.sh") prepare $($apiArgs -join ' ')"
 $apiActivate = "bash $(ConvertTo-BashLiteral "$remoteStaging/deploy-api.sh") activate $($apiArgs -join ' ')"
-$apiRollback = "bash $(ConvertTo-BashLiteral "$remoteStaging/deploy-api.sh") rollback $($apiArgs -join ' ')"
 $escapedMaintainScript = $maintainScript.Replace("'", "''")
 $maintainCommand = "& '$escapedMaintainScript' -Mode AfterChange -Scope @('anytls','homepage','homepage-api','visionguard')"
 
@@ -201,6 +197,7 @@ try {
     Invoke-Remote -Command $frontendPrepare | Out-Host
     Invoke-Remote -Command $apiActivate | Out-Host
     $apiActivated = $true
+    Test-ApiHealth -Revision $head
     Invoke-Remote -Command $frontendActivate | Out-Host
     $frontendActivated = $true
 
@@ -208,15 +205,16 @@ try {
         Test-PublicUrl -Url ("https://xgwnje.cn" + $route)
     }
     Test-PublicUrl -Url ("https://xgwnje.cn/__full-release-probe-$releaseId") -ExpectedStatus 404
-    Test-ApiHealth -Revision $head
     Test-PublicUrl -Url 'https://visionguard.xgwnje.cn/' -ExpectedStatus 404
     powershell.exe -NoProfile -ExecutionPolicy Bypass -Command $maintainCommand | Out-Host
     if ($LASTEXITCODE -ne 0) { throw 'Server-infra AfterChange failed.' }
     Invoke-Remote -Command "rm -rf $(ConvertTo-BashLiteral $remoteStaging)" | Out-Null
 } catch {
     if ($frontendActivated) { Invoke-Remote -Command $frontendRollback | Out-Host }
-    if ($apiActivated) { Invoke-Remote -Command $apiRollback | Out-Host }
     powershell.exe -NoProfile -ExecutionPolicy Bypass -Command $maintainCommand | Out-Host
+    if ($apiActivated) {
+        throw "Full release failed after the API committed revision $head. The healthy API was preserved to avoid data loss; inspect the frontend rollback and complete or repair the partial release. Cause: $($_.Exception.Message)"
+    }
     throw
 }
 
@@ -233,6 +231,9 @@ try {
     apiBackup = "/opt/homepage-api/backups/$releaseId"
     rollback = [ordered]@{
         frontend = "bash /var/www/xgwnje-home.releases/$releaseId/deploy-frontend.sh rollback $releaseId $frontendSha $fileCount $totalBytes $indexSha $($baseline.frontendRelease)"
-        api = "bash /opt/homepage-api/releases/$releaseId/.release/deploy-api.sh rollback $releaseId $apiSha $head $($baseline.apiRelease)"
+        api = [ordered]@{
+            command = "bash /opt/homepage-api/releases/$releaseId/.release/deploy-api.sh rollback $releaseId $apiSha $head $($baseline.apiRelease)"
+            warning = 'This restores the activation-time SQLite and uploads snapshot. Review post-release writes before running it after the immediate release window.'
+        }
     }
 } | ConvertTo-Json -Depth 6
