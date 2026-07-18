@@ -19,13 +19,19 @@ Seeing that line still felt great.
 
 ![OpenAI support chat showing that the Codex for Windows bug report was escalated to a support specialist](/image/blog/ai-bug-report-achievement/support-escalated.webp)
 
+## A four-second freeze finally left evidence
+
 The story did not begin dramatically. The Codex Windows desktop app froze my input again. The keys I pressed were not lost; nothing appeared for about four seconds, and then the text arrived in the input box all at once. Four seconds is not long, but it is long enough to break a train of thought. Worse, this kind of problem is easy to dismiss as “the computer lagged for a moment.” It definitely happened, but by the time you try to explain it, the scene has already disappeared.
 
 This time, I had an ETW trace. ETW is Windows' built-in event tracing system, capable of recording what the operating system and an application were doing over a period of time. Codex analyzed a 43.313-second trace with zero lost events and found nine delayed keyboard messages. The longest delay was 4,032 milliseconds. Those four seconds were no longer just a feeling; they had left a shape in the data.
 
+## AI did nearly all of the hard labor
+
 Most of the analysis that followed was not mine.
 
 Codex traced a performance hotspot to runtime path resolution in Browser Use. It proposed that synchronous SHA-256 work may have repeatedly read and hashed roughly 1.343 GiB of data. Disk utilization, network activity, and driver interrupts did not show a blockage of comparable scale. Codex organized the timeline, compared the metrics, assembled the evidence, and turned it into an English report. Put bluntly, from collecting the data to interpreting it and writing something an engineering team could use, AI did nearly all of the hard labor.
+
+## An elegant explanation is still only an explanation
 
 But I did not immediately treat its conclusion as fact.
 
@@ -37,9 +43,13 @@ That sentence weakened the report's force, but made it more worthy of being take
 
 ![The accuracy statement and five-page PDF bug report attached in the OpenAI support conversation](/image/blog/ai-bug-report-achievement/report-attached.webp)
 
+## Stop proving it locally and hand it upstream
+
 Codex also suggested continuing with local A/B tests: change one condition, reproduce the problem, and see whether the freeze disappeared with it. That would have made the investigation more complete, but it was inconvenient for me and did not seem worth the time required to keep working around the issue. I decided to stop building local defenses and give the existing evidence to the people upstream who actually had the code and could decide whether it deserved a fix.
 
 Even the submission did not go smoothly. Codex tried several times to complete the support request through browser automation, but none of those attempts established a real conversation. In the end, I logged in myself, pasted the explanation, uploaded the PDF and supporting files, and checked that the accuracy statement had actually gone out with the message.
+
+## Why achievement remained after AI did most of the work
 
 Afterward, I said: “Even though AI did most of the work, I still felt a real sense of achievement.”
 
@@ -48,6 +58,8 @@ That feeling does not prove that “humans are irreplaceable.” Without AI, I p
 But ownership of an outcome does not seem to be calculated by labor volume alone.
 
 I noticed a problem worth pursuing. I decided to capture evidence. I questioned whether the machine's hardware affected the diagnosis. I required the report to separate facts from hypotheses. And when automation failed, I personally carried the material across the final boundary. AI acted as analyst, technical writer, and operational assistant. It did not decide what level of evidence justified a conclusion, and it did not take responsibility for the embarrassment I might face if that conclusion turned out to be wrong after I sent it to someone else.
+
+## What remains human when AI takes over execution
 
 In the past, it was easy to tie achievement to doing something by hand: I wrote the code, drew the diagram, or composed the text, so the result was mine. Once AI breaks that relationship apart, a harder question remains. If much of the execution can be handed to a tool, what part of the work still belongs to the person?
 
