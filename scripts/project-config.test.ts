@@ -208,3 +208,12 @@ test('local cleanup stays inside the repository and preserves persistent data', 
 	assert.match(cleanup, /server-data/);
 	assert.doesNotMatch(cleanup, /Remove-Item[^\r\n]*server-data/);
 });
+
+test('article policy documents adaptive TOC layout without burdening later content releases', async () => {
+	const agents = await readFile(new URL('../AGENTS.md', import.meta.url), 'utf8');
+	const maintenance = await readFile(new URL('../docs/site-maintenance.zh-CN.md', import.meta.url), 'utf8');
+	assert.match(agents, /至少两个可识别的章节标题/u);
+	assert.match(agents, /零个或一个标题.*正文居中/u);
+	assert.match(maintenance, /后续普通.*\.md.*ContentOnly/u);
+	assert.match(maintenance, /不因文章选择目录布局或居中布局.*完整验证/u);
+});

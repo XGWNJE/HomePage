@@ -67,6 +67,12 @@ Codex-Journal 只会在用户明确点击“发到主页”后，向 `src/conten
 - 可复用的 MDX 组件放在 `src/components/article/`。`.mdx` 会进入普通前端发布；`ContentOnly` 只接受不包含组件逻辑的 `.md`。
 - 参考 [`mdx-content-showcase-cn.mdx`](../src/content/blog/mdx-content-showcase-cn.mdx) 与英文配对文章。Mermaid、公式渲染、视频/PDF 嵌入和第三方交互图表目前不是已接通能力；先实现集中组件并验收，再在文章中复用。
 
+### 章节导航与短文布局
+
+审核稿不设统一标题数量。至少两个可识别章节标题时，文章页自动显示桌面目录和移动端目录；零个或一个标题时自动使用无目录的居中阅读布局。章节标题优先写成符合语气的自然过渡句，不使用空标题、HTML 隐藏标题或只为凑目录存在的章节。
+
+布局由 Markdown 标题自动判断，不需要 frontmatter。首次修改这套共享布局时运行完整验证；后续普通 `.md` 文章仍走 `ContentOnly`，不因文章选择目录布局或居中布局而重复前端完整验证或浏览器矩阵。
+
 ### 文章效果的决策顺序
 
 用户或作者提出“想要某种效果”时，不直接默认新建组件。先查 [`visual-system/ui-reuse.zh-CN.md`](./visual-system/ui-reuse.zh-CN.md) 的组件地图，并按下表选择满足需求的最低成本路径：
