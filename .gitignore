@@ -35,6 +35,7 @@ Thumbs.db
 .idea/
 .vscode/
 .claude/
+.worktrees/
 
 # Git protection
 .git_disable/
