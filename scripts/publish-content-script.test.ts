@@ -36,3 +36,16 @@ test('content and benchmark releases keep the direct one-build article hot path'
 	assert.equal(source.match(/node_modules\\\.bin\\astro\.cmd/gu)?.length, 1);
 	assert.doesNotMatch(source, /preflight\.ps1|-Mode', 'ContentOnly'|test:content-release|npm run verify/u);
 });
+
+test('content release passes JSON arrays through environment variables on Windows', async () => {
+	const source = await readFile(scriptUrl, 'utf8');
+	const worktreeHelper = await readFile(new URL('./content-release-worktree.mjs', import.meta.url), 'utf8');
+	const linkHelper = await readFile(new URL('./content-release-links.mjs', import.meta.url), 'utf8');
+
+	assert.match(source, /CONTENT_RELEASE_WORKTREE_PATHS_JSON/u);
+	assert.match(source, /CONTENT_RELEASE_LINK_ROUTES_JSON/u);
+	assert.match(worktreeHelper, /process\.env\.CONTENT_RELEASE_WORKTREE_PATHS_JSON/u);
+	assert.match(linkHelper, /process\.env\.CONTENT_RELEASE_LINK_ROUTES_JSON/u);
+	assert.doesNotMatch(source, /'--paths-json', \$overlayPathsJson/u);
+	assert.doesNotMatch(source, /'--routes-json', \$routesJson/u);
+});

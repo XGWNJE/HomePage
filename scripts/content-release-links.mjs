@@ -53,12 +53,15 @@ export async function findMissingLocalReleaseTargets({ distRoot, routes }) {
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
 	const rootIndex = process.argv.indexOf('--root');
 	const routesIndex = process.argv.indexOf('--routes-json');
-	if (rootIndex < 0 || routesIndex < 0) {
-		throw new Error('Usage: content-release-links.mjs --root <dist> --routes-json <json>');
+	const routesJson = process.env.CONTENT_RELEASE_LINK_ROUTES_JSON
+		|| (routesIndex >= 0 ? process.argv[routesIndex + 1] : '')
+		|| '[]';
+	if (rootIndex < 0) {
+		throw new Error('Usage: content-release-links.mjs --root <dist>');
 	}
 	const missing = await findMissingLocalReleaseTargets({
 		distRoot: process.argv[rootIndex + 1],
-		routes: JSON.parse(process.argv[routesIndex + 1] || '[]'),
+		routes: JSON.parse(routesJson),
 	});
 	process.stdout.write(JSON.stringify({ missing }));
 }

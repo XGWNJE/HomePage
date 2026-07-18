@@ -367,16 +367,19 @@ $isolatedProjectRoot = Join-Path $outputRoot (Join-Path 'worktrees' $releaseId)
 $isolatedPrepared = $false
 if (-not $PlanOnly) {
     try {
-        $overlayPathsJson = ConvertTo-Json -Compress -InputObject @($overlayScope.paths)
-        Invoke-Native -FilePath 'node.exe' -Arguments @(
-            $contentWorktreeHelper,
-            'prepare',
-            '--repository-root', $projectRoot,
-            '--worktree-root', $isolatedProjectRoot,
-            '--production-revision', $productionRevision,
-            '--source-revision', $head,
-            '--paths-json', $overlayPathsJson
-        ) | Out-Null
+        $env:CONTENT_RELEASE_WORKTREE_PATHS_JSON = ConvertTo-Json -Compress -InputObject @($overlayScope.paths)
+        try {
+            Invoke-Native -FilePath 'node.exe' -Arguments @(
+                $contentWorktreeHelper,
+                'prepare',
+                '--repository-root', $projectRoot,
+                '--worktree-root', $isolatedProjectRoot,
+                '--production-revision', $productionRevision,
+                '--source-revision', $head
+            ) | Out-Null
+        } finally {
+            Remove-Item Env:CONTENT_RELEASE_WORKTREE_PATHS_JSON -ErrorAction SilentlyContinue
+        }
         $isolatedPrepared = $true
 
         Invoke-Native -FilePath 'node.exe' -Arguments @(
@@ -396,12 +399,15 @@ if (-not $PlanOnly) {
                 throw "Built article route is missing: $route ($relative)"
             }
         }
-        $routesJson = ConvertTo-Json -Compress -InputObject @($articleRoutes)
-        $linkCheckJson = (Invoke-Native -FilePath 'node.exe' -Arguments @(
-            $contentLinkHelper,
-            '--root', $distRoot,
-            '--routes-json', $routesJson
-        )) -join "`n"
+        $env:CONTENT_RELEASE_LINK_ROUTES_JSON = ConvertTo-Json -Compress -InputObject @($articleRoutes)
+        try {
+            $linkCheckJson = (Invoke-Native -FilePath 'node.exe' -Arguments @(
+                $contentLinkHelper,
+                '--root', $distRoot
+            )) -join "`n"
+        } finally {
+            Remove-Item Env:CONTENT_RELEASE_LINK_ROUTES_JSON -ErrorAction SilentlyContinue
+        }
         $linkCheck = $linkCheckJson | ConvertFrom-Json
         if (@($linkCheck.missing).Count -gt 0) {
             $missingTargets = @($linkCheck.missing | ForEach-Object { "$($_.route) -> $($_.target)" })

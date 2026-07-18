@@ -99,11 +99,12 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
 		worktreeRoot: values['worktree-root'],
 	};
 	if (action === 'prepare') {
+		const pathsJson = process.env.CONTENT_RELEASE_WORKTREE_PATHS_JSON || values['paths-json'] || '[]';
 		const result = await prepareIsolatedContentWorktree({
 			...common,
 			productionRevision: values['production-revision'],
 			sourceRevision: values['source-revision'],
-			contentPaths: JSON.parse(values['paths-json'] || '[]'),
+			contentPaths: JSON.parse(pathsJson),
 		});
 		process.stdout.write(JSON.stringify(result));
 	} else if (action === 'remove') {
