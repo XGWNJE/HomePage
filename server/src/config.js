@@ -1,5 +1,5 @@
 import { randomBytes } from 'node:crypto';
-import { isAbsolute, join, win32 } from 'node:path';
+import { basename, dirname, isAbsolute, join, resolve, win32 } from 'node:path';
 
 function splitList(value) {
 	return String(value || '')
@@ -10,6 +10,15 @@ function splitList(value) {
 
 function normalizeOrigin(value) {
 	return new URL(String(value)).origin;
+}
+
+function positiveInteger(env, name, fallback) {
+	const configured = env[name];
+	const value = Number(configured === undefined || configured === '' ? fallback : configured);
+	if (!Number.isSafeInteger(value) || value <= 0) {
+		throw new Error(`${name} must be a positive safe integer`);
+	}
+	return value;
 }
 
 export function loadConfig(env = process.env) {
@@ -56,6 +65,19 @@ export function loadConfig(env = process.env) {
 	if (subscriptionAccessFixture && !isAbsoluteOnAnyPlatform(subscriptionAccessFixtureQr)) {
 		throw new Error('SUBSCRIPTION_ACCESS_FIXTURE_QR must be an absolute path in fixture mode');
 	}
+	const uploadDir = env.UPLOAD_DIR || join(dataDir, 'uploads');
+	const resolvedUploadDir = resolve(uploadDir);
+	const uploadMaxFileBytes = positiveInteger(env, 'UPLOAD_MAX_FILE_BYTES', 8 * 1024 * 1024);
+	const uploadMaxPixels = positiveInteger(env, 'UPLOAD_MAX_PIXELS', 40_000_000);
+	const uploadMaxFrames = positiveInteger(env, 'UPLOAD_MAX_FRAMES', 50);
+	const uploadUserQuotaBytes = positiveInteger(env, 'UPLOAD_USER_QUOTA_BYTES', 256 * 1024 * 1024);
+	const uploadRateLimitPerUser = positiveInteger(env, 'UPLOAD_RATE_LIMIT_PER_USER', 10);
+	const uploadRateLimitPerIp = positiveInteger(env, 'UPLOAD_RATE_LIMIT_PER_IP', 30);
+	const uploadRateLimitWindowMs = positiveInteger(env, 'UPLOAD_RATE_LIMIT_WINDOW_MS', 60_000);
+	const uploadMaxConcurrentDecodes = positiveInteger(env, 'UPLOAD_MAX_CONCURRENT_DECODES', 2);
+	if (uploadUserQuotaBytes < uploadMaxFileBytes) {
+		throw new Error('UPLOAD_USER_QUOTA_BYTES must be greater than or equal to UPLOAD_MAX_FILE_BYTES');
+	}
 
 	return {
 		nodeEnv,
@@ -74,8 +96,18 @@ export function loadConfig(env = process.env) {
 		adminGithubLogins: splitList(env.ADMIN_GITHUB_LOGINS),
 		adminEmails: splitList(env.ADMIN_EMAILS).map((email) => email.toLowerCase()),
 		devLogin,
-		uploadDir: env.UPLOAD_DIR || join(dataDir, 'uploads'),
+		uploadDir,
+		uploadTempDir: join(dirname(resolvedUploadDir), `.${basename(resolvedUploadDir)}-tmp`),
+		uploadRecoveryDir: join(dirname(resolvedUploadDir), `.${basename(resolvedUploadDir)}-recovery`),
 		uploadPublicBaseUrl: env.UPLOAD_PUBLIC_BASE_URL || 'https://api.xgwnje.cn/uploads',
+		uploadMaxFileBytes,
+		uploadMaxPixels,
+		uploadMaxFrames,
+		uploadUserQuotaBytes,
+		uploadRateLimitPerUser,
+		uploadRateLimitPerIp,
+		uploadRateLimitWindowMs,
+		uploadMaxConcurrentDecodes,
 		contactToEmail: env.CONTACT_TO_EMAIL || '',
 		sendmailPath: env.SENDMAIL_PATH || '/usr/sbin/sendmail',
 		enableSendmail: env.ENABLE_SENDMAIL === 'true',

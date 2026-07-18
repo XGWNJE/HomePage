@@ -12,5 +12,7 @@ export function storeOutbox(db, type, recipient, subject, body) {
 export function trySendmail(config, recipient, subject, body) {
 	if (!config.enableSendmail || !recipient) return;
 	const child = spawn(config.sendmailPath, ['-t'], { stdio: ['pipe', 'ignore', 'ignore'] });
+	child.once('error', () => {});
+	child.stdin.once('error', () => {});
 	child.stdin.end(`To: ${recipient}\nSubject: ${subject}\nContent-Type: text/plain; charset=UTF-8\n\n${body}`);
 }

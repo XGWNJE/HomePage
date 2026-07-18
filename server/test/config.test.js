@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { basename, dirname, join, resolve } from 'node:path';
 import { test } from 'node:test';
 
 import { loadConfig } from '../src/config.js';
@@ -57,6 +58,57 @@ test('frontend and explicit CORS values are normalized to URL origins', () => {
 
 	assert.equal(config.frontendUrl, 'https://xgwnje.cn');
 	assert.deepEqual(config.allowedOrigins, ['https://xgwnje.cn', 'https://admin.xgwnje.cn']);
+});
+
+test('upload security limits are positive safe integers with quota covering one file', () => {
+	const config = loadConfig({
+		NODE_ENV: 'production',
+		UPLOAD_DIR: '/srv/homepage/uploads',
+		UPLOAD_MAX_FILE_BYTES: '1024',
+		UPLOAD_MAX_PIXELS: '2000',
+		UPLOAD_MAX_FRAMES: '3',
+		UPLOAD_USER_QUOTA_BYTES: '4096',
+		UPLOAD_RATE_LIMIT_PER_USER: '4',
+		UPLOAD_RATE_LIMIT_PER_IP: '5',
+		UPLOAD_RATE_LIMIT_WINDOW_MS: '6000',
+		UPLOAD_MAX_CONCURRENT_DECODES: '2',
+	});
+
+	assert.equal(config.uploadMaxFileBytes, 1024);
+	assert.equal(config.uploadMaxPixels, 2000);
+	assert.equal(config.uploadMaxFrames, 3);
+	assert.equal(config.uploadUserQuotaBytes, 4096);
+	assert.equal(config.uploadRateLimitPerUser, 4);
+	assert.equal(config.uploadRateLimitPerIp, 5);
+	assert.equal(config.uploadRateLimitWindowMs, 6000);
+	assert.equal(config.uploadMaxConcurrentDecodes, 2);
+	const resolvedUploadDir = resolve(config.uploadDir);
+	assert.equal(
+		config.uploadTempDir,
+		join(dirname(resolvedUploadDir), `.${basename(resolvedUploadDir)}-tmp`),
+	);
+	assert.equal(
+		config.uploadRecoveryDir,
+		join(dirname(resolvedUploadDir), `.${basename(resolvedUploadDir)}-recovery`),
+	);
+
+	for (const [name, value] of [
+		['UPLOAD_MAX_FILE_BYTES', '0'],
+		['UPLOAD_MAX_PIXELS', '-1'],
+		['UPLOAD_MAX_FRAMES', '1.5'],
+		['UPLOAD_USER_QUOTA_BYTES', String(Number.MAX_SAFE_INTEGER + 1)],
+		['UPLOAD_RATE_LIMIT_PER_USER', 'not-a-number'],
+		['UPLOAD_RATE_LIMIT_PER_IP', '0'],
+		['UPLOAD_RATE_LIMIT_WINDOW_MS', '-100'],
+		['UPLOAD_MAX_CONCURRENT_DECODES', '0'],
+	]) {
+		assert.throws(() => loadConfig({ NODE_ENV: 'production', [name]: value }), /positive safe integer/);
+	}
+	assert.throws(() => loadConfig({
+		NODE_ENV: 'production',
+		UPLOAD_MAX_FILE_BYTES: '2048',
+		UPLOAD_USER_QUOTA_BYTES: '1024',
+	}), /greater than or equal/);
 });
 
 test('subscription fixture access is explicit, bounded, and forbidden in production', () => {

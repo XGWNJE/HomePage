@@ -25,7 +25,17 @@ function testConfig(overrides = {}) {
 		adminEmails: [],
 		adminGithubLogins: [],
 		uploadDir: join(tempDir, 'uploads'),
+		uploadTempDir: join(tempDir, '.uploads-tmp'),
+		uploadRecoveryDir: join(tempDir, '.uploads-recovery'),
 		uploadPublicBaseUrl: 'https://api.xgwnje.cn/uploads',
+		uploadMaxFileBytes: 8 * 1024 * 1024,
+		uploadMaxPixels: 40_000_000,
+		uploadMaxFrames: 50,
+		uploadUserQuotaBytes: 256 * 1024 * 1024,
+		uploadRateLimitPerUser: 10,
+		uploadRateLimitPerIp: 30,
+		uploadRateLimitWindowMs: 60_000,
+		uploadMaxConcurrentDecodes: 2,
 		sessionTtlSeconds: 60 * 60,
 		serviceVersion: '0.1.0-test',
 		serviceRevision: 'test-revision',
@@ -623,17 +633,15 @@ test('image uploads require auth and reject non-image files', async () => {
 	});
 	assert.equal(rejected.status, 400);
 
-	const valid = new FormData();
-	valid.append('file', new Blob([new Uint8Array([0x89, 0x50, 0x4e, 0x47])], { type: 'image/png' }), 'pixel.png');
-	const uploaded = await fetch(`${baseUrl}/api/images`, {
+	const spoofed = new FormData();
+	spoofed.append('file', new Blob([new Uint8Array([0x89, 0x50, 0x4e, 0x47])], { type: 'image/png' }), 'pixel.png');
+	const rejectedSpoof = await fetch(`${baseUrl}/api/images`, {
 		method: 'POST',
 		headers: { authorization: `Bearer ${token}` },
-		body: valid,
+		body: spoofed,
 	});
-	const body = await uploaded.json();
-	assert.equal(uploaded.status, 201);
-	assert.equal(body.ok, true);
-	assert.match(body.url, /^https:\/\/api\.xgwnje\.cn\/uploads\/img_/);
+	assert.equal(rejectedSpoof.status, 400);
+	assert.equal(db.prepare('SELECT COUNT(*) AS count FROM images WHERE user_id = ?').get('dev:uploader').count, 0);
 });
 
 test('subscription API hides capability from unauthorized callers, ungranted admins, and ADMIN_TOKEN', async () => {

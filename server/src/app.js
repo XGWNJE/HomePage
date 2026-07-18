@@ -1,4 +1,5 @@
-import { mkdirSync } from 'node:fs';
+import { chmodSync, mkdirSync, realpathSync, statSync } from 'node:fs';
+import { isAbsolute, relative, sep } from 'node:path';
 
 import express from 'express';
 
@@ -10,7 +11,7 @@ import { registerAuthRoutes } from './routes/auth.js';
 import { registerCommentRoutes } from './routes/comments.js';
 import { registerContactRoutes } from './routes/contact.js';
 import { registerHealthRoutes } from './routes/health.js';
-import { registerImageRoutes } from './routes/images.js';
+import { reconcileImageStorage, registerImageRoutes } from './routes/images.js';
 import { registerProfileRoutes } from './routes/profile.js';
 import { registerViewRoutes } from './routes/views.js';
 
@@ -19,6 +20,31 @@ export function createApp({ db, config, fetchImpl = globalThis.fetch }) {
 		throw new Error('Turnstile site and secret keys must be configured together');
 	}
 	mkdirSync(config.uploadDir, { recursive: true });
+	mkdirSync(config.uploadTempDir, { recursive: true, mode: 0o700 });
+	mkdirSync(config.uploadRecoveryDir, { recursive: true, mode: 0o700 });
+	chmodSync(config.uploadTempDir, 0o700);
+	chmodSync(config.uploadRecoveryDir, 0o700);
+	const resolvedUploadDir = realpathSync(config.uploadDir);
+	const resolvedUploadTempDir = realpathSync(config.uploadTempDir);
+	const resolvedUploadRecoveryDir = realpathSync(config.uploadRecoveryDir);
+	const isOutsideUploads = (candidate) => {
+		const relativePath = relative(resolvedUploadDir, candidate);
+		return relativePath !== '' && (
+			isAbsolute(relativePath)
+			|| relativePath === '..'
+			|| relativePath.startsWith(`..${sep}`)
+		);
+	};
+	if (
+		statSync(resolvedUploadDir).dev !== statSync(resolvedUploadTempDir).dev
+		|| statSync(resolvedUploadDir).dev !== statSync(resolvedUploadRecoveryDir).dev
+		|| resolvedUploadTempDir === resolvedUploadRecoveryDir
+		|| !isOutsideUploads(resolvedUploadTempDir)
+		|| !isOutsideUploads(resolvedUploadRecoveryDir)
+	) {
+		throw new Error('Upload temporary and recovery directories must be outside uploads on the same filesystem');
+	}
+	reconcileImageStorage(db, config);
 
 	const app = express();
 	const checkRate = createRateLimiter();
@@ -33,6 +59,9 @@ export function createApp({ db, config, fetchImpl = globalThis.fetch }) {
 		index: false,
 		maxAge: '30d',
 		immutable: true,
+		setHeaders(res) {
+			res.setHeader('X-Content-Type-Options', 'nosniff');
+		},
 	}));
 	app.use(corsMiddleware(config));
 

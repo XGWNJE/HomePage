@@ -40,6 +40,11 @@ API 默认监听 `http://127.0.0.1:8787`，本地数据写入已忽略的 `serve
 | `PUBLIC_ALLOWED_ORIGIN` | 允许访问 API 的本地前端来源 |
 | `HOMEPAGE_API_DATA_DIR` | 本地数据目录 |
 | `DATABASE_PATH` | SQLite 文件位置 |
+| `UPLOAD_DIR` / `UPLOAD_PUBLIC_BASE_URL` | 上传文件持久目录与公开 URL 前缀；临时文件和崩溃恢复隔离区自动放在公开目录之外的同文件系统受限目录 |
+| `UPLOAD_MAX_FILE_BYTES` / `UPLOAD_MAX_PIXELS` / `UPLOAD_MAX_FRAMES` | 单文件字节、总解码像素和动画帧数上限 |
+| `UPLOAD_USER_QUOTA_BYTES` | 每个用户可持久保存的上传文件总量 |
+| `UPLOAD_RATE_LIMIT_PER_USER` / `UPLOAD_RATE_LIMIT_PER_IP` / `UPLOAD_RATE_LIMIT_WINDOW_MS` | 上传尝试的用户/IP 固定窗口限流 |
+| `UPLOAD_MAX_CONCURRENT_DECODES` | 单个 API 进程同时执行的 Sharp 完整图片解码数量 |
 | `DEV_LOGIN` | 仅在显式设为 `true` 时启用本地测试登录；生产环境禁止启用 |
 | `BASE_URL` / `FRONTEND_URL` | OAuth 和返回地址 |
 | `TURNSTILE_SITE_KEY` / `TURNSTILE_SECRET_KEY` | 成对启用邮件登录与联系表单的服务端人机验证；站点密钥必须与前端 `PUBLIC_TURNSTILE_SITE_KEY` 相同 |
@@ -86,7 +91,7 @@ npm --prefix server run permission:manage -- grant --login dev_user manage_subsc
 | `server/src/routes/admin-subscriptions.js` | 权限、GitHub 重新认证、主动锁定、按需复制、二维码和脱敏审计 |
 | `server/test/api.test.js` | API 集成测试 |
 
-数据库层会优先使用当前 Node 提供的 `node:sqlite`，不可用时回退到 `better-sqlite3`。schema 变更按 `PRAGMA user_version` 顺序迁移；每次变更都要新增版本并测试新库、旧库升级和重复启动。生产 Node 版本与本地版本不一致时，要明确验证生产实际使用的驱动。
+数据库层会优先使用当前 Node 提供的 `node:sqlite`，不可用时回退到 `better-sqlite3`。图片上传使用服务端直接依赖的 Sharp 严格解码，客户端 MIME 和扩展名不能替代真实格式检查。schema 变更按 `PRAGMA user_version` 顺序迁移；每次变更都要新增版本并测试新库、旧库升级和重复启动。生产 Node 版本与本地版本不一致时，要明确验证生产实际使用的驱动和 Sharp 原生模块。
 
 ## 验证
 
@@ -108,7 +113,7 @@ npm run verify
 2. 本地登录后调用 `GET /api/me`。
 3. 浏览量读取与写入。
 4. 评论匿名拒绝和登录提交。
-5. 非图片上传拒绝。
+5. 有效图片上传成功，伪图片、超限图片和格式不匹配上传被拒绝，失败后临时目录无残留；启动时发现的无数据库记录文件进入非公开恢复隔离区而不是直接删除。
 6. 非管理员访问管理接口被拒绝。
 
 ## 数据与清理
