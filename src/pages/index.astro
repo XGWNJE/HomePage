@@ -7,15 +7,15 @@ import { BILIBILI_URL, GITHUB_URL, SITE_TITLE } from '../consts';
 import { DEFAULT_UI_LANG, getUiText } from '../data/i18n';
 import { visualAssets } from '../data/visualAssets';
 import SiteLayout from '../layouts/SiteLayout.astro';
-import { getPostLang } from '../utils/postAnalytics';
+import { getPostLang, groupPostsByArticle } from '../utils/postAnalytics';
 import { getPublishedPosts } from '../utils/publishedPosts';
 
 const BASE = import.meta.env.BASE_URL;
 const T = getUiText(DEFAULT_UI_LANG);
 // Keep home preview aligned with list pagination size for consistent editorial cadence.
-const posts = (await getPublishedPosts())
-	.sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf())
-	.slice(0, 6);
+const posts = groupPostsByArticle(
+	(await getPublishedPosts()).sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf()),
+).slice(0, 6).flat();
 
 ---
 

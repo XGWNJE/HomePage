@@ -41,6 +41,7 @@ const setTranslatedAttribute = (
 export const applyLanguage = (requested = getStoredLanguage()): void => {
 	const lang = isLanguage(requested) ? requested : DEFAULT_UI_LANG;
 	document.documentElement.dataset.uiLang = lang;
+	document.documentElement.lang = lang === 'cn' ? 'zh-CN' : 'en';
 
 	document.querySelectorAll<HTMLElement>('[data-i18n]').forEach((node) => {
 		const key = node.getAttribute('data-i18n');

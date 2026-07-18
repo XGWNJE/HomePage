@@ -59,3 +59,9 @@ test('legacy globals are isolated to explicit compatibility bridges', async () =
 	assert.match(auth, /from ['"]\.\.\/\.\.\/lib\/auth['"]/);
 	assert.match(auth, /getAuthToken: getToken/);
 });
+
+test('UI language changes keep the document language in sync', async () => {
+	const i18n = await read('src/client/site/i18n.ts');
+
+	assert.match(i18n, /document\.documentElement\.lang\s*=\s*lang === 'cn' \? 'zh-CN' : 'en'/);
+});

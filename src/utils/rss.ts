@@ -8,6 +8,7 @@ interface RssFeedOptions {
 	title: string;
 	description: string;
 	site?: string | URL;
+	language?: 'zh-CN' | 'en';
 }
 
 export function getPostLang(post: CollectionEntry<'blog'>): string {
@@ -17,13 +18,12 @@ export function getPostLang(post: CollectionEntry<'blog'>): string {
 /**
  * Generate RSS feed
  */
-export async function generateRssFeed({ posts, title, description, site }: RssFeedOptions) {
-	const BASE_URL = import.meta.env.BASE_URL || '/';
+export async function generateRssFeed({ posts, title, description, site, language }: RssFeedOptions) {
+	const BASE_URL = import.meta.env?.BASE_URL || '/';
 	const items = await Promise.all(
 		posts.map(async (post) => {
-			const postLang = getPostLang(post);
 			const pubDate = post.data.updatedDate ?? post.data.pubDate;
-			const renderedHtml = post.rendered?.html ?? post.body ?? '';
+			const renderedHtml = post.rendered?.html;
 
 			return {
 				title: post.data.title,
@@ -31,9 +31,7 @@ export async function generateRssFeed({ posts, title, description, site }: RssFe
 				description: post.data.description,
 				link: `${BASE_URL}blog/${post.id}/`,
 				categories: post.data.tags ?? [],
-				content: renderedHtml,
-				// Add language for RSS readers that support it
-				...(postLang && { lang: postLang }),
+				...(renderedHtml ? { content: renderedHtml } : {}),
 			};
 		})
 	);
@@ -43,7 +41,7 @@ export async function generateRssFeed({ posts, title, description, site }: RssFe
 		description,
 		site: site ?? BASE_URL,
 		items,
-		customData: `<language>en-us</language>`,
+		...(language ? { customData: `<language>${language}</language>` } : {}),
 	});
 }
 

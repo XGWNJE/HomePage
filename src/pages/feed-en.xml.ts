@@ -11,5 +11,6 @@ export async function GET(context: APIContext) {
 		title: `${SITE_TITLE} - English`,
 		description: 'English blog posts feed',
 		site: context.site,
+		language: 'en',
 	});
 }

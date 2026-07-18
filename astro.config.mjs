@@ -84,6 +84,15 @@ function remarkGitHubAlertFallback() {
 const runtimeBase = '/';
 const runtimeSite = 'https://xgwnje.cn';
 
+/** @param {string} page */
+export function shouldIncludeInSitemap(page) {
+	const pathname = new URL(page).pathname;
+	if (pathname === '/admin' || pathname.startsWith('/admin/') || pathname === '/important/') {
+		return false;
+	}
+	return !/^\/blog\/page\/\d+\/$/.test(pathname);
+}
+
 /*
  * Rewrites markdown `<img src="/image/...">` to include the active base path.
  * This prevents broken images when the same markdown is built for different hosts.
@@ -130,12 +139,7 @@ export default defineConfig({
 	integrations: [
 		mdx(),
 		sitemap({
-			filter: (page) => {
-				if (page === `${runtimeSite}/admin/` || page === `${runtimeSite}/important/`) {
-					return false;
-				}
-				return !new RegExp(`^${runtimeSite.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}/blog/page/\\d+/$`).test(page);
-			},
+			filter: shouldIncludeInSitemap,
 		}),
 	],
 	markdown: {

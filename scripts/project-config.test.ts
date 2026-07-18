@@ -47,6 +47,15 @@ test('legacy platform environment values cannot change the VPS root base', async
 	assert.equal(config.base, '/');
 });
 
+test('sitemap excludes only the admin route namespace', async () => {
+	const { shouldIncludeInSitemap } = await import(configUrl.href);
+
+	assert.equal(shouldIncludeInSitemap('https://xgwnje.cn/admin'), false);
+	assert.equal(shouldIncludeInSitemap('https://xgwnje.cn/admin/'), false);
+	assert.equal(shouldIncludeInSitemap('https://xgwnje.cn/admin/subscriptions/'), false);
+	assert.equal(shouldIncludeInSitemap('https://xgwnje.cn/administrator/'), true);
+});
+
 test('the root package owns frontend tooling and delegates API commands to server', async () => {
 	const packageJson = JSON.parse(await readFile(path.resolve('package.json'), 'utf8'));
 	const serverPackageJson = JSON.parse(await readFile(path.resolve('server/package.json'), 'utf8'));

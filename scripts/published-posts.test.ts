@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 import type { CollectionEntry } from 'astro:content';
 
 import { createPublishedPostsQuery, filterPublishedPosts } from '../src/utils/publishedPosts.ts';
+import { groupPostsByArticle } from '../src/utils/postAnalytics.ts';
 import { getRelatedPosts } from '../src/utils/posts.ts';
 
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -54,6 +55,33 @@ test('getRelatedPosts never recommends a draft', () => {
 		getRelatedPosts(asBlogPost(current), [asBlogPost(draft), asBlogPost(published)], 4).map((post) => post.id),
 		['published-en'],
 	);
+});
+
+test('article language variants stay together when pages are split into six groups', () => {
+	const posts = Array.from({ length: 7 }, (_, index) =>
+		(['cn', 'en'] as const).map((lang) => asBlogPost({
+			id: `group-${index + 1}-${lang}`,
+			data: { group: `group-${index + 1}`, lang },
+		})),
+	).flat();
+	const groups = groupPostsByArticle(posts);
+
+	assert.equal(groups.length, 7);
+	assert.deepEqual(groups.slice(0, 6).flat().map((post) => post.id), posts.slice(0, 12).map((post) => post.id));
+	assert.deepEqual(groups.slice(6).flat().map((post) => post.id), ['group-7-cn', 'group-7-en']);
+});
+
+test('home and blog pagination apply limits to article groups', async () => {
+	const [home, blog, paginatedBlog] = await Promise.all([
+		readFile(path.join(repositoryRoot, 'src/pages/index.astro'), 'utf8'),
+		readFile(path.join(repositoryRoot, 'src/pages/blog/index.astro'), 'utf8'),
+		readFile(path.join(repositoryRoot, 'src/pages/blog/page/[...page].astro'), 'utf8'),
+	]);
+
+	assert.match(home, /groupPostsByArticle[\s\S]*\.slice\(0, 6\)\.flat\(\)/);
+	assert.match(blog, /postGroups\.slice\(0, PAGE_SIZE\)\.flat\(\)/);
+	assert.match(blog, /Math\.ceil\(postGroups\.length \/ PAGE_SIZE\)/);
+	assert.match(paginatedBlog, /paginate\(postGroups, \{ pageSize: PAGE_SIZE \}\)/);
 });
 
 test('every public blog reader uses the shared published-post query', async () => {

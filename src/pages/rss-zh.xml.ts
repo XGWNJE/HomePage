@@ -11,5 +11,6 @@ export async function GET(context: APIContext) {
 		title: `${SITE_TITLE} - 中文`,
 		description: '中文博客文章订阅',
 		site: context.site,
+		language: 'zh-CN',
 	});
 }

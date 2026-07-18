@@ -48,9 +48,18 @@ for (const key of requiredKeys) {
 	if (!quotedKey.test(i18nSource)) fail(`${i18nPath} is missing key ${key}`);
 }
 
+for (const inaccurateCopy of [
+	'会经过 AI 审核',
+	'reviewed by AI',
+	'所有留言发送前都会经过审核',
+	'All messages will be reviewed before being sent',
+]) {
+	if (i18nSource.includes(inaccurateCopy)) fail(`${i18nPath} still contains inaccurate review copy: ${inaccurateCopy}`);
+}
+
 const fileChecks = [
 	['src/components/Header.astro', ['data-ui-lang-option', 'data-i18n={link.labelKey}', 'startHeaderRuntime']],
-	['src/client/site/i18n.ts', ['window.__xgwnjeI18n', 'applyLanguage', "from '../../data/i18n'"]],
+	['src/client/site/i18n.ts', ['window.__xgwnjeI18n', 'applyLanguage', "from '../../data/i18n'", 'document.documentElement.lang', "'zh-CN'"]],
 	['src/components/MobileDrawer.astro', ['XGWNJE', 'data-i18n={link.labelKey}']],
 	['src/components/Footer.astro', ['data-i18n="footer.contact"', 'data-motion-hint', 'data-i18n="footer.motionPaused"', 'data-i18n="footer.motionHelp"']],
 	['src/components/LoginModal.astro', ['data-i18n="login.title"']],

@@ -8,7 +8,7 @@ import PostCard from '../../../components/PostCard.astro';
 import { SITE_TITLE } from '../../../consts';
 import { DEFAULT_UI_LANG, getUiText } from '../../../data/i18n';
 import SiteLayout from '../../../layouts/SiteLayout.astro';
-import { getPostLang } from '../../../utils/postAnalytics';
+import { getPostLang, groupPostsByArticle } from '../../../utils/postAnalytics';
 import { getPublishedPosts } from '../../../utils/publishedPosts';
 
 const BASE_DESCRIPTION = 'Browse all articles on this blog. Find technical tutorials, engineering guides, research notes, and programming tips.';
@@ -22,9 +22,10 @@ export const getStaticPaths = (async ({ paginate }) => {
 	const posts = (await getPublishedPosts()).sort(
 		(a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf(),
 	);
+	const postGroups = groupPostsByArticle(posts);
 
 	// Page 1 is intentionally handled by /blog/ to avoid duplicate first-page routes.
-	return paginate(posts, { pageSize: PAGE_SIZE }).filter(
+	return paginate(postGroups, { pageSize: PAGE_SIZE }).filter(
 		(entry) => entry.props.page.currentPage > 1,
 	);
 }) satisfies GetStaticPaths;
@@ -33,11 +34,12 @@ interface Props {
 	page: {
 		currentPage: number;
 		lastPage: number;
-		data: any[];
+		data: any[][];
 	};
 }
 
 const { page } = Astro.props as Props;
+const posts = page.data.flat();
 
 // Generate unique description for each page to avoid SEO penalties
 const pageDescription = page.currentPage === 1
@@ -68,7 +70,7 @@ const pageDescription = page.currentPage === 1
 
 				<ul class="mt-8 grid gap-4">
 					{
-						page.data.map((post, idx) => (
+						posts.map((post, idx) => (
 								<li class="relative" data-reveal data-i18n-content-lang={getPostLang(post)} style={`--reveal-delay: ${Math.min(idx * 60, 180)}ms`}>
 								<PostCard post={post} base={BASE} maxMobile={3} maxDesktop={null} reloadOnNavigate={true} />
 							</li>

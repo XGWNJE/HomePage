@@ -7,7 +7,7 @@ import PostCard from '../../components/PostCard.astro';
 import { SITE_TITLE } from '../../consts';
 import { DEFAULT_UI_LANG, getUiText } from '../../data/i18n';
 import SiteLayout from '../../layouts/SiteLayout.astro';
-import { getPostLang } from '../../utils/postAnalytics';
+import { getPostLang, groupPostsByArticle } from '../../utils/postAnalytics';
 import { getPublishedPosts } from '../../utils/publishedPosts';
 
 const BASE = import.meta.env.BASE_URL;
@@ -29,8 +29,9 @@ const importantPosts = allPosts
 
 // Pagination for Latest view
 const PAGE_SIZE = 6;
-const paginatedPosts = posts.slice(0, PAGE_SIZE);
-const lastPage = Math.max(1, Math.ceil(posts.length / PAGE_SIZE));
+const postGroups = groupPostsByArticle(posts);
+const paginatedPosts = postGroups.slice(0, PAGE_SIZE).flat();
+const lastPage = Math.max(1, Math.ceil(postGroups.length / PAGE_SIZE));
 
 // Group posts by year and month for archive view
 const postsByYearMonth: Record<string, Record<string, typeof posts>> = {};
