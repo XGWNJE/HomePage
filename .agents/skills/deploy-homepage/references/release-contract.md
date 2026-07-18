@@ -2,7 +2,7 @@
 
 ## 发布档位
 
-- `ContentOnly`：文章快速通道，仅允许 `src/content/blog/*.md` 与 `public/image/blog/**` 中扩展名为 `avif/gif/jpeg/jpg/png/webp` 的图片；嵌套文章、`.mdx`、其他资产格式、文章删除、公开文章转草稿，或从线上 manifest 的生产 revision 到本地 `HEAD` 之间出现其他路径时拒绝发布。
+- `ContentOnly`：文章快速通道，允许 `src/content/blog/*.md`、`public/image/blog/**` 中的安全图片和 `public/file/blog/**` 中的安全下载附件。嵌套文章、`.mdx`、原生 HTML、组件、样式、脚本、文章或附件删除、公开文章转草稿不进入该通道。线上生产 revision 到本地 `HEAD` 之间存在其他工程路径时，只忽略这些路径，不得让它们阻塞纯文章或进入文章制品。
 - `FastFrontend`：默认前端档位，适用于影响边界清晰的页面和视觉资产变更。
 - `FullAudit`：用户明确要求软件审查、完整验收、全局或端到端验证时使用；后端、认证、数据库、migration、依赖锁、构建配置、部署脚本、共享基础组件或基础设施变更也必须使用。
 - 轻量门禁失败、变更路径无法可靠归类或线上表现异常时，立即停止并升级 `FullAudit`，不得降低检查逃避失败。
@@ -17,9 +17,9 @@
 
 ## ContentOnly 门禁与验收
 
-1. 要求干净工作区；读取生产 release manifest 的 revision，使用 `git diff <production-revision>..HEAD` 判定完整发布差异，不依赖操作者手填范围。
-2. 运行语言配对、文章/图片发布契约和一次生产构建；草稿不生成公开文章路由。发布回归测试留在开发与 CI 门禁，不进入日常文章上线热路径。
-3. 比较线上完整静态树和本地 `dist/`，只上传变化文件。差量 bundle 独立上传并核对哈希，远端部署脚本通过 `bash -s` 标准输入执行，避免 Windows SSH 命令行转义改变脚本内容。服务器复制上一 release 后应用变化与删除，核对文件数、总字节、入口哈希和完整树哈希；版本目录与线上目录不得共享可被运行时写入的 inode，也不得原地覆盖单篇 HTML。
+1. 要求干净工作区且内容 commit 已推送；读取生产 release manifest 的生产代码 revision 与上一内容来源 revision。用 Git 差异自动选择 Markdown 和文章专用资源，不依赖操作者手填范围；其他工程路径只记录为忽略项。
+2. 从生产代码 revision 创建临时隔离工作树，叠加生产代码基线以来的全部内容文件，再运行语言配对、文章资源契约、本地链接存在性检查和一次生产构建。不得直接从当前 `HEAD` 工作树构建文章制品；草稿不生成公开文章路由。发布回归测试留在开发与 CI 门禁，不进入日常文章上线热路径。
+3. 比较线上完整静态树和隔离构建的 `dist/`，只上传变化文件。差量 bundle 独立上传并核对哈希，远端部署脚本通过 `bash -s` 标准输入执行，避免 Windows SSH 命令行转义改变脚本内容。服务器复制上一 release 后应用变化与删除，核对文件数、总字节、入口哈希和完整树哈希；版本目录与线上目录不得共享可被运行时写入的 inode，也不得原地覆盖单篇 HTML。
 4. 后端、SQLite、上传目录、环境文件与 Nginx 保持不变。
 5. 切换后只验证本次公开文章路由并运行 `Server-infra AfterChange`；失败立即恢复静态 backup。首页、博客、标签、RSS 与 Sitemap 由完整树哈希保证与已通过构建的本地产物一致，不重复逐页探测。
 
@@ -39,7 +39,7 @@
 
 ## 发布身份
 
-- 每次发布生成唯一 `release_id`；manifest 至少包含前后端哈希、文件数、字节数、Node/npm 版本、Git 状态和构建时间，并记录自身 SHA-256。
+- 每次发布生成唯一 `release_id`；manifest 至少包含生产代码 revision、内容来源 revision、内容叠加路径、被忽略工程路径、前后端哈希、文件数、字节数、Git 状态和构建时间，并记录自身 SHA-256。
 - 干净工作区用 Git commit 作为 API revision；用户明确授权的脏工作区用 `worktree-<server-sha12>`。manifest 哈希负责唯一标识完整前后端组合。
 - 把 revision 写入 API 的 `SERVICE_REVISION`，但不覆盖仓库外已有秘密。
 

@@ -47,7 +47,7 @@ npm run verify
 
 ## 内容与资产
 
-- 文章位于 `src/content/blog/`；中英文版本使用 `-cn` / `-en` 文件名并共享 `group`。文章专用本地图片放在 `public/image/blog/`，以便内容快速发布通道可靠判定范围。
+- 文章位于 `src/content/blog/`；中英文版本使用 `-cn` / `-en` 文件名并共享 `group`。文章专用本地图片放在 `public/image/blog/<article-group>/`，下载附件放在 `public/file/blog/<article-group>/`，以便内容快速发布通道可靠判定范围。
 - Codex-Journal 可在用户点击“发到主页”后写入 `draft: true` 的普通中文选题提纲。这些文件只包含写作切口、写作价值和可用素材，不使用专属分类或加载器；标题、文件名、分类、标签和正文均在本项目继续编辑。
 - 用户提出文章中的图表、卡片、时间线、特殊排版或交互效果时，实施前先给出简短判断：当前是否原生支持、是否已有可复用组件、能否用 Markdown 基础样式或静态图片替代、是否必须新增/修改组件，以及对应是 `ContentOnly` 还是前端发布。
 - 文章效果默认按“Markdown 基础能力 → 已有 MDX 组件 → 扩展已有组件 → 静态图片 → 新组件”的成本顺序评估；一次性、内容固定且不需要交互的数据图或示意图可以优先图片，重复使用、需要数据更新、响应式、主题适配、多语言或可访问语义时优先组件。不得为了展示一个一次性效果直接新增组件。
@@ -69,7 +69,7 @@ npm run verify
 - 不在本仓库复制服务器密码、token、私有 IP 清单或共享 Nginx/SNI 拓扑。
 - 生产发布优先使用项目级 [`deploy-homepage` Skill](./.agents/skills/deploy-homepage/SKILL.md)；前端细节见 [站点维护](./docs/site-maintenance.zh-CN.md)，后端使用版本化 `releases/current/previous` 流程，见 [后端维护](./docs/backend-maintenance.zh-CN.md)。
 - 影响边界清晰的纯静态前端发布默认使用 `FastFrontend`；用户明确要求软件审查/完整验收，或变更触及高风险边界时使用 `FullAudit`。两档都保留版本化制品、哈希、备份、原子切换、回滚和 `Server-infra AfterChange`。
-- 仅文章与 `public/image/blog/` 图片变更使用 `npm run publish:content` 的 `ContentOnly` 通道；它必须从线上 manifest revision 自动判定范围，夹带任何代码、配置或基础设施改动时拒绝并升级普通发布。
+- 普通 `.md` 文章及其 `public/image/blog/` 图片、`public/file/blog/` 安全附件使用 `npm run publish:content` 的 `ContentOnly` 通道。快速通道从线上 manifest revision 建立隔离工作树，只叠加内容文件再构建；仓库中其他未上线代码不阻塞文章发布，也不得进入文章制品。`.mdx`、组件、样式、脚本、配置或基础设施改动仍按普通前端或完整发布处理。
 - 修改 Nginx 前先在 `Server-infra` 核对真实配置，备份目标文件并运行 `nginx -t`；仅替换静态文件不需要 reload。
 - SQLite 与上传文件属于持久数据，不随代码 release 替换；备份必须保证 SQLite 一致性。
 

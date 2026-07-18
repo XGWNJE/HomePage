@@ -17,6 +17,8 @@ $projectRoot = if ([string]::IsNullOrWhiteSpace($ProjectRoot)) {
 $serverEnvPath = Join-Path $ServerInfraRoot 'server.local.env'
 $maintainScript = Join-Path $ServerInfraRoot 'scripts\maintain.ps1'
 $remoteHelper = Join-Path $projectRoot '.agents\skills\deploy-homepage\scripts\deploy-frontend.sh'
+$contentWorktreeHelper = Join-Path $projectRoot 'scripts\content-release-worktree.mjs'
+$contentLinkHelper = Join-Path $projectRoot 'scripts\content-release-links.mjs'
 $outputRoot = Join-Path $projectRoot 'output\content-release'
 $utf8NoBom = [System.Text.UTF8Encoding]::new($false)
 
@@ -39,14 +41,24 @@ function Read-DotEnv {
 function Invoke-Native {
     param(
         [Parameter(Mandatory)][string]$FilePath,
-        [Parameter(Mandatory)][string[]]$Arguments
+        [Parameter(Mandatory)][string[]]$Arguments,
+        [string]$WorkingDirectory = ''
     )
 
-    $output = & $FilePath @Arguments
-    if ($LASTEXITCODE -ne 0) {
-        throw "$FilePath failed with exit code $LASTEXITCODE"
+    if (-not [string]::IsNullOrWhiteSpace($WorkingDirectory)) {
+        Push-Location -LiteralPath $WorkingDirectory
     }
-    return @($output)
+    try {
+        $output = & $FilePath @Arguments
+        if ($LASTEXITCODE -ne 0) {
+            throw "$FilePath failed with exit code $LASTEXITCODE"
+        }
+        return @($output)
+    } finally {
+        if (-not [string]::IsNullOrWhiteSpace($WorkingDirectory)) {
+            Pop-Location
+        }
+    }
 }
 
 function ConvertTo-BashLiteral {
@@ -174,7 +186,40 @@ function Invoke-AfterChange {
     ) | Out-Host
 }
 
-foreach ($path in @($serverEnvPath, $maintainScript, $remoteHelper)) {
+function Get-ContentReleaseScope {
+    param(
+        [Parameter(Mandatory)][string[]]$Paths,
+        [Parameter(Mandatory)][string]$PreviousContentRevision
+    )
+
+    $env:CONTENT_RELEASE_PATHS_JSON = ConvertTo-Json -Compress -InputObject @($Paths)
+    $env:CONTENT_RELEASE_PRODUCTION_REVISION = $PreviousContentRevision
+    $env:CONTENT_RELEASE_PROJECT_ROOT = $projectRoot
+    $env:CONTENT_RELEASE_SELECT_ONLY = '1'
+    try {
+        $scopeJson = (& node (Join-Path $projectRoot 'scripts\content-release-scope.mjs')) -join "`n"
+        if ($LASTEXITCODE -ne 0) { throw 'Content release scope classifier failed.' }
+        return $scopeJson | ConvertFrom-Json
+    } finally {
+        Remove-Item Env:CONTENT_RELEASE_PATHS_JSON -ErrorAction SilentlyContinue
+        Remove-Item Env:CONTENT_RELEASE_PRODUCTION_REVISION -ErrorAction SilentlyContinue
+        Remove-Item Env:CONTENT_RELEASE_PROJECT_ROOT -ErrorAction SilentlyContinue
+        Remove-Item Env:CONTENT_RELEASE_SELECT_ONLY -ErrorAction SilentlyContinue
+    }
+}
+
+function Remove-IsolatedContentWorktree {
+    param([Parameter(Mandatory)][string]$WorktreeRoot)
+
+    Invoke-Native -FilePath 'node.exe' -Arguments @(
+        $contentWorktreeHelper,
+        'remove',
+        '--repository-root', $projectRoot,
+        '--worktree-root', $WorktreeRoot
+    ) | Out-Null
+}
+
+foreach ($path in @($serverEnvPath, $maintainScript, $remoteHelper, $contentWorktreeHelper, $contentLinkHelper)) {
     if (-not (Test-Path -LiteralPath $path -PathType Leaf)) { throw "Required release file is missing: $path" }
 }
 
@@ -243,49 +288,47 @@ done
 $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
 $snapshotHandle = Start-CapturedProcess -FilePath 'ssh.exe' -Arguments ($sshArgs + @($sshTarget, 'bash', '-s')) -RedirectInput
 Send-ProcessInput -Handle $snapshotHandle -Value $snapshotCommand
-$buildFailure = $null
-if (-not $PlanOnly) {
-    try {
-        Invoke-Native -FilePath 'node.exe' -Arguments @((Join-Path $projectRoot 'scripts\check-language-pairs.mjs')) | Out-Host
-        Invoke-Native -FilePath (Join-Path $projectRoot 'node_modules\.bin\astro.cmd') -Arguments @('build') | Out-Host
-        Invoke-Native -FilePath 'node.exe' -Arguments @((Join-Path $projectRoot 'scripts\ensure-sitemap-xml.mjs')) | Out-Host
-    } catch {
-        $buildFailure = $_
-    }
-}
 $snapshotResult = Complete-CapturedProcess -Handle $snapshotHandle -Phase 'Production snapshot'
-if ($buildFailure) { throw $buildFailure }
 
 $snapshotParts = [regex]::Split($snapshotResult.StandardOutput, '(?m)^__TREE_TSV__\r?$', 2)
 if ($snapshotParts.Count -ne 2) { throw 'Unable to parse the production release snapshot.' }
 $production = $snapshotParts[0].Trim() | ConvertFrom-Json
 $productionRevision = [string]$production.revision
 $previousRelease = [string]$production.releaseId
+$previousContentRevision = if (
+    $production.PSObject.Properties.Name -contains 'contentSourceRevision' -and
+    [string]$production.contentSourceRevision -match '^[a-f0-9]{40}$'
+) {
+    [string]$production.contentSourceRevision
+} else {
+    $productionRevision
+}
 if ($productionRevision -notmatch '^[a-f0-9]{40}$') { throw 'Production manifest contains an invalid Git revision.' }
 if ($previousRelease -notmatch '^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$') { throw 'Production manifest contains an invalid release ID.' }
 
-& git -C $projectRoot cat-file -e "$productionRevision`^{commit}"
-if ($LASTEXITCODE -ne 0) { throw "Production revision is not available locally: $productionRevision" }
-$changedPaths = @(& git -C $projectRoot diff --name-only "$productionRevision..HEAD")
-$deletedArticles = @($changedPaths | Where-Object {
-    $_ -match '^src/content/blog/.+\.md$' -and
-    -not (Test-Path -LiteralPath (Join-Path $projectRoot $_) -PathType Leaf)
-})
-if ($deletedArticles.Count -gt 0) {
-    throw "Article deletion is not supported by the daily fast lane: $($deletedArticles -join ', ')"
+foreach ($revision in @($productionRevision, $previousContentRevision)) {
+    & git -C $projectRoot cat-file -e "$revision`^{commit}"
+    if ($LASTEXITCODE -ne 0) { throw "Required content release revision is not available locally: $revision" }
 }
-$env:CONTENT_RELEASE_PATHS_JSON = ConvertTo-Json -Compress -InputObject $changedPaths
-$env:CONTENT_RELEASE_PRODUCTION_REVISION = $productionRevision
-try {
-    $scopeJson = (& node (Join-Path $projectRoot 'scripts\content-release-scope.mjs')) -join "`n"
-    if ($LASTEXITCODE -ne 0) { throw 'Content release scope classifier failed.' }
-    $scope = $scopeJson | ConvertFrom-Json
-} finally {
-    Remove-Item Env:CONTENT_RELEASE_PATHS_JSON -ErrorAction SilentlyContinue
-    Remove-Item Env:CONTENT_RELEASE_PRODUCTION_REVISION -ErrorAction SilentlyContinue
-}
+
+$releaseRepositoryPaths = @(& git -C $projectRoot diff --name-only "$previousContentRevision..HEAD")
+$overlayRepositoryPaths = @(& git -C $projectRoot diff --name-only "$productionRevision..HEAD")
+$scope = Get-ContentReleaseScope -Paths $releaseRepositoryPaths -PreviousContentRevision $previousContentRevision
+$overlayScope = Get-ContentReleaseScope -Paths $overlayRepositoryPaths -PreviousContentRevision $productionRevision
 if (-not $scope.eligible) {
-    throw "Fast content release accepts only ordinary Markdown and public/image/blog assets. Rejected: $(@($scope.rejectedPaths) -join ', ')"
+    throw 'Fast content release found no new ordinary Markdown article changes.'
+}
+if (-not $overlayScope.eligible) {
+    throw 'Fast content release could not construct a production-base content overlay.'
+}
+if (@($overlayScope.rawHtmlArticles).Count -gt 0) {
+    throw "ContentOnly accepts native Markdown only; raw HTML requires a frontend release: $(@($overlayScope.rawHtmlArticles) -join ', ')"
+}
+$deletedContent = @(@($overlayScope.paths) | Where-Object {
+    -not (Test-Path -LiteralPath (Join-Path $projectRoot ([string]$_)) -PathType Leaf)
+})
+if ($deletedContent.Count -gt 0) {
+    throw "Article or attachment deletion is not supported by the daily fast lane: $($deletedContent -join ', ')"
 }
 if (@($scope.publishedToDraft).Count -gt 0) {
     throw "The daily fast lane cannot turn a published article back into a draft: $(@($scope.publishedToDraft) -join ', ')"
@@ -296,7 +339,8 @@ foreach ($asset in @($scope.assetFiles)) {
     $assetPath = Join-Path $projectRoot ([string]$asset)
     if (Test-Path -LiteralPath $assetPath -PathType Leaf) {
         $assetBytes = (Get-Item -LiteralPath $assetPath).Length
-        if ($assetBytes -gt 1MB) { throw "Blog asset exceeds the one-megabyte fast-lane limit: $asset" }
+        $assetLimit = if (@($scope.attachmentFiles) -contains $asset) { 10MB } else { 1MB }
+        if ($assetBytes -gt $assetLimit) { throw "Blog asset exceeds its fast-lane size limit: $asset" }
     }
 }
 
@@ -306,109 +350,160 @@ if ($PlanOnly) {
         planOnly = $true
         productionRelease = $previousRelease
         productionRevision = $productionRevision
-        revision = $head
+        previousContentSourceRevision = $previousContentRevision
+        contentSourceRevision = $head
         changedPaths = @($scope.paths)
+        contentOverlayPaths = @($overlayScope.paths)
+        ignoredRepositoryPaths = @($scope.ignoredPaths)
         articleRoutes = $articleRoutes
         skipped = @('full test suite', 'API tests', 'browser QA', 'full dist upload')
     } | ConvertTo-Json -Depth 5
     exit 0
 }
 
-$distRoot = Join-Path $projectRoot 'dist'
-foreach ($route in $articleRoutes) {
-    $relative = Convert-RouteToDistPath -Route ([uri]::UnescapeDataString([string]$route))
-    if (-not (Test-Path -LiteralPath (Join-Path $distRoot $relative) -PathType Leaf)) {
-        throw "Built article route is missing: $route ($relative)"
-    }
-}
-
 $releaseId = "$((Get-Date).ToUniversalTime().ToString('yyyyMMddTHHmmssZ'))-content-$headShort"
 $artifactDir = Join-Path $outputRoot $releaseId
-New-Item -ItemType Directory -Path $artifactDir -Force | Out-Null
-$baselinePath = Join-Path $artifactDir 'BASELINE_TREE.tsv'
-Write-Utf8NoBom -Path $baselinePath -Value $snapshotParts[1].TrimStart("`r", "`n")
-$deltaJson = ((Invoke-Native -FilePath 'node.exe' -Arguments @(
-    (Join-Path $projectRoot 'scripts\content-delta.mjs'),
-    '--root', $distRoot,
-    '--baseline', $baselinePath
-)) -join "`n") | ConvertFrom-Json
-$changedOutputPaths = @($deltaJson.delta.changedPaths)
-$deletedOutputPaths = @($deltaJson.delta.deletedPaths)
-if ($changedOutputPaths.Count -eq 0 -and $deletedOutputPaths.Count -eq 0) {
-    throw 'The build produced no public file changes.'
-}
+$isolatedProjectRoot = Join-Path $outputRoot (Join-Path 'worktrees' $releaseId)
+$isolatedPrepared = $false
+if (-not $PlanOnly) {
+    try {
+        $overlayPathsJson = ConvertTo-Json -Compress -InputObject @($overlayScope.paths)
+        Invoke-Native -FilePath 'node.exe' -Arguments @(
+            $contentWorktreeHelper,
+            'prepare',
+            '--repository-root', $projectRoot,
+            '--worktree-root', $isolatedProjectRoot,
+            '--production-revision', $productionRevision,
+            '--source-revision', $head,
+            '--paths-json', $overlayPathsJson
+        ) | Out-Null
+        $isolatedPrepared = $true
 
-$changedListPath = Join-Path $artifactDir 'CHANGED_FILES'
-$deletedListPath = Join-Path $artifactDir 'DELETED_FILES'
-Write-Utf8NoBom -Path $changedListPath -Value (($changedOutputPaths -join "`n") + "`n")
-Write-Utf8NoBom -Path $deletedListPath -Value $(if ($deletedOutputPaths.Count -gt 0) { ($deletedOutputPaths -join "`n") + "`n" } else { '' })
+        Invoke-Native -FilePath 'node.exe' -Arguments @(
+            (Join-Path $isolatedProjectRoot 'scripts\check-language-pairs.mjs')
+        ) -WorkingDirectory $isolatedProjectRoot | Out-Host
+        Invoke-Native -FilePath (Join-Path $projectRoot 'node_modules\.bin\astro.cmd') -Arguments @(
+            'build'
+        ) -WorkingDirectory $isolatedProjectRoot | Out-Host
+        Invoke-Native -FilePath 'node.exe' -Arguments @(
+            (Join-Path $isolatedProjectRoot 'scripts\ensure-sitemap-xml.mjs')
+        ) -WorkingDirectory $isolatedProjectRoot | Out-Host
 
-$deltaArchiveName = "homepage-frontend-delta-$releaseId.tar.gz"
-$manifestName = "release-manifest-$releaseId.json"
-$bundleName = "homepage-content-bundle-$releaseId.tar.gz"
-$deltaArchivePath = Join-Path $artifactDir $deltaArchiveName
-$manifestPath = Join-Path $artifactDir $manifestName
-$sumsPath = Join-Path $artifactDir 'SHA256SUMS'
-$helperArtifactPath = Join-Path $artifactDir 'deploy-frontend.sh'
-Copy-Item -LiteralPath $remoteHelper -Destination $helperArtifactPath
-Invoke-Native -FilePath 'tar.exe' -Arguments @(
-    '-czf', $deltaArchivePath,
-    '-C', $distRoot,
-    '-T', $changedListPath
-) | Out-Null
+        $distRoot = Join-Path $isolatedProjectRoot 'dist'
+        foreach ($route in $articleRoutes) {
+            $relative = Convert-RouteToDistPath -Route ([uri]::UnescapeDataString([string]$route))
+            if (-not (Test-Path -LiteralPath (Join-Path $distRoot $relative) -PathType Leaf)) {
+                throw "Built article route is missing: $route ($relative)"
+            }
+        }
+        $routesJson = ConvertTo-Json -Compress -InputObject @($articleRoutes)
+        $linkCheckJson = (Invoke-Native -FilePath 'node.exe' -Arguments @(
+            $contentLinkHelper,
+            '--root', $distRoot,
+            '--routes-json', $routesJson
+        )) -join "`n"
+        $linkCheck = $linkCheckJson | ConvertFrom-Json
+        if (@($linkCheck.missing).Count -gt 0) {
+            $missingTargets = @($linkCheck.missing | ForEach-Object { "$($_.route) -> $($_.target)" })
+            throw "Built article contains missing local links or assets: $($missingTargets -join ', ')"
+        }
 
-$deltaArchiveSha = (Get-FileHash -LiteralPath $deltaArchivePath -Algorithm SHA256).Hash.ToLowerInvariant()
-$manifest = [ordered]@{
-    releaseId = $releaseId
-    scope = 'content-only-delta'
-    revision = $head
-    productionBaseRevision = $productionRevision
-    branch = $branch
-    gitStatus = 'clean'
-    builtAtUtc = (Get-Date).ToUniversalTime().ToString('o')
-    changedPaths = @($scope.paths)
-    affectedRoutes = @($articleRoutes)
-    publishPolicy = [ordered]@{
-        format = 'plain-markdown'
-        browserQa = $false
-        apiTests = $false
-        fullDistUpload = $false
+        New-Item -ItemType Directory -Path $artifactDir -Force | Out-Null
+        $baselinePath = Join-Path $artifactDir 'BASELINE_TREE.tsv'
+        Write-Utf8NoBom -Path $baselinePath -Value $snapshotParts[1].TrimStart("`r", "`n")
+        $deltaJson = ((Invoke-Native -FilePath 'node.exe' -Arguments @(
+            (Join-Path $projectRoot 'scripts\content-delta.mjs'),
+            '--root', $distRoot,
+            '--baseline', $baselinePath
+        )) -join "`n") | ConvertFrom-Json
+        $changedOutputPaths = @($deltaJson.delta.changedPaths)
+        $deletedOutputPaths = @($deltaJson.delta.deletedPaths)
+        if ($changedOutputPaths.Count -eq 0 -and $deletedOutputPaths.Count -eq 0) {
+            throw 'The build produced no public file changes.'
+        }
+
+        $changedListPath = Join-Path $artifactDir 'CHANGED_FILES'
+        $deletedListPath = Join-Path $artifactDir 'DELETED_FILES'
+        Write-Utf8NoBom -Path $changedListPath -Value (($changedOutputPaths -join "`n") + "`n")
+        Write-Utf8NoBom -Path $deletedListPath -Value $(if ($deletedOutputPaths.Count -gt 0) { ($deletedOutputPaths -join "`n") + "`n" } else { '' })
+
+        $deltaArchiveName = "homepage-frontend-delta-$releaseId.tar.gz"
+        $manifestName = "release-manifest-$releaseId.json"
+        $bundleName = "homepage-content-bundle-$releaseId.tar.gz"
+        $deltaArchivePath = Join-Path $artifactDir $deltaArchiveName
+        $manifestPath = Join-Path $artifactDir $manifestName
+        $sumsPath = Join-Path $artifactDir 'SHA256SUMS'
+        $helperArtifactPath = Join-Path $artifactDir 'deploy-frontend.sh'
+        Copy-Item -LiteralPath $remoteHelper -Destination $helperArtifactPath
+        Invoke-Native -FilePath 'tar.exe' -Arguments @(
+            '-czf', $deltaArchivePath,
+            '-C', $distRoot,
+            '-T', $changedListPath
+        ) | Out-Null
+
+        $deltaArchiveSha = (Get-FileHash -LiteralPath $deltaArchivePath -Algorithm SHA256).Hash.ToLowerInvariant()
+        $manifest = [ordered]@{
+            releaseId = $releaseId
+            scope = 'content-only-delta'
+            revision = $productionRevision
+            productionBaseRevision = $productionRevision
+            previousContentSourceRevision = $previousContentRevision
+            contentSourceRevision = $head
+            branch = $branch
+            gitStatus = 'clean'
+            builtAtUtc = (Get-Date).ToUniversalTime().ToString('o')
+            changedPaths = @($scope.paths)
+            contentOverlayPaths = @($overlayScope.paths)
+            ignoredRepositoryPaths = @($scope.ignoredPaths)
+            affectedRoutes = @($articleRoutes)
+            publishPolicy = [ordered]@{
+                format = 'plain-markdown'
+                isolatedProductionBuild = $true
+                browserQa = $false
+                apiTests = $false
+                fullDistUpload = $false
+            }
+            frontend = [ordered]@{
+                archive = $deltaArchiveName
+                sha256 = $deltaArchiveSha
+                changedFileCount = $changedOutputPaths.Count
+                deletedFileCount = $deletedOutputPaths.Count
+                changedBytes = (Get-Item -LiteralPath $deltaArchivePath).Length
+                fileCount = [int]$deltaJson.current.fileCount
+                totalBytes = [int64]$deltaJson.current.totalBytes
+                indexSha256 = [string]$deltaJson.current.indexSha256
+                treeSha256 = [string]$deltaJson.current.treeSha256
+            }
+            backend = [ordered]@{
+                deployed = $false
+                currentRevision = [string]$production.backend.currentRevision
+            }
+        }
+        Write-Utf8NoBom -Path $manifestPath -Value ($manifest | ConvertTo-Json -Depth 8)
+        $sumFiles = @($deltaArchivePath, $manifestPath, $changedListPath, $deletedListPath, $helperArtifactPath)
+        $sumLines = foreach ($sumFile in $sumFiles) {
+            "$((Get-FileHash -LiteralPath $sumFile -Algorithm SHA256).Hash.ToLowerInvariant())  $([System.IO.Path]::GetFileName($sumFile))"
+        }
+        Write-Utf8NoBom -Path $sumsPath -Value (($sumLines -join "`n") + "`n")
+
+        $bundlePath = Join-Path $artifactDir $bundleName
+        Invoke-Native -FilePath 'tar.exe' -Arguments @(
+            '-czf', $bundlePath,
+            '-C', $artifactDir,
+            $deltaArchiveName,
+            $manifestName,
+            'SHA256SUMS',
+            'CHANGED_FILES',
+            'DELETED_FILES',
+            'deploy-frontend.sh'
+        ) | Out-Null
+        $bundleSha = (Get-FileHash -LiteralPath $bundlePath -Algorithm SHA256).Hash.ToLowerInvariant()
+    } finally {
+        if ($isolatedPrepared -or (Test-Path -LiteralPath $isolatedProjectRoot)) {
+            Remove-IsolatedContentWorktree -WorktreeRoot $isolatedProjectRoot
+        }
     }
-    frontend = [ordered]@{
-        archive = $deltaArchiveName
-        sha256 = $deltaArchiveSha
-        changedFileCount = $changedOutputPaths.Count
-        deletedFileCount = $deletedOutputPaths.Count
-        changedBytes = (Get-Item -LiteralPath $deltaArchivePath).Length
-        fileCount = [int]$deltaJson.current.fileCount
-        totalBytes = [int64]$deltaJson.current.totalBytes
-        indexSha256 = [string]$deltaJson.current.indexSha256
-        treeSha256 = [string]$deltaJson.current.treeSha256
-    }
-    backend = [ordered]@{
-        deployed = $false
-        currentRevision = [string]$production.backend.currentRevision
-    }
 }
-Write-Utf8NoBom -Path $manifestPath -Value ($manifest | ConvertTo-Json -Depth 8)
-$sumFiles = @($deltaArchivePath, $manifestPath, $changedListPath, $deletedListPath, $helperArtifactPath)
-$sumLines = foreach ($sumFile in $sumFiles) {
-    "$((Get-FileHash -LiteralPath $sumFile -Algorithm SHA256).Hash.ToLowerInvariant())  $([System.IO.Path]::GetFileName($sumFile))"
-}
-Write-Utf8NoBom -Path $sumsPath -Value (($sumLines -join "`n") + "`n")
-
-$bundlePath = Join-Path $artifactDir $bundleName
-Invoke-Native -FilePath 'tar.exe' -Arguments @(
-    '-czf', $bundlePath,
-    '-C', $artifactDir,
-    $deltaArchiveName,
-    $manifestName,
-    'SHA256SUMS',
-    'CHANGED_FILES',
-    'DELETED_FILES',
-    'deploy-frontend.sh'
-) | Out-Null
-$bundleSha = (Get-FileHash -LiteralPath $bundlePath -Algorithm SHA256).Hash.ToLowerInvariant()
 $buildAndBundleSeconds = $stopwatch.Elapsed.TotalSeconds
 
 if ($BenchmarkOnly) {
@@ -510,7 +605,9 @@ $stopwatch.Stop()
 [ordered]@{
     mode = 'ContentOnlyDelta'
     releaseId = $releaseId
-    revision = $head
+    revision = $productionRevision
+    previousContentSourceRevision = $previousContentRevision
+    contentSourceRevision = $head
     previousRelease = $previousRelease
     publishedSeconds = [math]::Round($publishedSeconds, 2)
     totalSeconds = [math]::Round($stopwatch.Elapsed.TotalSeconds, 2)

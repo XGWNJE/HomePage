@@ -43,13 +43,13 @@ npm ci --prefix server
 npm run verify
 ```
 
-仅更新普通 Markdown 文章时，提交并推送文章与 `public/image/blog/` 下的专用图片，然后运行一步快速通道：
+仅更新普通 Markdown 文章时，提交并推送文章、`public/image/blog/` 下的专用图片及 `public/file/blog/` 下的文章附件，然后运行一步快速通道：
 
 ```powershell
 npm run publish:content
 ```
 
-它会自动核对生产 revision、拒绝夹带代码改动、构建完整静态站，只上传变化文件并原子切换；不会重新发布 API、修改 Nginx 或执行全站浏览器检查。日常内容与回滚细节见 [站点维护](./docs/site-maintenance.zh-CN.md)。
+它会从生产 revision 建立隔离工作树，只叠加本次 Markdown 与文章附件后构建完整静态站，再上传变化文件并原子切换；仓库中其他未上线代码不会阻塞文章，也不会进入制品。快速通道不会重新发布 API、修改 Nginx 或执行全站浏览器检查。日常内容与回滚细节见 [站点维护](./docs/site-maintenance.zh-CN.md)。
 
 ## 核心能力
 

@@ -169,7 +169,11 @@ test('the project release skill preserves production safety gates', async () => 
 	assert.match(contentPublisher, /productionRevision\.\.HEAD/);
 	assert.doesNotMatch(contentPublisher, /ls-remote/);
 	assert.match(contentPublisher, /rev-parse '@\{u\}'/);
-	assert.match(contentPublisher, /Fast content release accepts only ordinary Markdown/);
+	assert.match(contentPublisher, /CONTENT_RELEASE_SELECT_ONLY/);
+	assert.match(contentPublisher, /content-release-worktree\.mjs/);
+	assert.match(contentPublisher, /revision = \$productionRevision/);
+	assert.match(contentPublisher, /contentSourceRevision = \$head/);
+	assert.match(contentPublisher, /ignoredRepositoryPaths/);
 	assert.match(contentPublisher, /StrictHostKeyChecking=yes/);
 	assert.match(contentPublisher, /prepare-delta/);
 	assert.match(contentPublisher, /RedirectStandardInput/);

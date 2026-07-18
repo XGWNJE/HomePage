@@ -43,7 +43,7 @@ draft: false
 
 - 两种语言的 `group`、标签语义和发布日期保持一致。
 - `important: true` 的文章用 `importantOrder` 控制顺序。
-- 快速发布使用的文章专用图片放在 `public/image/blog/<article-group>/`；共享站点资产继续通过既有资产入口维护。
+- 快速发布使用的文章专用图片放在 `public/image/blog/<article-group>/`；PDF、数据文件等下载附件放在 `public/file/blog/<article-group>/`。共享站点资产继续通过既有资产入口维护。
 - 外部图片迁移前先验证目标域名、对象完整性和回滚；不得批量猜测替换。
 - 发布前检查构建产物没有草稿文章。
 
@@ -87,13 +87,13 @@ Codex-Journal 只会在用户明确点击“发到主页”后，向 `src/conten
 
 ### 文章快速通道
 
-文章写作与本地预览完成后，提交并推送文章及其专用图片。工作区干净且 `main` 已同步时，发布只需要一个命令：
+文章写作与本地预览完成后，提交并推送文章及其专用资源。工作区干净且 `main` 已同步时，发布只需要一个命令：
 
 ```powershell
 npm run publish:content
 ```
 
-`publish:content` 从线上当前 release manifest 读取生产 revision，自动拒绝夹带的工程改动，并发完成线上快照和本地静态构建。它只上传新旧 `dist/` 之间的变化文件，通过一次 SSH 完成校验、完整版本重建和原子切换；成功后只探测本次文章地址并运行 `Server-infra AfterChange`。发布脚本回归测试保留在开发与 CI，不进入每次文章上线；日常发文无需 API 测试、全站浏览器检查、Nginx 检查或完整前端上传。
+`publish:content` 从线上当前 release manifest 读取生产代码 revision，在临时隔离工作树中只叠加当前内容 revision 里的普通 Markdown 与文章专用资源，再完成一次静态构建。当前分支同时存在其他未上线工程改动时，这些改动会被记录为忽略路径，不阻塞纯文章发布，也不会进入构建树。命令只上传新旧 `dist/` 之间的变化文件，通过一次 SSH 完成校验、完整版本重建和原子切换；成功后只探测本次文章地址并运行 `Server-infra AfterChange`。发布脚本回归测试保留在开发与 CI，不进入每次文章上线；日常发文无需 API 测试、全站浏览器检查、Nginx 检查或完整前端上传。
 
 `npm run content:release:plan` 只查看范围，不构建、不上线；`npm run content:release:benchmark` 构建并生成差量制品，但不上传。单篇普通文章的目标是约 10 秒完成公开切换，实际时间仍受本机构建和 SSH 网络影响，命令会分别输出切换时间和总耗时。
 
@@ -101,8 +101,9 @@ npm run publish:content
 
 - `src/content/blog/*.md`
 - `public/image/blog/**` 下的 `avif`、`gif`、`jpeg`、`jpg`、`png`、`webp` 图片
+- `public/file/blog/**` 下的 `pdf`、`txt`、`csv`、`json`、`zip`、`mp3`、`ogg`、`wav`、`mp4`、`webm` 下载附件
 
-嵌套文章、`.mdx`、不在白名单内的图片/其他资产、页面、组件、样式、依赖、部署脚本或后端差异都会被拒绝。此时按 `FastFrontend` 或 `FullAudit` 正常发布；文章删除和“已公开文章改回草稿”也不走日常快速通道。
+外部链接属于 Markdown 正文，不需要随制品打包；本地链接和图片会在构建后检查目标是否存在。嵌套文章、`.mdx`、原生 HTML、脚本或样式、不在白名单内的附件不属于纯文章；页面、组件、依赖、部署脚本或后端差异不会进入隔离内容构建。需要发布这些工程改动时按 `FastFrontend` 或 `FullAudit` 正常发布；文章或附件删除和“已公开文章改回草稿”也不走日常快速通道。
 
 即使只更新一篇文章，本地也会重新生成完整 `dist/`：首页最新文章、博客列表、标签、RSS 与 Sitemap 都依赖内容集合。上传时只传变化文件，服务器复制上一版本并应用差异，再核对文件数、总字节、入口哈希和整棵文件树哈希。快速通道省掉的是无关验证与传输，不是原子发布和回滚保护。
 
@@ -144,7 +145,7 @@ npm run verify
 
 发布分为三档：
 
-- `ContentOnly`：仅普通 Markdown 文章与白名单格式的文章专用图片；运行 `npm run publish:content`，差量上传并验收本次文章地址。
+- `ContentOnly`：普通 Markdown 文章与白名单格式的文章专用图片、下载附件；运行 `npm run publish:content`，在生产代码基线上隔离构建、差量上传并验收本次文章地址。
 - `FastFrontend`（默认）：用于影响边界清晰的静态页面和视觉资产。运行 UI 复用约束、类型检查和生产构建，只发布前端，并验收 API health、首页、404 与受影响路由。
 - `FullAudit`：用户明确要求软件审查、完整验收、全局或端到端验证，或变更触及后端、认证、数据库、依赖锁、构建配置、部署脚本或基础设施时使用。运行 `npm ci`、后端依赖安装、`npm run verify`、服务与其他项目基线检查及完整浏览器矩阵。
 

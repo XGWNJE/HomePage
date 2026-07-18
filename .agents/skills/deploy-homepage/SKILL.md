@@ -10,7 +10,7 @@ description: Release HomePage through a one-command content fast lane, a lightwe
 ## 1. 确认授权与范围
 
 - 只有用户明确要求上线、发布或回滚时才改变生产环境。
-- 默认只发布实际变更的部分。仅包含 `src/content/blog/*.md` 与 `public/image/blog/**` 中 `avif/gif/jpeg/jpg/png/webp` 图片的文章变更使用 `ContentOnly`；嵌套文章、`.mdx`、其他格式资产和其他纯静态前端变更使用 `FastFrontend`。不得为了沿用旧流程顺带发布未变更的 `server/`。
+- 默认只发布实际变更的部分。普通 `src/content/blog/*.md`、`public/image/blog/**` 中的安全图片和 `public/file/blog/**` 中的安全下载附件使用 `ContentOnly`；嵌套文章、`.mdx`、原生 HTML、组件、样式、脚本和其他静态前端变更使用 `FastFrontend`。不得为了沿用旧流程顺带发布未变更的 `server/`。
 - 用户明确要求“软件审查”“完整验收”“全局验证”“端到端验证”时使用 `FullAudit`。
 - 变更涉及 `server/`、认证、数据库、migration、依赖锁、构建配置、部署脚本、Nginx/DNS/端口/证书/防火墙，或影响边界不清楚、轻量门禁失败时，即使用户未点名也升级 `FullAudit`。
 - 不自动 commit、push、tag 或创建 Release。
@@ -19,13 +19,13 @@ description: Release HomePage through a one-command content fast lane, a lightwe
 
 ## 2. 选择并执行本地门禁
 
-文章快速发布要求工作区干净，并从生产 manifest 读取基准 revision；若该基准到本地 `HEAD` 之间只包含文章和文章图片，直接运行：
+文章快速发布要求工作区干净且内容 commit 已推送。脚本从生产 manifest 读取代码 revision，在隔离工作树中只叠加当前内容 revision 里的 Markdown 与文章专用资源；仓库中其他未上线工程提交既不阻塞文章，也不进入制品。直接运行：
 
 ```powershell
 npm run publish:content
 ```
 
-该命令自动完成内容配对、一次生产构建、变更范围拒绝、差量制品/manifest/SHA-256、独立制品上传、远端原子切换、文章路由验收、失败回滚与 `Server-infra AfterChange`。远端 Bash 通过标准输入执行，不依赖 Windows SSH 对嵌套引号的传递。`npm run content:release:plan` 只看范围，`npm run content:release:benchmark` 构建差量制品但不上线。文章发布仍在本地构建完整静态站，但只传变化文件；它不会部署 API、修改 Nginx、运行 API 测试或执行全站浏览器矩阵。
+该命令自动完成内容配对、本地链接与附件存在性检查、一次隔离生产构建、差量制品/manifest/SHA-256、独立制品上传、远端原子切换、文章路由验收、失败回滚与 `Server-infra AfterChange`。manifest 分别记录生产代码 revision 与内容来源 revision。远端 Bash 通过标准输入执行，不依赖 Windows SSH 对嵌套引号的传递。`npm run content:release:plan` 只看范围，`npm run content:release:benchmark` 构建差量制品但不上线。文章发布仍在本地构建完整静态站，但只传变化文件；它不会部署 API、修改 Nginx、运行 API 测试或执行全站浏览器矩阵。
 
 先检查相对上一生产 revision 的变更路径与当前工作区；确认没有高风险路径后，纯前端发布运行：
 
