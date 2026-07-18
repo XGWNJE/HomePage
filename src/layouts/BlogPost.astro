@@ -64,7 +64,7 @@ const withBase = (path: string) => {
 const tocItems = headings.filter((h: { depth: number }) => h.depth === 2 || h.depth === 3 || h.depth === 4);
 const articleTags = tags as string[];
 const articleRelatedPosts = relatedPosts as CollectionEntry<'blog'>[];
-const hasToc = tocItems.length > 0;
+const hasToc = tocItems.length >= 2;
 // Reading time is character-based to stay language-neutral for mixed CN/EN content.
 const chars = rawBody.replace(/\s+/g, '').length;
 const minutes = Math.max(1, Math.ceil(chars / 950));
@@ -82,7 +82,7 @@ const charsLabel = chars.toLocaleString('en-US');
 		<div class="reading-progress" aria-hidden="true"></div>
 		<Header showTocButton={hasToc} />
 		<MobileDrawer />
-		<TocDrawer headings={tocItems} />
+		{hasToc && <TocDrawer headings={tocItems} />}
 
 		<!-- Page fade is CSS-driven so route changes remain smooth even when shared-element transitions are bypassed. -->
 		<main class="blog-post-page page-fade-in min-h-screen min-w-0 w-full py-10 md:py-14" transition:name="page-main" transition:animate="fade">
@@ -94,41 +94,35 @@ const charsLabel = chars.toLocaleString('en-US');
 					'mt-10 min-w-0',
 					metaMode === 'page'
 						? 'mx-auto max-w-3xl'
-						: 'md:grid md:grid-cols-[240px_minmax(0,1fr)] md:gap-10 lg:grid-cols-[280px_minmax(0,820px)_minmax(0,1fr)] lg:gap-x-10',
+						: hasToc
+							? 'md:grid md:grid-cols-[240px_minmax(0,1fr)] md:gap-10 lg:grid-cols-[280px_minmax(0,820px)_minmax(0,1fr)] lg:gap-x-10'
+							: 'mx-auto max-w-[820px]',
 				]}>
-					<aside class:list={[
-						metaMode === 'page' ? 'hidden' : 'hidden md:block',
-					]} data-toc-fade-wrap>
-						<div class="sticky top-24 self-start">
-							<div class="relative">
-								<div class="toc-scroll max-h-[calc(100vh-7.5rem)] overflow-auto pr-2" data-toc-scroll="sidebar">
-								{
-									hasToc ? (
-										<TocSidebar headings={tocItems} />
-									) : (
-										// Placeholder keeps first paint geometry stable when a post has no headings.
+					{
+						metaMode !== 'page' && hasToc && (
+							<aside class="hidden md:block" data-toc-fade-wrap>
+								<div class="sticky top-24 self-start">
+									<div class="relative">
+										<div class="toc-scroll max-h-[calc(100vh-7.5rem)] overflow-auto pr-2" data-toc-scroll="sidebar">
+											<TocSidebar headings={tocItems} />
+										</div>
 										<div
-											class="min-h-[220px] rounded-2xl border border-transparent bg-transparent"
-											aria-hidden="true"
+											data-toc-fade="top"
+											class="toc-fade toc-fade-top pointer-events-none absolute inset-x-0 top-0 h-8 opacity-0"
 										></div>
-									)
-								}
-							</div>
-							<div
-								data-toc-fade="top"
-								class="toc-fade toc-fade-top pointer-events-none absolute inset-x-0 top-0 h-8 opacity-0"
-							></div>
-							<div
-								data-toc-fade="bottom"
-								class="toc-fade toc-fade-bottom pointer-events-none absolute inset-x-0 bottom-0 h-8 opacity-0"
-							></div>
-						</div>
-						</div>
-					</aside>
+										<div
+											data-toc-fade="bottom"
+											class="toc-fade toc-fade-bottom pointer-events-none absolute inset-x-0 bottom-0 h-8 opacity-0"
+										></div>
+									</div>
+								</div>
+							</aside>
+						)
+					}
 
 					<main class:list={[
 						'min-w-0',
-						metaMode !== 'page' && 'lg:col-start-2',
+						metaMode !== 'page' && hasToc && 'lg:col-start-2',
 					]}>
 						<header class="mb-10 min-w-0 border-b border-zinc-200 pb-6 dark:border-zinc-700">
 							{
