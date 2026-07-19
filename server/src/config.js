@@ -123,7 +123,7 @@ export function loadConfig(env = process.env) {
 		subscriptionAccessTtlSeconds,
 		siteRepoDir: env.SITE_REPO_DIR || '/opt/homepage-site',
 		siteReleaseNodeBin: env.SITE_RELEASE_NODE_BIN || '/opt/node22/bin/node',
-		siteReleaseUseSudo: (env.SITE_RELEASE_USE_SUDO || 'true') !== 'false',
+		siteReleaseUseSudo: env.SITE_RELEASE_USE_SUDO === 'true',
 		siteRepoSyncCommand: env.SITE_REPO_SYNC_COMMAND || '/usr/local/sbin/homepage-site-sync',
 	};
 }

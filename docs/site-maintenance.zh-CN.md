@@ -160,7 +160,7 @@ npm run publish:full
 
 运行环境：`/opt/node22` 是前端构建专用 Node（不改动系统 Node，API 继续用系统版本）；仓库通过仅限本仓库的 GitHub deploy key（`vps-site-release`）读写。首次手动验证（2026-07-19）发布与删除各一次约 24 秒。构建失败在 commit 之前中止，不进入 git 历史；切换后公网验收失败自动恢复备份。
 
-`/admin` 的「文章管理」区块通过 `/api/admin/articles` 系列路由使用这条通道：列出与读取文章直接来自发布克隆（读取前经 `/usr/local/sbin/homepage-site-sync` 同步），删除文章会触发完整重新发布。API（`homepage-api` 用户）通过 sudoers 单条白名单调用发布脚本与同步命令，无其他 root 权限；删除操作写入 `admin_audit` 审计表。
+`/admin` 的「文章管理」区块通过 `/api/admin/articles` 系列路由使用这条通道：列出与读取文章直接来自发布克隆（读取前经 `/usr/local/sbin/homepage-site-sync` 同步），删除文章会触发完整重新发布。API 以 `homepage-api` 用户（隶属 `www-data` 组）直接执行发布与同步：`/var/www` 和 releases 目录走属组授权，克隆归 `homepage-api` 持有并配其专属 deploy key（仅限本仓库），不使用 sudo；删除操作写入 `admin_audit` 审计表。
 
 ## 本地清理
 

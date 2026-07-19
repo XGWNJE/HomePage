@@ -2,9 +2,10 @@ import { spawn, spawnSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 
-// 网页后台发布执行器：API（www-data）通过受限 sudo 调用仓库克隆中的
-// site-release.mjs。sudoers 只允许这一条命令路径，参数由脚本内的
-// 路径白名单二次校验。
+// 网页后台发布执行器：API（homepage-api 用户，隶属 www-data 组）直接调用
+// 仓库克隆中的 site-release.mjs；/var/www 与其 releases 目录通过属组授权，
+// 克隆由 homepage-api 持有，git 推送使用其专属 deploy key（仅限本仓库）。
+// 无 sudo、无 root。参数由脚本内的路径白名单二次校验。
 export function runSiteRelease(config, { writes = [], deletes = [], message }) {
 	const script = join(config.siteRepoDir, 'server', 'scripts', 'site-release.mjs');
 	const args = [];
@@ -31,9 +32,9 @@ export function runSiteRelease(config, { writes = [], deletes = [], message }) {
 				reject(new Error(`Site release failed with exit code ${code}. ${stderr.trim() || stdout.trim()}`.slice(0, 500)));
 				return;
 			}
-			const summaryLine = stdout.trim().split('\n').filter(Boolean).pop() || '{}';
+			const jsonStart = stdout.lastIndexOf('\n{');
 			try {
-				resolve(JSON.parse(summaryLine));
+				resolve(JSON.parse(jsonStart >= 0 ? stdout.slice(jsonStart + 1) : stdout.trim()));
 			} catch {
 				resolve({ raw: stdout.trim().slice(-500) });
 			}
