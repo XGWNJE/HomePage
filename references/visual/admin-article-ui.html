@@ -1,0 +1,1035 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script>
+      tailwind = { config: { corePlugins: { preflight: false } } };
+    </script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cascadia+Mono%3Awght%40200..700&family=Inter%3Awght%40100..900&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      *, ::before, ::after {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="relative w-[3000px] h-[900px]">
+      <div
+        data-pencil-name="Phase1 文章列表"
+        class="box-border w-[1440px] h-[900px] absolute left-0 top-0 flex flex-col gap-[24px] p-[36px_48px] justify-start items-start bg-[#FAFAF9] overflow-hidden"
+      >
+        <div
+          data-pencil-name="页头"
+          class="box-border w-full h-fit shrink-0 flex flex-row gap-0 p-[0px_0px_20px_0px] justify-between items-end"
+        >
+          <div
+            data-pencil-name="标题组"
+            class="box-border w-fit shrink-0 h-fit flex flex-col gap-[8px] justify-start items-start"
+          >
+            <div
+              data-pencil-name="眉标"
+              class="text-[11px]/[normal] box-border text-[#B45309] font-[Inter,system-ui,sans-serif] font-semibold tracking-[2px] text-left [white-space:nowrap]"
+            >
+              OPERATIONS / PRIVATE
+            </div>
+            <div
+              data-pencil-name="页面标题"
+              class="text-[32px]/[normal] box-border text-[#18181B] font-[Inter,system-ui,sans-serif] font-semibold text-left [white-space:nowrap]"
+            >
+              站点管理台
+            </div>
+            <div
+              data-pencil-name="页面说明"
+              class="text-[13px]/[normal] box-border text-[#71717A] font-[Inter,system-ui,sans-serif] font-normal text-left [white-space:nowrap]"
+            >
+              文章、评论、联系消息与邮件队列。权限来自当前登录会话。
+            </div>
+          </div>
+          <div
+            data-pencil-name="返回站点按钮"
+            class="box-border w-fit shrink-0 h-fit flex flex-row gap-0 p-[9px_18px] justify-start items-center bg-[#FFFFFF] [border:1px_solid_#E4E4E7] rounded-[999px]"
+          >
+            <div
+              data-pencil-name="返回站点"
+              class="text-[13px]/[normal] box-border text-[#71717A] font-[Inter,system-ui,sans-serif] font-medium text-left [white-space:nowrap]"
+            >
+              返回站点
+            </div>
+          </div>
+        </div>
+        <div
+          data-pencil-name="页头分隔线"
+          class="box-border w-full h-[1px] shrink-0 bg-[#E4E4E7]"
+        ></div>
+        <div
+          data-pencil-name="功能页签"
+          class="box-border w-fit h-fit shrink-0 flex flex-row gap-[8px] justify-start items-start"
+        >
+          <div
+            data-pencil-name="页签-评论"
+            class="box-border w-fit shrink-0 h-fit flex flex-row gap-0 p-[8px_16px] justify-start items-start bg-[#FFFFFF] [border:1px_solid_#E4E4E7] rounded-[999px]"
+          >
+            <div
+              data-pencil-name="评论"
+              class="text-[13px]/[normal] box-border text-[#71717A] font-[Inter,system-ui,sans-serif] font-medium text-left [white-space:nowrap]"
+            >
+              评论
+            </div>
+          </div>
+          <div
+            data-pencil-name="页签-联系消息"
+            class="box-border w-fit shrink-0 h-fit flex flex-row gap-0 p-[8px_16px] justify-start items-start bg-[#FFFFFF] [border:1px_solid_#E4E4E7] rounded-[999px]"
+          >
+            <div
+              data-pencil-name="联系消息"
+              class="text-[13px]/[normal] box-border text-[#71717A] font-[Inter,system-ui,sans-serif] font-medium text-left [white-space:nowrap]"
+            >
+              联系消息
+            </div>
+          </div>
+          <div
+            data-pencil-name="页签-邮件队列"
+            class="box-border w-fit shrink-0 h-fit flex flex-row gap-0 p-[8px_16px] justify-start items-start bg-[#FFFFFF] [border:1px_solid_#E4E4E7] rounded-[999px]"
+          >
+            <div
+              data-pencil-name="邮件队列"
+              class="text-[13px]/[normal] box-border text-[#71717A] font-[Inter,system-ui,sans-serif] font-medium text-left [white-space:nowrap]"
+            >
+              邮件队列
+            </div>
+          </div>
+          <div
+            data-pencil-name="页签-文章"
+            class="box-border w-fit shrink-0 h-fit flex flex-row gap-0 p-[8px_16px] justify-start items-start bg-[#FFFBEB] [border:1px_solid_#B45309] rounded-[999px]"
+          >
+            <div
+              data-pencil-name="文章"
+              class="text-[13px]/[normal] box-border text-[#B45309] font-[Inter,system-ui,sans-serif] font-semibold text-left [white-space:nowrap]"
+            >
+              文章
+            </div>
+          </div>
+        </div>
+        <div
+          data-pencil-name="文章工具栏"
+          class="box-border w-full h-fit shrink-0 flex flex-row gap-0 p-[8px_0px_0px_0px] justify-between items-center"
+        >
+          <div
+            data-pencil-name="栏标题组"
+            class="box-border w-fit shrink-0 h-fit flex flex-row gap-[12px] justify-start items-center"
+          >
+            <div
+              data-pencil-name="栏目标题"
+              class="text-[18px]/[normal] box-border text-[#18181B] font-[Inter,system-ui,sans-serif] font-semibold text-left [white-space:nowrap]"
+            >
+              文章
+            </div>
+            <div
+              data-pencil-name="栏目计数"
+              class="text-[13px]/[normal] box-border text-[#A1A1AA] font-[Inter,system-ui,sans-serif] font-normal text-left [white-space:nowrap]"
+            >
+              12 篇已发布 · 2 篇草稿
+            </div>
+          </div>
+          <div
+            data-pencil-name="操作组"
+            class="box-border w-fit shrink-0 h-fit flex flex-row gap-[10px] justify-start items-center"
+          >
+            <div
+              data-pencil-name="搜索框"
+              class="box-border w-[200px] shrink-0 h-fit flex flex-row gap-0 p-[8px_14px] justify-start items-start bg-[#FFFFFF] [border:1px_solid_#E4E4E7] rounded-[999px]"
+            >
+              <div
+                data-pencil-name="搜索占位"
+                class="text-[13px]/[normal] box-border text-[#A1A1AA] font-[Inter,system-ui,sans-serif] font-normal text-left [white-space:nowrap]"
+              >
+                搜索标题 / 标签…
+              </div>
+            </div>
+            <div
+              data-pencil-name="新建文章按钮"
+              class="box-border w-fit shrink-0 h-fit flex flex-row gap-[6px] p-[9px_18px] justify-start items-center bg-[#B45309] rounded-[999px]"
+            >
+              <div
+                data-pencil-name="加号"
+                class="text-[14px]/[normal] box-border text-[#FFFFFF] font-[Inter,system-ui,sans-serif] font-semibold text-left [white-space:nowrap]"
+              >
+                +
+              </div>
+              <div
+                data-pencil-name="新建文章"
+                class="text-[13px]/[normal] box-border text-[#FFFFFF] font-[Inter,system-ui,sans-serif] font-semibold text-left [white-space:nowrap]"
+              >
+                新建文章
+              </div>
+            </div>
+          </div>
+        </div>
+        <div
+          data-pencil-name="草稿分组头"
+          class="box-border w-fit h-fit shrink-0 flex flex-row gap-[8px] p-[10px_2px_0px_2px] justify-start items-center"
+        >
+          <div
+            data-pencil-name="草稿箱"
+            class="text-[11px]/[normal] box-border text-[#A1A1AA] font-[Inter,system-ui,sans-serif] font-semibold tracking-[2px] text-left [white-space:nowrap]"
+          >
+            草稿箱（编辑器自动保存）
+          </div>
+        </div>
+        <div
+          data-pencil-name="草稿列表"
+          class="box-border w-full h-fit shrink-0 flex flex-col gap-[10px] justify-start items-start"
+        >
+          <div
+            data-pencil-name="草稿行-如何给 AI A"
+            class="box-border w-full h-fit shrink-0 flex flex-row gap-0 p-[14px_18px] justify-between items-center bg-[#FFFFFF] [border:1px_solid_#E4E4E7] rounded-[14px]"
+          >
+            <div
+              data-pencil-name="行信息"
+              class="box-border w-fit shrink-0 h-fit flex flex-col gap-[6px] justify-start items-start"
+            >
+              <div
+                data-pencil-name="标题行"
+                class="box-border w-fit h-fit shrink-0 flex flex-row gap-[10px] justify-start items-center"
+              >
+                <div
+                  data-pencil-name="文章标题"
+                  class="text-[15px]/[normal] box-border text-[#18181B] font-[Inter,system-ui,sans-serif] font-semibold text-left [white-space:nowrap]"
+                >
+                  如何给 AI Agent 设计止损机制
+                </div>
+                <div
+                  data-pencil-name="草稿徽章"
+                  class="box-border w-fit shrink-0 h-fit flex flex-row gap-0 p-[3px_10px] justify-start items-start bg-[#FFFBEB] rounded-[999px]"
+                >
+                  <div
+                    data-pencil-name="草稿"
+                    class="text-[11px]/[normal] box-border text-[#B45309] font-[Inter,system-ui,sans-serif] font-semibold text-left [white-space:nowrap]"
+                  >
+                    草稿
+                  </div>
+                </div>
+              </div>
+              <div
+                data-pencil-name="行元信息"
+                class="text-[12px]/[normal] box-border text-[#A1A1AA] font-[Inter,system-ui,sans-serif] font-normal text-left [white-space:nowrap]"
+              >
+                未保存到 git · 10 分钟前
+              </div>
+            </div>
+            <div
+              data-pencil-name="行操作"
+              class="box-border w-fit shrink-0 h-fit flex flex-row gap-[8px] justify-start items-start"
+            >
+              <div
+                data-pencil-name="继续编辑"
+                class="box-border w-fit shrink-0 h-fit flex flex-row gap-0 p-[7px_14px] justify-start items-start bg-[#FFFFFF] [border:1px_solid_#E4E4E7] rounded-[999px]"
+              >
+                <div
+                  data-pencil-name="继续编辑文字"
+                  class="text-[12px]/[normal] box-border text-[#71717A] font-[Inter,system-ui,sans-serif] font-medium text-left [white-space:nowrap]"
+                >
+                  继续编辑
+                </div>
+              </div>
+              <div
+                data-pencil-name="删除"
+                class="box-border w-fit shrink-0 h-fit flex flex-row gap-0 p-[7px_14px] justify-start items-start bg-[#FFFFFF] [border:1px_solid_#BE123C] rounded-[999px]"
+              >
+                <div
+                  data-pencil-name="删除文字"
+                  class="text-[12px]/[normal] box-border text-[#BE123C] font-[Inter,system-ui,sans-serif] font-medium text-left [white-space:nowrap]"
+                >
+                  删除
+                </div>
+              </div>
+            </div>
+          </div>
+          <div
+            data-pencil-name="草稿行-VPS 构建环境"
+            class="box-border w-full h-fit shrink-0 flex flex-row gap-0 p-[14px_18px] justify-between items-center bg-[#FFFFFF] [border:1px_solid_#E4E4E7] rounded-[14px]"
+          >
+            <div
+              data-pencil-name="行信息"
+              class="box-border w-fit shrink-0 h-fit flex flex-col gap-[6px] justify-start items-start"
+            >
+              <div
+                data-pencil-name="标题行"
+                class="box-border w-fit h-fit shrink-0 flex flex-row gap-[10px] justify-start items-center"
+              >
+                <div
+                  data-pencil-name="文章标题"
+                  class="text-[15px]/[normal] box-border text-[#18181B] font-[Inter,system-ui,sans-serif] font-semibold text-left [white-space:nowrap]"
+                >
+                  VPS 构建环境的踩坑记录
+                </div>
+                <div
+                  data-pencil-name="草稿徽章"
+                  class="box-border w-fit shrink-0 h-fit flex flex-row gap-0 p-[3px_10px] justify-start items-start bg-[#FFFBEB] rounded-[999px]"
+                >
+                  <div
+                    data-pencil-name="草稿"
+                    class="text-[11px]/[normal] box-border text-[#B45309] font-[Inter,system-ui,sans-serif] font-semibold text-left [white-space:nowrap]"
+                  >
+                    草稿
+                  </div>
+                </div>
+              </div>
+              <div
+                data-pencil-name="行元信息"
+                class="text-[12px]/[normal] box-border text-[#A1A1AA] font-[Inter,system-ui,sans-serif] font-normal text-left [white-space:nowrap]"
+              >
+                已存草稿 · 昨天 22:41
+              </div>
+            </div>
+            <div
+              data-pencil-name="行操作"
+              class="box-border w-fit shrink-0 h-fit flex flex-row gap-[8px] justify-start items-start"
+            >
+              <div
+                data-pencil-name="继续编辑"
+                class="box-border w-fit shrink-0 h-fit flex flex-row gap-0 p-[7px_14px] justify-start items-start bg-[#FFFFFF] [border:1px_solid_#E4E4E7] rounded-[999px]"
+              >
+                <div
+                  data-pencil-name="继续编辑文字"
+                  class="text-[12px]/[normal] box-border text-[#71717A] font-[Inter,system-ui,sans-serif] font-medium text-left [white-space:nowrap]"
+                >
+                  继续编辑
+                </div>
+              </div>
+              <div
+                data-pencil-name="删除"
+                class="box-border w-fit shrink-0 h-fit flex flex-row gap-0 p-[7px_14px] justify-start items-start bg-[#FFFFFF] [border:1px_solid_#BE123C] rounded-[999px]"
+              >
+                <div
+                  data-pencil-name="删除文字"
+                  class="text-[12px]/[normal] box-border text-[#BE123C] font-[Inter,system-ui,sans-serif] font-medium text-left [white-space:nowrap]"
+                >
+                  删除
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div
+          data-pencil-name="已发布分组头"
+          class="box-border w-fit h-fit shrink-0 flex flex-row gap-[8px] p-[12px_2px_0px_2px] justify-start items-center"
+        >
+          <div
+            data-pencil-name="已发布"
+            class="text-[11px]/[normal] box-border text-[#A1A1AA] font-[Inter,system-ui,sans-serif] font-semibold tracking-[2px] text-left [white-space:nowrap]"
+          >
+            已发布（git 仓库中的文章）
+          </div>
+        </div>
+        <div
+          data-pencil-name="已发布列表"
+          class="box-border w-full h-fit shrink-0 flex flex-col gap-[10px] justify-start items-start"
+        >
+          <div
+            data-pencil-name="文章行-hello-xgwnje-index"
+            class="box-border w-full h-fit shrink-0 flex flex-row gap-0 p-[14px_18px] justify-between items-center bg-[#FFFFFF] [border:1px_solid_#E4E4E7] rounded-[14px]"
+          >
+            <div
+              data-pencil-name="行信息"
+              class="box-border w-fit shrink-0 h-fit flex flex-col gap-[6px] justify-start items-start"
+            >
+              <div
+                data-pencil-name="标题行"
+                class="box-border w-fit h-fit shrink-0 flex flex-row gap-[10px] justify-start items-center"
+              >
+                <div
+                  data-pencil-name="文章标题"
+                  class="text-[15px]/[normal] box-border text-[#18181B] font-[Inter,system-ui,sans-serif] font-semibold text-left [white-space:nowrap]"
+                >
+                  你好，XGWNJE Index
+                </div>
+                <div
+                  data-pencil-name="语言徽章"
+                  class="box-border w-fit shrink-0 h-fit flex flex-row gap-0 p-[3px_10px] justify-start items-start bg-[#ECFDF5] rounded-[999px]"
+                >
+                  <div
+                    data-pencil-name="cn"
+                    class="text-[11px]/[normal] box-border text-[#047857] font-[Inter,system-ui,sans-serif] font-semibold text-left [white-space:nowrap]"
+                  >
+                    CN
+                  </div>
+                </div>
+              </div>
+              <div
+                data-pencil-name="行元信息"
+                class="text-[12px]/[normal] box-border text-[#A1A1AA] font-[Inter,system-ui,sans-serif] font-normal text-left [white-space:nowrap]"
+              >
+                hello-xgwnje-index · 2026-07-10 · XGWNJE / Blog
+              </div>
+            </div>
+            <div
+              data-pencil-name="行操作"
+              class="box-border w-fit shrink-0 h-fit flex flex-row gap-[8px] justify-start items-start"
+            >
+              <div
+                data-pencil-name="查看"
+                class="box-border w-fit shrink-0 h-fit flex flex-row gap-0 p-[7px_14px] justify-start items-start bg-[#FFFFFF] [border:1px_solid_#E4E4E7] rounded-[999px]"
+              >
+                <div
+                  data-pencil-name="查看文字"
+                  class="text-[12px]/[normal] box-border text-[#71717A] font-[Inter,system-ui,sans-serif] font-medium text-left [white-space:nowrap]"
+                >
+                  查看
+                </div>
+              </div>
+              <div
+                data-pencil-name="编辑"
+                class="box-border w-fit shrink-0 h-fit flex flex-row gap-0 p-[7px_14px] justify-start items-start bg-[#FFFFFF] [border:1px_solid_#E4E4E7] rounded-[999px]"
+              >
+                <div
+                  data-pencil-name="编辑文字"
+                  class="text-[12px]/[normal] box-border text-[#71717A] font-[Inter,system-ui,sans-serif] font-medium text-left [white-space:nowrap]"
+                >
+                  编辑
+                </div>
+              </div>
+              <div
+                data-pencil-name="删除"
+                class="box-border w-fit shrink-0 h-fit flex flex-row gap-0 p-[7px_14px] justify-start items-start bg-[#FFFFFF] [border:1px_solid_#BE123C] rounded-[999px]"
+              >
+                <div
+                  data-pencil-name="删除文字"
+                  class="text-[12px]/[normal] box-border text-[#BE123C] font-[Inter,system-ui,sans-serif] font-medium text-left [white-space:nowrap]"
+                >
+                  删除
+                </div>
+              </div>
+            </div>
+          </div>
+          <div
+            data-pencil-name="文章行-hello-xgwnje-index"
+            class="box-border w-full h-fit shrink-0 flex flex-row gap-0 p-[14px_18px] justify-between items-center bg-[#FFFFFF] [border:1px_solid_#E4E4E7] rounded-[14px]"
+          >
+            <div
+              data-pencil-name="行信息"
+              class="box-border w-fit shrink-0 h-fit flex flex-col gap-[6px] justify-start items-start"
+            >
+              <div
+                data-pencil-name="标题行"
+                class="box-border w-fit h-fit shrink-0 flex flex-row gap-[10px] justify-start items-center"
+              >
+                <div
+                  data-pencil-name="文章标题"
+                  class="text-[15px]/[normal] box-border text-[#18181B] font-[Inter,system-ui,sans-serif] font-semibold text-left [white-space:nowrap]"
+                >
+                  Hello, XGWNJE Index
+                </div>
+                <div
+                  data-pencil-name="语言徽章"
+                  class="box-border w-fit shrink-0 h-fit flex flex-row gap-0 p-[3px_10px] justify-start items-start bg-[#F4F4F5] rounded-[999px]"
+                >
+                  <div
+                    data-pencil-name="en"
+                    class="text-[11px]/[normal] box-border text-[#71717A] font-[Inter,system-ui,sans-serif] font-semibold text-left [white-space:nowrap]"
+                  >
+                    EN
+                  </div>
+                </div>
+              </div>
+              <div
+                data-pencil-name="行元信息"
+                class="text-[12px]/[normal] box-border text-[#A1A1AA] font-[Inter,system-ui,sans-serif] font-normal text-left [white-space:nowrap]"
+              >
+                hello-xgwnje-index · 2026-07-10 · XGWNJE / Blog
+              </div>
+            </div>
+            <div
+              data-pencil-name="行操作"
+              class="box-border w-fit shrink-0 h-fit flex flex-row gap-[8px] justify-start items-start"
+            >
+              <div
+                data-pencil-name="查看"
+                class="box-border w-fit shrink-0 h-fit flex flex-row gap-0 p-[7px_14px] justify-start items-start bg-[#FFFFFF] [border:1px_solid_#E4E4E7] rounded-[999px]"
+              >
+                <div
+                  data-pencil-name="查看文字"
+                  class="text-[12px]/[normal] box-border text-[#71717A] font-[Inter,system-ui,sans-serif] font-medium text-left [white-space:nowrap]"
+                >
+                  查看
+                </div>
+              </div>
+              <div
+                data-pencil-name="编辑"
+                class="box-border w-fit shrink-0 h-fit flex flex-row gap-0 p-[7px_14px] justify-start items-start bg-[#FFFFFF] [border:1px_solid_#E4E4E7] rounded-[999px]"
+              >
+                <div
+                  data-pencil-name="编辑文字"
+                  class="text-[12px]/[normal] box-border text-[#71717A] font-[Inter,system-ui,sans-serif] font-medium text-left [white-space:nowrap]"
+                >
+                  编辑
+                </div>
+              </div>
+              <div
+                data-pencil-name="删除"
+                class="box-border w-fit shrink-0 h-fit flex flex-row gap-0 p-[7px_14px] justify-start items-start bg-[#FFFFFF] [border:1px_solid_#BE123C] rounded-[999px]"
+              >
+                <div
+                  data-pencil-name="删除文字"
+                  class="text-[12px]/[normal] box-border text-[#BE123C] font-[Inter,system-ui,sans-serif] font-medium text-left [white-space:nowrap]"
+                >
+                  删除
+                </div>
+              </div>
+            </div>
+          </div>
+          <div
+            data-pencil-name="文章行-codex-windows-encoding"
+            class="box-border w-full h-fit shrink-0 flex flex-row gap-0 p-[14px_18px] justify-between items-center bg-[#FFFFFF] [border:1px_solid_#E4E4E7] rounded-[14px]"
+          >
+            <div
+              data-pencil-name="行信息"
+              class="box-border w-fit shrink-0 h-fit flex flex-col gap-[6px] justify-start items-start"
+            >
+              <div
+                data-pencil-name="标题行"
+                class="box-border w-fit h-fit shrink-0 flex flex-row gap-[10px] justify-start items-center"
+              >
+                <div
+                  data-pencil-name="文章标题"
+                  class="text-[15px]/[normal] box-border text-[#18181B] font-[Inter,system-ui,sans-serif] font-semibold text-left [white-space:nowrap]"
+                >
+                  我删掉了一条 Codex 规则，乱码就回来了
+                </div>
+                <div
+                  data-pencil-name="语言徽章"
+                  class="box-border w-fit shrink-0 h-fit flex flex-row gap-0 p-[3px_10px] justify-start items-start bg-[#ECFDF5] rounded-[999px]"
+                >
+                  <div
+                    data-pencil-name="cn"
+                    class="text-[11px]/[normal] box-border text-[#047857] font-[Inter,system-ui,sans-serif] font-semibold text-left [white-space:nowrap]"
+                  >
+                    CN
+                  </div>
+                </div>
+              </div>
+              <div
+                data-pencil-name="行元信息"
+                class="text-[12px]/[normal] box-border text-[#A1A1AA] font-[Inter,system-ui,sans-serif] font-normal text-left [white-space:nowrap]"
+              >
+                codex-windows-encoding · 2026-07-16 · Codex / AI Agent
+              </div>
+            </div>
+            <div
+              data-pencil-name="行操作"
+              class="box-border w-fit shrink-0 h-fit flex flex-row gap-[8px] justify-start items-start"
+            >
+              <div
+                data-pencil-name="查看"
+                class="box-border w-fit shrink-0 h-fit flex flex-row gap-0 p-[7px_14px] justify-start items-start bg-[#FFFFFF] [border:1px_solid_#E4E4E7] rounded-[999px]"
+              >
+                <div
+                  data-pencil-name="查看文字"
+                  class="text-[12px]/[normal] box-border text-[#71717A] font-[Inter,system-ui,sans-serif] font-medium text-left [white-space:nowrap]"
+                >
+                  查看
+                </div>
+              </div>
+              <div
+                data-pencil-name="编辑"
+                class="box-border w-fit shrink-0 h-fit flex flex-row gap-0 p-[7px_14px] justify-start items-start bg-[#FFFFFF] [border:1px_solid_#E4E4E7] rounded-[999px]"
+              >
+                <div
+                  data-pencil-name="编辑文字"
+                  class="text-[12px]/[normal] box-border text-[#71717A] font-[Inter,system-ui,sans-serif] font-medium text-left [white-space:nowrap]"
+                >
+                  编辑
+                </div>
+              </div>
+              <div
+                data-pencil-name="删除"
+                class="box-border w-fit shrink-0 h-fit flex flex-row gap-0 p-[7px_14px] justify-start items-start bg-[#FFFFFF] [border:1px_solid_#BE123C] rounded-[999px]"
+              >
+                <div
+                  data-pencil-name="删除文字"
+                  class="text-[12px]/[normal] box-border text-[#BE123C] font-[Inter,system-ui,sans-serif] font-medium text-left [white-space:nowrap]"
+                >
+                  删除
+                </div>
+              </div>
+            </div>
+          </div>
+          <div
+            data-pencil-name="文章行-chrome-screenshot-debugging"
+            class="box-border w-full h-fit shrink-0 flex flex-row gap-0 p-[14px_18px] justify-between items-center bg-[#FFFFFF] [border:1px_solid_#E4E4E7] rounded-[14px]"
+          >
+            <div
+              data-pencil-name="行信息"
+              class="box-border w-fit shrink-0 h-fit flex flex-col gap-[6px] justify-start items-start"
+            >
+              <div
+                data-pencil-name="标题行"
+                class="box-border w-fit h-fit shrink-0 flex flex-row gap-[10px] justify-start items-center"
+              >
+                <div
+                  data-pencil-name="文章标题"
+                  class="text-[15px]/[normal] box-border text-[#18181B] font-[Inter,system-ui,sans-serif] font-semibold text-left [white-space:nowrap]"
+                >
+                  Chrome 截图调试的三种姿势
+                </div>
+                <div
+                  data-pencil-name="语言徽章"
+                  class="box-border w-fit shrink-0 h-fit flex flex-row gap-0 p-[3px_10px] justify-start items-start bg-[#ECFDF5] rounded-[999px]"
+                >
+                  <div
+                    data-pencil-name="cn"
+                    class="text-[11px]/[normal] box-border text-[#047857] font-[Inter,system-ui,sans-serif] font-semibold text-left [white-space:nowrap]"
+                  >
+                    CN
+                  </div>
+                </div>
+              </div>
+              <div
+                data-pencil-name="行元信息"
+                class="text-[12px]/[normal] box-border text-[#A1A1AA] font-[Inter,system-ui,sans-serif] font-normal text-left [white-space:nowrap]"
+              >
+                chrome-screenshot-debugging · 2026-07-14 · Engineering
+              </div>
+            </div>
+            <div
+              data-pencil-name="行操作"
+              class="box-border w-fit shrink-0 h-fit flex flex-row gap-[8px] justify-start items-start"
+            >
+              <div
+                data-pencil-name="查看"
+                class="box-border w-fit shrink-0 h-fit flex flex-row gap-0 p-[7px_14px] justify-start items-start bg-[#FFFFFF] [border:1px_solid_#E4E4E7] rounded-[999px]"
+              >
+                <div
+                  data-pencil-name="查看文字"
+                  class="text-[12px]/[normal] box-border text-[#71717A] font-[Inter,system-ui,sans-serif] font-medium text-left [white-space:nowrap]"
+                >
+                  查看
+                </div>
+              </div>
+              <div
+                data-pencil-name="编辑"
+                class="box-border w-fit shrink-0 h-fit flex flex-row gap-0 p-[7px_14px] justify-start items-start bg-[#FFFFFF] [border:1px_solid_#E4E4E7] rounded-[999px]"
+              >
+                <div
+                  data-pencil-name="编辑文字"
+                  class="text-[12px]/[normal] box-border text-[#71717A] font-[Inter,system-ui,sans-serif] font-medium text-left [white-space:nowrap]"
+                >
+                  编辑
+                </div>
+              </div>
+              <div
+                data-pencil-name="删除"
+                class="box-border w-fit shrink-0 h-fit flex flex-row gap-0 p-[7px_14px] justify-start items-start bg-[#FFFFFF] [border:1px_solid_#BE123C] rounded-[999px]"
+              >
+                <div
+                  data-pencil-name="删除文字"
+                  class="text-[12px]/[normal] box-border text-[#BE123C] font-[Inter,system-ui,sans-serif] font-medium text-left [white-space:nowrap]"
+                >
+                  删除
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div
+          data-pencil-name="脚注"
+          class="box-border w-fit h-fit shrink-0 flex flex-row gap-0 p-[10px_2px_0px_2px] justify-start items-start"
+        >
+          <div
+            data-pencil-name="脚注文字"
+            class="text-[12px]/[normal] box-border text-[#A1A1AA] font-[Inter,system-ui,sans-serif] font-normal text-left [white-space:nowrap]"
+          >
+            删除已发布文章会触发一次完整重新发布（git 提交 + 服务器构建），约 25
+            秒，不可撤销前请二次确认。
+          </div>
+        </div>
+      </div>
+      <div
+        data-pencil-name="Phase2 编辑器"
+        class="box-border w-[1440px] h-[900px] absolute left-[1560px] top-0 flex flex-col gap-[18px] p-[28px_40px] justify-start items-start bg-[#FAFAF9] overflow-hidden"
+      >
+        <div
+          data-pencil-name="编辑器顶栏"
+          class="box-border w-full h-fit shrink-0 flex flex-row gap-0 justify-between items-center"
+        >
+          <div
+            data-pencil-name="顶栏左"
+            class="box-border w-fit shrink-0 h-fit flex flex-row gap-[14px] justify-start items-center"
+          >
+            <div
+              data-pencil-name="返回列表"
+              class="box-border w-fit shrink-0 h-fit flex flex-row gap-0 p-[8px_14px] justify-start items-center bg-[#FFFFFF] [border:1px_solid_#E4E4E7] rounded-[999px]"
+            >
+              <div
+                data-pencil-name="返回"
+                class="text-[13px]/[normal] box-border text-[#71717A] font-[Inter,system-ui,sans-serif] font-medium text-left [white-space:nowrap]"
+              >
+                ← 文章列表
+              </div>
+            </div>
+            <div
+              data-pencil-name="状态组"
+              class="box-border w-fit shrink-0 h-fit flex flex-col gap-[2px] justify-start items-start"
+            >
+              <div
+                data-pencil-name="编辑对象"
+                class="text-[15px]/[normal] box-border text-[#18181B] font-[Inter,system-ui,sans-serif] font-semibold text-left [white-space:nowrap]"
+              >
+                如何给 AI Agent 设计止损机制
+              </div>
+              <div
+                data-pencil-name="保存状态"
+                class="text-[11px]/[normal] box-border text-[#047857] font-[Inter,system-ui,sans-serif] font-normal text-left [white-space:nowrap]"
+              >
+                草稿已自动保存 · 12:03:47
+              </div>
+            </div>
+          </div>
+          <div
+            data-pencil-name="顶栏右"
+            class="box-border w-fit shrink-0 h-fit flex flex-row gap-[10px] justify-start items-center"
+          >
+            <div
+              data-pencil-name="保存草稿"
+              class="box-border w-fit shrink-0 h-fit flex flex-row gap-0 p-[9px_16px] justify-start items-start bg-[#FFFFFF] [border:1px_solid_#E4E4E7] rounded-[999px]"
+            >
+              <div
+                data-pencil-name="保存草稿文字"
+                class="text-[13px]/[normal] box-border text-[#71717A] font-[Inter,system-ui,sans-serif] font-medium text-left [white-space:nowrap]"
+              >
+                保存草稿
+              </div>
+            </div>
+            <div
+              data-pencil-name="发表按钮"
+              class="box-border w-fit shrink-0 h-fit flex flex-row gap-[8px] p-[9px_20px] justify-start items-center bg-[#B45309] rounded-[999px]"
+            >
+              <div
+                data-pencil-name="发表"
+                class="text-[13px]/[normal] box-border text-[#FFFFFF] font-[Inter,system-ui,sans-serif] font-semibold text-left [white-space:nowrap]"
+              >
+                发表 →
+              </div>
+            </div>
+          </div>
+        </div>
+        <div
+          data-pencil-name="校验提示条"
+          class="box-border w-full h-fit shrink-0 flex flex-row gap-[10px] p-[10px_14px] justify-start items-center bg-[#FFF1F2] [border:1px_solid_#BE123C] rounded-[12px]"
+        >
+          <div
+            data-pencil-name="校验提示"
+            class="text-[12px]/[normal] box-border text-[#BE123C] font-[Inter,system-ui,sans-serif] font-medium text-left [white-space:nowrap]"
+          >
+            发表前请补齐：description（摘要）为空 · pubDate 未设置。草稿可正常保存。
+          </div>
+        </div>
+        <div
+          data-pencil-name="编辑区"
+          class="box-border w-full [flex:1_1_0] flex flex-row gap-[18px] justify-start items-start"
+        >
+          <div
+            data-pencil-name="编辑表单列"
+            class="box-border w-[560px] shrink-0 h-full flex flex-col gap-[12px] justify-start items-start"
+          >
+            <div
+              data-pencil-name="字段-标题"
+              class="box-border w-full h-fit shrink-0 flex flex-col gap-[6px] justify-start items-start"
+            >
+              <div
+                data-pencil-name="字段名"
+                class="text-[12px]/[normal] box-border text-[#71717A] font-[Inter,system-ui,sans-serif] font-semibold text-left [white-space:nowrap]"
+              >
+                标题
+              </div>
+              <div
+                data-pencil-name="输入框"
+                class="box-border w-full h-fit shrink-0 flex flex-row gap-0 p-[9px_12px] justify-start items-start bg-[#FFFFFF] [border:1px_solid_#E4E4E7] rounded-[10px]"
+              >
+                <div
+                  data-pencil-name="字段值"
+                  class="text-[13px]/[normal] box-border text-[#18181B] font-[Inter,system-ui,sans-serif] font-normal text-left [white-space:nowrap]"
+                >
+                  如何给 AI Agent 设计止损机制
+                </div>
+              </div>
+            </div>
+            <div
+              data-pencil-name="字段-Slug（文件名）"
+              class="box-border w-full h-fit shrink-0 flex flex-col gap-[6px] justify-start items-start"
+            >
+              <div
+                data-pencil-name="字段名"
+                class="text-[12px]/[normal] box-border text-[#71717A] font-[Inter,system-ui,sans-serif] font-semibold text-left [white-space:nowrap]"
+              >
+                Slug（文件名）
+              </div>
+              <div
+                data-pencil-name="输入框"
+                class="box-border w-full h-fit shrink-0 flex flex-row gap-0 p-[9px_12px] justify-start items-start bg-[#FFFFFF] [border:1px_solid_#E4E4E7] rounded-[10px]"
+              >
+                <div
+                  data-pencil-name="字段值"
+                  class="text-[13px]/[normal] box-border text-[#18181B] font-[Inter,system-ui,sans-serif] font-normal text-left [white-space:nowrap]"
+                >
+                  agent-stop-loss-cn
+                </div>
+              </div>
+            </div>
+            <div
+              data-pencil-name="字段-描述（description）"
+              class="box-border w-full h-fit shrink-0 flex flex-col gap-[6px] justify-start items-start"
+            >
+              <div
+                data-pencil-name="字段名"
+                class="text-[12px]/[normal] box-border text-[#BE123C] font-[Inter,system-ui,sans-serif] font-semibold text-left [white-space:nowrap]"
+              >
+                描述（description） * 必填
+              </div>
+              <div
+                data-pencil-name="输入框"
+                class="box-border w-full h-fit shrink-0 flex flex-row gap-0 p-[9px_12px] justify-start items-start bg-[#FFFFFF] [border:1px_solid_#BE123C] rounded-[10px]"
+              >
+                <div
+                  data-pencil-name="字段值"
+                  class="text-[13px]/[normal] box-border text-[#A1A1AA] font-[Inter,system-ui,sans-serif] font-normal text-left [white-space:nowrap]"
+                >
+                  点击填写…
+                </div>
+              </div>
+            </div>
+            <div
+              data-pencil-name="字段-标签（逗号分隔）"
+              class="box-border w-full h-fit shrink-0 flex flex-col gap-[6px] justify-start items-start"
+            >
+              <div
+                data-pencil-name="字段名"
+                class="text-[12px]/[normal] box-border text-[#71717A] font-[Inter,system-ui,sans-serif] font-semibold text-left [white-space:nowrap]"
+              >
+                标签（逗号分隔）
+              </div>
+              <div
+                data-pencil-name="输入框"
+                class="box-border w-full h-fit shrink-0 flex flex-row gap-0 p-[9px_12px] justify-start items-start bg-[#FFFFFF] [border:1px_solid_#E4E4E7] rounded-[10px]"
+              >
+                <div
+                  data-pencil-name="字段值"
+                  class="text-[13px]/[normal] box-border text-[#18181B] font-[Inter,system-ui,sans-serif] font-normal text-left [white-space:nowrap]"
+                >
+                  AI Agent, Engineering
+                </div>
+              </div>
+            </div>
+            <div
+              data-pencil-name="字段-分类"
+              class="box-border w-full h-fit shrink-0 flex flex-col gap-[6px] justify-start items-start"
+            >
+              <div
+                data-pencil-name="字段名"
+                class="text-[12px]/[normal] box-border text-[#71717A] font-[Inter,system-ui,sans-serif] font-semibold text-left [white-space:nowrap]"
+              >
+                分类
+              </div>
+              <div
+                data-pencil-name="输入框"
+                class="box-border w-full h-fit shrink-0 flex flex-row gap-0 p-[9px_12px] justify-start items-start bg-[#FFFFFF] [border:1px_solid_#E4E4E7] rounded-[10px]"
+              >
+                <div
+                  data-pencil-name="字段值"
+                  class="text-[13px]/[normal] box-border text-[#18181B] font-[Inter,system-ui,sans-serif] font-normal text-left [white-space:nowrap]"
+                >
+                  Engineering
+                </div>
+              </div>
+            </div>
+            <div
+              data-pencil-name="字段-正文"
+              class="box-border w-full [flex:1_1_0] flex flex-col gap-[6px] justify-start items-start"
+            >
+              <div
+                data-pencil-name="正文标签行"
+                class="box-border w-full h-fit shrink-0 flex flex-row gap-0 justify-between items-center"
+              >
+                <div
+                  data-pencil-name="字段名"
+                  class="text-[12px]/[normal] box-border text-[#71717A] font-[Inter,system-ui,sans-serif] font-semibold text-left [white-space:nowrap]"
+                >
+                  正文（Markdown）
+                </div>
+                <div
+                  data-pencil-name="插入图片按钮"
+                  class="box-border w-fit shrink-0 h-fit flex flex-row gap-0 p-[6px_12px] justify-start items-start bg-[#FFFFFF] [border:1px_solid_#E4E4E7] rounded-[999px]"
+                >
+                  <div
+                    data-pencil-name="插入图片"
+                    class="text-[11px]/[normal] box-border text-[#71717A] font-[Inter,system-ui,sans-serif] font-medium text-left [white-space:nowrap]"
+                  >
+                    插入图片
+                  </div>
+                </div>
+              </div>
+              <div
+                data-pencil-name="正文编辑框"
+                class="box-border w-full [flex:1_1_0] flex flex-col gap-[6px] p-[14px] justify-start items-start bg-[#FFFFFF] [border:1px_solid_#E4E4E7] rounded-[10px]"
+              >
+                <div
+                  data-pencil-name="正文行"
+                  class="text-[12px]/[normal] box-border text-[#18181B] font-['Cascadia_Mono',system-ui,sans-serif] font-normal text-left [white-space:nowrap]"
+                >
+                  ## 为什么需要止损
+                </div>
+                <div
+                  data-pencil-name="正文行"
+                  class="text-[12px]/[normal] box-border text-[#A1A1AA] font-['Cascadia_Mono',system-ui,sans-serif] font-normal text-left [white-space:nowrap]"
+                ></div>
+                <div
+                  data-pencil-name="正文行"
+                  class="text-[12px]/[normal] box-border text-[#18181B] font-['Cascadia_Mono',system-ui,sans-serif] font-normal text-left [white-space:nowrap]"
+                >
+                  agent 在长任务里最常见的失败模式不是犯错，
+                </div>
+                <div
+                  data-pencil-name="正文行"
+                  class="text-[12px]/[normal] box-border text-[#18181B] font-['Cascadia_Mono',system-ui,sans-serif] font-normal text-left [white-space:nowrap]"
+                >
+                  而是**不停试错**。
+                </div>
+                <div
+                  data-pencil-name="正文行"
+                  class="text-[12px]/[normal] box-border text-[#A1A1AA] font-['Cascadia_Mono',system-ui,sans-serif] font-normal text-left [white-space:nowrap]"
+                ></div>
+                <div
+                  data-pencil-name="正文行"
+                  class="text-[12px]/[normal] box-border text-[#18181B] font-['Cascadia_Mono',system-ui,sans-serif] font-normal text-left [white-space:nowrap]"
+                >
+                  ```bash
+                </div>
+                <div
+                  data-pencil-name="正文行"
+                  class="text-[12px]/[normal] box-border text-[#18181B] font-['Cascadia_Mono',system-ui,sans-serif] font-normal text-left [white-space:nowrap]"
+                >
+                  npm run verify &amp;&amp; npm run publish:content
+                </div>
+                <div
+                  data-pencil-name="正文行"
+                  class="text-[12px]/[normal] box-border text-[#18181B] font-['Cascadia_Mono',system-ui,sans-serif] font-normal text-left [white-space:nowrap]"
+                >
+                  ```
+                </div>
+                <div
+                  data-pencil-name="正文行"
+                  class="text-[12px]/[normal] box-border text-[#A1A1AA] font-['Cascadia_Mono',system-ui,sans-serif] font-normal text-left [white-space:nowrap]"
+                ></div>
+                <div
+                  data-pencil-name="正文行"
+                  class="text-[12px]/[normal] box-border text-[#18181B] font-['Cascadia_Mono',system-ui,sans-serif] font-normal text-left [white-space:nowrap]"
+                >
+                  &gt; 止损不是放弃，是把决策权交还给人。
+                </div>
+              </div>
+            </div>
+          </div>
+          <div
+            data-pencil-name="预览列"
+            class="box-border [flex:1_1_0] h-full flex flex-col gap-[8px] justify-start items-start"
+          >
+            <div
+              data-pencil-name="预览标签行"
+              class="box-border w-full h-fit shrink-0 flex flex-row gap-0 justify-between items-center"
+            >
+              <div
+                data-pencil-name="预览标签"
+                class="text-[12px]/[normal] box-border text-[#71717A] font-[Inter,system-ui,sans-serif] font-semibold text-left [white-space:nowrap]"
+              >
+                预览（服务端渲染）
+              </div>
+              <div
+                data-pencil-name="预览延迟"
+                class="text-[11px]/[normal] box-border text-[#A1A1AA] font-[Inter,system-ui,sans-serif] font-normal text-left [white-space:nowrap]"
+              >
+                防抖 500ms
+              </div>
+            </div>
+            <div
+              data-pencil-name="预览卡片"
+              class="box-border w-full [flex:1_1_0] flex flex-col gap-[12px] p-[22px_26px] justify-start items-start bg-[#FFFFFF] [border:1px_solid_#E4E4E7] rounded-[14px] overflow-hidden"
+            >
+              <div
+                data-pencil-name="预览标题"
+                class="text-[24px]/[normal] box-border w-full text-[#18181B] font-[Inter,system-ui,sans-serif] font-bold text-left"
+              >
+                如何给 AI Agent 设计止损机制
+              </div>
+              <div
+                data-pencil-name="预览元信息"
+                class="text-[12px]/[normal] box-border text-[#A1A1AA] font-[Inter,system-ui,sans-serif] font-normal text-left [white-space:nowrap]"
+              >
+                2026-07-19 · Engineering · #AI Agent #Engineering
+              </div>
+              <div
+                data-pencil-name="预览 H2"
+                class="text-[18px]/[normal] box-border text-[#18181B] font-[Inter,system-ui,sans-serif] font-semibold text-left [white-space:nowrap]"
+              >
+                为什么需要止损
+              </div>
+              <div
+                data-pencil-name="预览段落"
+                class="text-[14px]/[24px] box-border w-full text-[#18181B] font-[Inter,system-ui,sans-serif] font-normal text-left"
+              >
+                agent 在长任务里最常见的失败模式不是犯错，而是不停试错。
+              </div>
+              <div
+                data-pencil-name="预览代码块"
+                class="box-border w-full h-fit shrink-0 flex flex-col gap-0 p-[10px_14px] justify-start items-start bg-[#F4F4F5] rounded-[8px]"
+              >
+                <div
+                  data-pencil-name="代码行"
+                  class="text-[12px]/[normal] box-border text-[#18181B] font-['Cascadia_Mono',system-ui,sans-serif] font-normal text-left [white-space:nowrap]"
+                >
+                  npm run verify &amp;&amp; npm run publish:content
+                </div>
+              </div>
+              <div
+                data-pencil-name="预览引用"
+                class="box-border w-full h-fit shrink-0 flex flex-row gap-[10px] justify-start items-center"
+              >
+                <div
+                  data-pencil-name="引用条"
+                  class="box-border w-[3px] shrink-0 h-[20px] bg-[#B45309]"
+                ></div>
+                <div
+                  data-pencil-name="引用文字"
+                  class="text-[13px]/[normal] box-border text-[#71717A] font-[Inter,system-ui,sans-serif] font-normal text-left [white-space:nowrap]"
+                >
+                  止损不是放弃，是把决策权交还给人。
+                </div>
+              </div>
+              <div
+                data-pencil-name="预览配图占位"
+                class="box-border w-full h-[120px] shrink-0 flex flex-row gap-0 justify-center items-center bg-[#F4F4F5] rounded-[8px]"
+              >
+                <div
+                  data-pencil-name="配图说明"
+                  class="text-[12px]/[normal] box-border text-[#A1A1AA] font-[Inter,system-ui,sans-serif] font-normal text-left [white-space:nowrap]"
+                >
+                  正文图片预览（上传后自动替换为 /image/blog/&lt;group&gt;/ 路径）
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

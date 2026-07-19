@@ -28,6 +28,23 @@ assert.doesNotMatch(page, /\.innerHTML\s*=/, 'admin page must not inject API con
 assert.match(page, /astro:page-load/, 'admin page must initialize after ClientRouter navigation');
 assert.match(page, /adminInitialized/, 'admin page must guard duplicate listeners on the same DOM');
 
+for (const contract of [
+	'data-admin-articles',
+	'data-admin-article-action',
+	'admin-article-delete-modal',
+	'admin-article-view-modal',
+	'data-admin-article-delete-pair',
+]) {
+	assert.match(page, new RegExp(contract), `admin page is missing article contract ${contract}`);
+}
+assert.match(client, /\/api\/admin\/articles/, 'admin client must call the articles endpoint');
+assert.match(client, /pair=1/, 'admin client must support paired article deletion');
+
+const articlesRoute = read('server/src/routes/articles.js');
+assert.match(articlesRoute, /adminAuth/, 'article routes must require admin auth');
+assert.match(articlesRoute, /admin_audit/, 'article routes must record admin audit entries');
+assert.doesNotMatch(articlesRoute, /adminToken/, 'article routes must not special-case the admin token');
+
 assert.match(client, /getToken/, 'admin client must read the existing authenticated session token');
 assert.match(client, /Authorization/, 'admin client must send a Bearer authorization header');
 assert.match(client, /Bearer\s+\$\{token\}/, 'admin client must use the current token as Bearer auth');

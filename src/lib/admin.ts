@@ -182,3 +182,43 @@ export async function createSubscriptionQrObjectUrl(): Promise<string> {
 export function revokeSubscriptionQrObjectUrl(url: string | null): void {
 	if (url) URL.revokeObjectURL(url);
 }
+
+export interface AdminArticle {
+	id: string;
+	file: string;
+	format: 'md' | 'mdx';
+	title: string;
+	lang: string;
+	group: string;
+	draft: boolean;
+	pubDate: string;
+	category: string;
+	tags: string;
+}
+
+export interface AdminArticleDetail {
+	id: string;
+	file: string;
+	format: 'md' | 'mdx';
+	frontmatter: Record<string, string>;
+	source: string;
+}
+
+export interface AdminArticleDeleteResult {
+	ok: boolean;
+	deleted: string[];
+	release: { releaseId?: string; seconds?: number };
+}
+
+export function getAdminArticles(): Promise<{ articles: AdminArticle[]; sync: boolean }> {
+	return adminRequest('/api/admin/articles');
+}
+
+export function getAdminArticle(id: string): Promise<AdminArticleDetail> {
+	return adminRequest(`/api/admin/article?id=${encodeURIComponent(id)}`);
+}
+
+export function deleteAdminArticle(id: string, pair: boolean): Promise<AdminArticleDeleteResult> {
+	const query = pair ? '&pair=1' : '';
+	return adminRequest(`/api/admin/article?id=${encodeURIComponent(id)}${query}`, { method: 'DELETE' });
+}

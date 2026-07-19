@@ -1,5 +1,6 @@
 ---
 import SiteLayout from '../../layouts/SiteLayout.astro';
+import ModalShell from '../../components/ModalShell.astro';
 ---
 
 <SiteLayout title="管理台 | XGWNJE" description="XGWNJE 站点内容与消息管理台。">
@@ -36,6 +37,20 @@ import SiteLayout from '../../layouts/SiteLayout.astro';
 						</span>
 						<span class="shrink-0 text-sm font-medium text-zinc-500 dark:text-zinc-400" aria-hidden="true">进入 →</span>
 					</a>
+					<section aria-labelledby="admin-articles-heading">
+						<div class="mb-4 flex items-center justify-between gap-4">
+							<div>
+								<p class="m-0 text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-400 dark:text-zinc-500">Content</p>
+								<h2 id="admin-articles-heading" class="mt-1 text-xl">文章管理</h2>
+							</div>
+							<div class="flex items-center gap-3">
+								<span class="text-xs text-zinc-400 dark:text-zinc-500" data-admin-articles-status aria-live="polite"></span>
+								<button type="button" class="rounded-full border border-zinc-200 bg-white px-3.5 py-2 text-sm font-medium text-zinc-600 hover:border-zinc-300 hover:text-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300" data-admin-articles-refresh>刷新</button>
+							</div>
+						</div>
+						<div class="space-y-3" data-admin-articles aria-live="polite"></div>
+					</section>
+
 					<section aria-labelledby="admin-stats-heading">
 						<div class="mb-4 flex items-center justify-between gap-4">
 							<div>
@@ -85,18 +100,47 @@ import SiteLayout from '../../layouts/SiteLayout.astro';
 			:global(.dark) .admin-filter { border-color: rgb(63 63 70); background: rgba(24,24,27,.78); color: rgb(212 212 216); }
 			:global(.dark) .admin-filter:hover, :global(.dark) .admin-filter[aria-pressed='true'] { border-color: rgb(113 113 122); background: rgb(244 244 245); color: rgb(24 24 27); }
 		</style>
+
+		<ModalShell id="admin-article-view-modal" titleId="admin-article-view-title" contentClass="w-[min(720px,100%)]">
+			<div class="flex items-start justify-between gap-4">
+				<div>
+					<h3 id="admin-article-view-title" class="m-0 text-lg font-semibold text-zinc-950 dark:text-zinc-50" data-admin-article-view-title>文章详情</h3>
+					<p class="mt-1 font-mono text-[11px] text-zinc-400 dark:text-zinc-500" data-admin-article-view-meta></p>
+				</div>
+				<button type="button" data-modal-close class="rounded-full border border-zinc-200 px-3 py-1.5 text-xs font-medium text-zinc-500 hover:border-zinc-300 hover:text-zinc-800 dark:border-zinc-700 dark:text-zinc-300">关闭</button>
+			</div>
+			<pre class="mt-4 max-h-[60dvh] overflow-auto whitespace-pre-wrap break-words rounded-xl bg-zinc-50 p-4 font-mono text-xs leading-5 text-zinc-700 dark:bg-zinc-800/60 dark:text-zinc-300" data-admin-article-view-source></pre>
+		</ModalShell>
+
+		<ModalShell id="admin-article-delete-modal" titleId="admin-article-delete-title" contentClass="w-[min(520px,100%)]">
+			<h3 id="admin-article-delete-title" class="m-0 text-lg font-semibold text-zinc-950 dark:text-zinc-50">删除这篇文章？</h3>
+			<p class="mt-3 text-sm leading-6 text-zinc-600 dark:text-zinc-400" data-admin-article-delete-body></p>
+			<div class="mt-3 rounded-lg bg-rose-50 px-3 py-2 text-xs leading-5 text-rose-700 dark:bg-rose-950/30 dark:text-rose-300">仅删除一种语言会破坏中英配对检查；如果另一语言版本存在，建议勾选一并删除。删除会触发一次完整重新发布（约 25 秒），线上立即下架，可通过 git 历史找回。</div>
+			<label class="mt-4 flex items-center gap-2 text-sm text-zinc-600 dark:text-zinc-300">
+				<input type="checkbox" data-admin-article-delete-pair class="h-4 w-4 accent-rose-700" />
+				同时删除对应语言版本（-cn / -en）
+			</label>
+			<div class="mt-5 flex justify-end gap-2">
+				<button type="button" data-modal-close class="rounded-full border border-zinc-200 px-4 py-2 text-sm font-medium text-zinc-600 hover:border-zinc-300 hover:text-zinc-900 dark:border-zinc-700 dark:text-zinc-300">取消</button>
+				<button type="button" data-admin-article-delete-confirm class="rounded-full bg-rose-700 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-800 disabled:opacity-60">确认删除</button>
+			</div>
+		</ModalShell>
 </SiteLayout>
 
 <script>
 	import {
 		approveComment,
 		checkAdmin,
+		deleteAdminArticle,
 		deleteComment,
+		getAdminArticle,
+		getAdminArticles,
 		getAdminComments,
 		getAdminContactMessages,
 		getAdminOutbox,
 		getAdminStats,
 		rejectComment,
+		type AdminArticle,
 		type AdminComment,
 		type AdminContactMessage,
 		type AdminOutboxItem,
@@ -223,6 +267,7 @@ import SiteLayout from '../../layouts/SiteLayout.astro';
 		subscriptionLink?.classList.toggle('hidden', !identity.permissions.manageSubscriptions);
 		subscriptionLink?.classList.toggle('flex', identity.permissions.manageSubscriptions);
 		try { await loadDashboard(); } catch { showFailure('管理数据加载失败。会话可能已过期，请重新登录后重试。'); }
+		void loadArticles();
 	};
 
 	root?.querySelector('[data-admin-refresh]')?.addEventListener('click', async () => {
@@ -257,6 +302,141 @@ import SiteLayout from '../../layouts/SiteLayout.astro';
 		} catch { showFailure('评论操作失败。请确认会话仍然有效。'); }
 		finally { button.disabled = false; }
 	});
+
+	// —— 文章管理（Phase 1：列表 / 查看 / 删除）——
+	const articlesRoot = root?.querySelector<HTMLElement>('[data-admin-articles]');
+	const articlesStatus = root?.querySelector<HTMLElement>('[data-admin-articles-status]');
+	let pendingDeleteId: string | null = null;
+
+	const setModalOpen = (id: string, open: boolean) => {
+		const modal = document.getElementById(id);
+		if (!modal) return;
+		const content = modal.querySelector('.modal-content');
+		if (open) {
+			modal.classList.remove('opacity-0', 'invisible');
+			modal.classList.add('opacity-100');
+			content?.classList.remove('scale-95', 'opacity-0');
+			content?.classList.add('scale-100', 'opacity-100');
+			modal.setAttribute('aria-hidden', 'false');
+		} else {
+			modal.classList.add('opacity-0');
+			modal.classList.remove('opacity-100');
+			content?.classList.add('scale-95', 'opacity-0');
+			content?.classList.remove('scale-100', 'opacity-100');
+			setTimeout(() => modal.classList.add('invisible'), 200);
+			modal.setAttribute('aria-hidden', 'true');
+		}
+	};
+	root?.querySelectorAll('#admin-article-view-modal [data-modal-close], #admin-article-delete-modal [data-modal-close]').forEach((button) => {
+		button.addEventListener('click', () => {
+			setModalOpen('admin-article-view-modal', false);
+			setModalOpen('admin-article-delete-modal', false);
+		});
+	});
+
+	const setArticlesStatus = (message: string) => {
+		if (articlesStatus) articlesStatus.textContent = message;
+	};
+
+	const langBadge = (article: AdminArticle) => {
+		if (article.draft) return ['草稿', 'rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-semibold text-amber-700 dark:bg-amber-950/40 dark:text-amber-400'] as const;
+		if (article.lang === 'cn') return ['CN', 'rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400'] as const;
+		if (article.lang === 'en') return ['EN', 'rounded-full bg-zinc-100 px-2.5 py-1 text-[11px] font-semibold text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400'] as const;
+		return ['—', 'rounded-full bg-zinc-100 px-2.5 py-1 text-[11px] font-semibold text-zinc-400 dark:bg-zinc-800'] as const;
+	};
+
+	const articleActionButton = (label: string, action: string, id: string, tone: 'default' | 'danger' = 'default') => {
+		const button = createElement('button', tone === 'danger'
+			? 'rounded-full border border-rose-200 px-3 py-1.5 text-xs font-medium text-rose-700 hover:bg-rose-50 dark:border-rose-900 dark:text-rose-400 dark:hover:bg-rose-950/30'
+			: 'rounded-full border border-zinc-200 px-3 py-1.5 text-xs font-medium text-zinc-600 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800', label);
+		button.type = 'button';
+		button.setAttribute('data-admin-article-action', action);
+		button.dataset.articleId = id;
+		return button;
+	};
+
+	const renderArticles = (articles: AdminArticle[]) => {
+		if (!articlesRoot) return;
+		articlesRoot.replaceChildren();
+		if (!articles.length) return articlesRoot.append(emptyState('仓库中还没有文章。'));
+		for (const article of articles) {
+			const row = createElement('article', 'flex flex-col gap-3 rounded-2xl border border-zinc-200/80 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900 sm:flex-row sm:items-center sm:justify-between');
+			const info = createElement('div', 'min-w-0');
+			const titleRow = createElement('div', 'flex flex-wrap items-center gap-2');
+			titleRow.append(createElement('p', 'm-0 truncate text-sm font-semibold text-zinc-900 dark:text-zinc-100', article.title));
+			const [badgeText, badgeClass] = langBadge(article);
+			titleRow.append(createElement('span', badgeClass, badgeText));
+			if (article.format === 'mdx') titleRow.append(createElement('span', 'rounded-full bg-zinc-100 px-2.5 py-1 text-[11px] font-semibold text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400', 'MDX'));
+			info.append(titleRow);
+			info.append(createElement('p', 'mt-1 text-xs text-zinc-500 dark:text-zinc-400', `${article.group} · ${article.pubDate || '未设置日期'}${article.category ? ` · ${article.category}` : ''}`));
+			const actions = createElement('div', 'flex shrink-0 flex-wrap gap-2');
+			actions.append(articleActionButton('查看', 'view', article.id));
+			if (article.format === 'md') actions.append(articleActionButton('删除', 'delete', article.id, 'danger'));
+			row.append(info, actions);
+			articlesRoot.append(row);
+		}
+	};
+
+	const loadArticles = async () => {
+		if (articlesRoot) articlesRoot.replaceChildren(emptyState('正在同步仓库并加载文章…'));
+		try {
+			const { articles } = await getAdminArticles();
+			renderArticles(articles);
+			setArticlesStatus(`${articles.length} 篇`);
+		} catch {
+			if (articlesRoot) articlesRoot.replaceChildren(emptyState('文章仓库在此主机不可用。'));
+			setArticlesStatus('');
+		}
+	};
+
+	articlesRoot?.addEventListener('click', async (event) => {
+		const button = (event.target as HTMLElement).closest<HTMLButtonElement>('[data-admin-article-action]');
+		const id = button?.dataset.articleId;
+		if (!button || !id) return;
+		if (button.dataset.adminArticleAction === 'view') {
+			button.disabled = true;
+			try {
+				const detail = await getAdminArticle(id);
+				const title = root.querySelector<HTMLElement>('[data-admin-article-view-title]');
+				const meta = root.querySelector<HTMLElement>('[data-admin-article-view-meta]');
+				const source = root.querySelector<HTMLElement>('[data-admin-article-view-source]');
+				if (title) title.textContent = detail.frontmatter.title || detail.id;
+				if (meta) meta.textContent = `src/content/blog/${detail.file}`;
+				if (source) source.textContent = detail.source;
+				setModalOpen('admin-article-view-modal', true);
+			} catch { setArticlesStatus('文章读取失败。'); }
+			finally { button.disabled = false; }
+			return;
+		}
+		pendingDeleteId = id;
+		const body = root.querySelector<HTMLElement>('[data-admin-article-delete-body]');
+		const pair = root.querySelector<HTMLInputElement>('[data-admin-article-delete-pair]');
+		if (body) body.textContent = `「${id}」将从 git 仓库删除并触发完整重新发布。`;
+		if (pair) pair.checked = false;
+		setModalOpen('admin-article-delete-modal', true);
+	});
+
+	root?.querySelector('[data-admin-article-delete-confirm]')?.addEventListener('click', async (event) => {
+		const confirmButton = event.currentTarget as HTMLButtonElement;
+		if (!pendingDeleteId) return;
+		const pair = root.querySelector<HTMLInputElement>('[data-admin-article-delete-pair]')?.checked ?? false;
+		confirmButton.disabled = true;
+		confirmButton.textContent = '正在发布…';
+		try {
+			const result = await deleteAdminArticle(pendingDeleteId, pair);
+			setModalOpen('admin-article-delete-modal', false);
+			setArticlesStatus(`已删除 ${result.deleted.length} 个文件，release ${result.release?.releaseId ?? '完成'}`);
+			await loadArticles();
+		} catch (error) {
+			setArticlesStatus(error instanceof Error ? error.message : '删除发布失败。');
+		} finally {
+			confirmButton.disabled = false;
+			confirmButton.textContent = '确认删除';
+			pendingDeleteId = null;
+		}
+	});
+
+	root?.querySelector('[data-admin-articles-refresh]')?.addEventListener('click', () => { void loadArticles(); });
 
 	void initialize();
 	};

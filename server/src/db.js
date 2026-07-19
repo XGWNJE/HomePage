@@ -174,6 +174,22 @@ CREATE INDEX IF NOT EXISTS idx_subscription_audit_created_at
 	ON subscription_audit_events(created_at);
 `,
 	},
+	{
+		version: 3,
+		sql: `
+CREATE TABLE IF NOT EXISTS admin_audit (
+	id TEXT PRIMARY KEY,
+	user_login TEXT,
+	action TEXT NOT NULL,
+	target TEXT NOT NULL,
+	detail TEXT,
+	created_at INTEGER NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_admin_audit_created_at
+	ON admin_audit(created_at);
+`,
+	},
 ];
 
 export const CURRENT_SCHEMA_VERSION = migrations.at(-1)?.version || 0;

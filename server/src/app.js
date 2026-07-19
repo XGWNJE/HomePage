@@ -7,6 +7,7 @@ import { corsMiddleware } from './internal/http.js';
 import { createRateLimiter } from './internal/request.js';
 import { registerAdminRoutes } from './routes/admin.js';
 import { registerAdminSubscriptionRoutes } from './routes/admin-subscriptions.js';
+import { registerArticleRoutes } from './routes/articles.js';
 import { registerAuthRoutes } from './routes/auth.js';
 import { registerCommentRoutes } from './routes/comments.js';
 import { registerContactRoutes } from './routes/contact.js';
@@ -15,7 +16,7 @@ import { reconcileImageStorage, registerImageRoutes } from './routes/images.js';
 import { registerProfileRoutes } from './routes/profile.js';
 import { registerViewRoutes } from './routes/views.js';
 
-export function createApp({ db, config, fetchImpl = globalThis.fetch }) {
+export function createApp({ db, config, fetchImpl = globalThis.fetch, releaseRunner }) {
 	if (Boolean(config.turnstileSiteKey) !== Boolean(config.turnstileSecretKey)) {
 		throw new Error('Turnstile site and secret keys must be configured together');
 	}
@@ -76,6 +77,7 @@ export function createApp({ db, config, fetchImpl = globalThis.fetch }) {
 	registerContactRoutes(app, context);
 	registerImageRoutes(app, context);
 	registerAdminRoutes(app, context);
+	registerArticleRoutes(app, { db, config, releaseRunner });
 
 	app.use((_req, res) => {
 		res.status(404).json({ error: 'Not Found' });
