@@ -202,6 +202,7 @@ export interface AdminArticleDetail {
 	format: 'md' | 'mdx';
 	frontmatter: Record<string, string>;
 	source: string;
+	body: string;
 }
 
 export interface AdminArticleDeleteResult {
@@ -231,6 +232,9 @@ export interface AdminArticleDraft {
 	tags: string;
 	category: string;
 	body: string;
+	en_title: string;
+	en_description: string;
+	en_body: string;
 	created_at: number;
 	updated_at: number;
 }
@@ -249,6 +253,7 @@ export type AdminArticleDraftInput = Omit<AdminArticleDraft, 'id' | 'created_at'
 export interface AdminArticlePublishResult {
 	ok: boolean;
 	slug: string;
+	enSlug: string | null;
 	release: { releaseId?: string; seconds?: number };
 }
 

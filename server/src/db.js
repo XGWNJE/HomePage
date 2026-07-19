@@ -210,6 +210,24 @@ CREATE INDEX IF NOT EXISTS idx_article_drafts_updated_at
 	ON article_drafts(updated_at);
 `,
 	},
+	{
+		version: 5,
+		// ALTER TABLE ADD COLUMN 没有 IF NOT EXISTS；列已存在（例如 user_version
+		// 被重置后重放迁移）时跳过该列，保证迁移可重入。
+		sql: `
+ALTER TABLE article_drafts ADD COLUMN en_title TEXT NOT NULL DEFAULT '';
+ALTER TABLE article_drafts ADD COLUMN en_description TEXT NOT NULL DEFAULT '';
+ALTER TABLE article_drafts ADD COLUMN en_body TEXT NOT NULL DEFAULT '';
+`,
+		guard: (db) => {
+			const columns = new Set(
+				db.prepare("SELECT name FROM pragma_table_info('article_drafts')").all().map((row) => row.name),
+			);
+			return ['en_title', 'en_description', 'en_body'].filter((name) => !columns.has(name))
+				.map((name) => `ALTER TABLE article_drafts ADD COLUMN ${name} TEXT NOT NULL DEFAULT '';`)
+				.join('\n');
+		},
+	},
 ];
 
 export const CURRENT_SCHEMA_VERSION = migrations.at(-1)?.version || 0;
@@ -225,7 +243,8 @@ function runMigrations(db) {
 		if (migration.version <= currentVersion) continue;
 		db.exec('BEGIN IMMEDIATE');
 		try {
-			db.exec(migration.sql);
+			const sql = migration.guard ? migration.guard(db) : migration.sql;
+			if (sql.trim()) db.exec(sql);
 			db.exec(`PRAGMA user_version = ${migration.version}`);
 			db.exec('COMMIT');
 		} catch (error) {

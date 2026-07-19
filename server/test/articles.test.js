@@ -143,6 +143,9 @@ test('article read validates id and returns source', async () => {
 	const body = await response.json();
 	assert.equal(body.frontmatter.title, '演示文章');
 	assert.match(body.source, /## 正文/);
+	// body 字段供编辑器加载：不含 frontmatter 块。
+	assert.match(body.body, /## 正文/);
+	assert.doesNotMatch(body.body, /^---/);
 });
 
 test('article delete runs a release and records audit', async () => {
@@ -265,7 +268,7 @@ test('preview renders markdown to html', async () => {
 	assert.match(body.html, /<strong>加粗<\/strong>/);
 });
 
-test('publish rejects incomplete drafts and existing slugs', async () => {
+test('publish rejects incomplete drafts and MDX conflicts', async () => {
 	const created = await adminJson('/api/admin/article/draft', {
 		method: 'POST',
 		body: JSON.stringify({ slug: 'incomplete-demo-cn', title: '缺描述', body: '正文' }),
@@ -280,19 +283,122 @@ test('publish rejects incomplete drafts and existing slugs', async () => {
 
 	const conflict = await adminJson('/api/admin/article/draft', {
 		method: 'POST',
-		body: JSON.stringify({ slug: 'demo-cn', title: '冲突', description: '描述', body: '正文' }),
+		body: JSON.stringify({ slug: 'widget-cn', title: '冲突', description: '描述', body: '正文' }),
 	});
 	const conflicted = await adminJson('/api/admin/article/publish', {
 		method: 'POST',
 		body: JSON.stringify({ id: conflict.body.draft.id }),
 	});
 	assert.equal(conflicted.response.status, 409);
+	assert.match(conflicted.body.error, /MDX/);
 
 	const missing = await adminJson('/api/admin/article/publish', {
 		method: 'POST',
 		body: JSON.stringify({ id: 'missing-draft' }),
 	});
 	assert.equal(missing.response.status, 404);
+});
+
+test('publish overwrites an existing md article, keeps pubDate and sets updatedDate', async () => {
+	let captured = null;
+	const capturing = createApp({
+		db,
+		config: testConfig(),
+		releaseRunner: async (job) => {
+			captured = job.writes.map(({ repoPath, contentPath }) => ({
+				repoPath,
+				source: readFileSync(contentPath, 'utf8'),
+			}));
+			return { releaseId: 'test-release', routes: [] };
+		},
+	});
+	const capturingServer = capturing.listen(0, '127.0.0.1');
+	await new Promise((resolve) => capturingServer.once('listening', resolve));
+	try {
+		const capturingBase = `http://127.0.0.1:${capturingServer.address().port}`;
+		const call = async (path, payload) => {
+			const response = await fetch(`${capturingBase}${path}`, {
+				method: 'POST',
+				headers: { Authorization: 'Bearer test-admin-token', 'Content-Type': 'application/json' },
+				body: JSON.stringify(payload),
+			});
+			return { response, body: await response.json() };
+		};
+		const created = await call('/api/admin/article/draft', {
+			slug: 'demo-cn',
+			title: '演示文章（修订）',
+			description: '修订后的描述。',
+			body: '## 修订正文',
+		});
+		const published = await call('/api/admin/article/publish', { id: created.body.draft.id });
+		assert.equal(published.response.status, 200);
+		const article = captured.find((write) => write.repoPath === 'src/content/blog/demo-cn.md');
+		assert.ok(article);
+		// demo-cn 的原始 pubDate 是 2026-07-19；覆盖时保留并追加 updatedDate。
+		assert.match(article.source, /pubDate: 2026-07-19/);
+		assert.match(article.source, /updatedDate: \d{4}-\d{2}-\d{2}/);
+		assert.match(article.source, /title: "演示文章（修订）"/);
+	} finally {
+		capturingServer.close();
+	}
+});
+
+test('publish writes the English pair when en_body is present', async () => {
+	let captured = null;
+	const capturing = createApp({
+		db,
+		config: testConfig(),
+		releaseRunner: async (job) => {
+			captured = job.writes.map(({ repoPath, contentPath }) => ({
+				repoPath,
+				source: readFileSync(contentPath, 'utf8'),
+			}));
+			return { releaseId: 'test-release', routes: [] };
+		},
+	});
+	const capturingServer = capturing.listen(0, '127.0.0.1');
+	await new Promise((resolve) => capturingServer.once('listening', resolve));
+	try {
+		const capturingBase = `http://127.0.0.1:${capturingServer.address().port}`;
+		const call = async (path, payload) => {
+			const response = await fetch(`${capturingBase}${path}`, {
+				method: 'POST',
+				headers: { Authorization: 'Bearer test-admin-token', 'Content-Type': 'application/json' },
+				body: JSON.stringify(payload),
+			});
+			return { response, body: await response.json() };
+		};
+		const created = await call('/api/admin/article/draft', {
+			slug: 'bilingual-demo-cn',
+			title: '双语演示',
+			description: '中文描述。',
+			tags: 'Demo, 双语',
+			category: 'Notes',
+			body: '## 中文正文',
+			en_title: 'Bilingual Demo',
+			en_body: '## English body',
+		});
+		const published = await call('/api/admin/article/publish', { id: created.body.draft.id });
+		assert.equal(published.response.status, 200);
+		assert.equal(published.body.enSlug, 'bilingual-demo-en');
+
+		const cn = captured.find((write) => write.repoPath === 'src/content/blog/bilingual-demo-cn.md');
+		const en = captured.find((write) => write.repoPath === 'src/content/blog/bilingual-demo-en.md');
+		assert.ok(cn && en);
+		assert.match(en.source, /lang: "en"/);
+		assert.match(en.source, /title: "Bilingual Demo"/);
+		// en_description 留空时回退中文描述；group/tags/category 与中文版一致。
+		assert.match(en.source, /description: "中文描述。"/);
+		assert.match(en.source, /group: "bilingual-demo"/);
+		assert.match(en.source, /tags: \["Demo", "双语"\]/);
+		assert.match(en.source, /## English body/);
+		const cnPubDate = cn.source.match(/pubDate: (.+)/)?.[1];
+		const enPubDate = en.source.match(/pubDate: (.+)/)?.[1];
+		assert.equal(enPubDate, cnPubDate);
+		assert.doesNotMatch(en.source, /updatedDate/);
+	} finally {
+		capturingServer.close();
+	}
 });
 
 test('publish writes article plus upload images, rewrites URLs and removes the draft', async () => {

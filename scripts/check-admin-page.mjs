@@ -65,9 +65,14 @@ for (const contract of [
 	'data-editor-upload',
 	'data-editor-tab',
 	'data-editor-notice',
+	'data-editor-en-section',
+	'data-editor-field="en_title"',
+	'data-editor-field="en_body"',
+	'data-editor-en-preview',
 ]) {
 	assert.match(editor, new RegExp(contract), `editor page is missing ${contract}`);
 }
+assert.match(editor, /params\.get\('article'\)/, 'editor page must support loading a published article');
 assert.match(editor, /from ['"]\.\.\/\.\.\/lib\/admin['"]/, 'editor page must use the shared admin client');
 assert.match(editor, /checkAdmin/, 'editor page must gate on the admin session');
 assert.match(editor, /astro:page-load/, 'editor page must initialize after ClientRouter navigation');
@@ -83,7 +88,7 @@ for (const match of editor.matchAll(/\.innerHTML\s*=/g)) {
 	assert.ok(match.index !== undefined);
 	const lineStart = editor.lastIndexOf('\n', match.index);
 	const line = editor.slice(lineStart, editor.indexOf('\n', match.index));
-	assert.match(line, /previewPane\.innerHTML/, `editor page must only inject preview HTML through marked: ${line.trim()}`);
+	assert.match(line, /pane\.innerHTML/, `editor page must only inject preview HTML through marked: ${line.trim()}`);
 }
 
 assert.match(client, /getToken/, 'admin client must read the existing authenticated session token');

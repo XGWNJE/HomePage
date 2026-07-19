@@ -48,10 +48,18 @@ function readArticle(config, id) {
 		const file = join(blogDir(config), `${id}${ext}`);
 		if (existsSync(file)) {
 			const source = readFileSync(file, 'utf8');
-			return { id, file: `${id}${ext}`, format: ext === '.mdx' ? 'mdx' : 'md', frontmatter: parseArticleFrontmatter(source), source };
+			return { id, file: `${id}${ext}`, format: ext === '.mdx' ? 'mdx' : 'md', frontmatter: parseArticleFrontmatter(source), source, body: stripFrontmatter(source) };
 		}
 	}
 	return null;
+}
+
+function stripFrontmatter(source) {
+	const text = String(source).replaceAll('\r\n', '\n');
+	if (!text.startsWith('---\n')) return text;
+	const end = text.indexOf('\n---', 4);
+	if (end < 0) return text;
+	return text.slice(end + 4).replace(/^\s+/, '');
 }
 
 function recordAudit(db, auth, action, target, detail) {
@@ -68,28 +76,31 @@ function todayIso() {
 	return new Date().toISOString().slice(0, 10);
 }
 
-function buildArticleSource(draft) {
-	const group = draft.slug.slice(0, -3);
-	const tags = String(draft.tags || '')
+function buildArticleSource({ slug, lang, title, description, tags, category, body, pubDate, updatedDate }) {
+	const group = slug.slice(0, -3);
+	const tagList = String(tags || '')
 		.split(',')
 		.map((tag) => tag.trim())
 		.filter(Boolean);
 	const lines = [
 		'---',
-		`title: ${yamlString(draft.title.trim())}`,
-		`description: ${yamlString(draft.description.trim())}`,
-		`pubDate: ${todayIso()}`,
-		'lang: "cn"',
+		`title: ${yamlString(String(title).trim())}`,
+		`description: ${yamlString(String(description).trim())}`,
+		`pubDate: ${pubDate}`,
+	];
+	if (updatedDate) lines.push(`updatedDate: ${updatedDate}`);
+	lines.push(
+		`lang: "${lang}"`,
 		'author: "XGWNJE"',
 		`group: ${yamlString(group)}`,
-		`tags: [${tags.map(yamlString).join(', ')}]`,
-		`category: ${yamlString(draft.category.trim() || 'Notes')}`,
+		`tags: [${tagList.map(yamlString).join(', ')}]`,
+		`category: ${yamlString(String(category).trim() || 'Notes')}`,
 		'draft: false',
 		'---',
 		'',
-		String(draft.body || '').replaceAll('\r\n', '\n').trim(),
+		String(body || '').replaceAll('\r\n', '\n').trim(),
 		'',
-	];
+	);
 	return lines.join('\n');
 }
 
@@ -192,6 +203,9 @@ export function registerArticleRoutes(app, { db, config, releaseRunner }) {
 			tags: cleanText(input.tags || '', DRAFT_LIMITS.tags),
 			category: cleanText(input.category || '', DRAFT_LIMITS.category),
 			body: String(input.body || '').slice(0, DRAFT_LIMITS.body),
+			en_title: cleanText(input.en_title || '', DRAFT_LIMITS.title),
+			en_description: cleanText(input.en_description || '', DRAFT_LIMITS.description),
+			en_body: String(input.en_body || '').slice(0, DRAFT_LIMITS.body),
 		};
 		const now = Date.now();
 		const id = cleanText(input.id || '', 64);
@@ -199,16 +213,19 @@ export function registerArticleRoutes(app, { db, config, releaseRunner }) {
 			const existing = db.prepare('SELECT id, created_at FROM article_drafts WHERE id = ?').get(id);
 			if (!existing) return res.status(404).json({ error: 'Draft not found' });
 			db.prepare(
-				`UPDATE article_drafts SET slug = ?, title = ?, description = ?, tags = ?, category = ?, body = ?, updated_at = ?
+				`UPDATE article_drafts SET slug = ?, title = ?, description = ?, tags = ?, category = ?, body = ?,
+					en_title = ?, en_description = ?, en_body = ?, updated_at = ?
 				 WHERE id = ?`
-			).run(fields.slug, fields.title, fields.description, fields.tags, fields.category, fields.body, now, id);
+			).run(fields.slug, fields.title, fields.description, fields.tags, fields.category, fields.body,
+				fields.en_title, fields.en_description, fields.en_body, now, id);
 			return res.json({ ok: true, draft: { id, ...fields, created_at: existing.created_at, updated_at: now } });
 		}
 		const newId = randomToken(12);
 		db.prepare(
-			`INSERT INTO article_drafts (id, slug, title, description, tags, category, body, created_at, updated_at, author_user_id)
-			 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-		).run(newId, fields.slug, fields.title, fields.description, fields.tags, fields.category, fields.body, now, now, auth.userId || null);
+			`INSERT INTO article_drafts (id, slug, title, description, tags, category, body, en_title, en_description, en_body, created_at, updated_at, author_user_id)
+			 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+		).run(newId, fields.slug, fields.title, fields.description, fields.tags, fields.category, fields.body,
+			fields.en_title, fields.en_description, fields.en_body, now, now, auth.userId || null);
 		res.status(201).json({ ok: true, draft: { id: newId, ...fields, created_at: now, updated_at: now } });
 	});
 
@@ -254,21 +271,56 @@ export function registerArticleRoutes(app, { db, config, releaseRunner }) {
 		if (!draft) return res.status(404).json({ error: 'Draft not found' });
 		const problems = validateDraftForPublish(draft);
 		if (problems.length > 0) return res.status(400).json({ error: `草稿不完整：${problems.join('；')}`, problems });
-		if (readArticle(config, draft.slug)) {
-			return res.status(409).json({ error: `已存在同名文章：${draft.slug}` });
+		const existing = readArticle(config, draft.slug);
+		if (existing && existing.format !== 'md') {
+			return res.status(409).json({ error: `同名文章是 MDX，不能通过网页通道覆盖：${draft.slug}` });
+		}
+		const group = draft.slug.slice(0, -3);
+		const enSlug = `${group}-en`;
+		const hasEnglish = Boolean(String(draft.en_body || '').trim());
+		const existingEn = hasEnglish ? readArticle(config, enSlug) : null;
+		if (existingEn && existingEn.format !== 'md') {
+			return res.status(409).json({ error: `同名文章是 MDX，不能通过网页通道覆盖：${enSlug}` });
 		}
 
-		const group = draft.slug.slice(0, -3);
+		const today = todayIso();
+		const pubDate = existing?.frontmatter.pubDate || today;
 		const tempDir = mkdtempSync(join(tmpdir(), 'article-publish-'));
-		recordAudit(db, auth, 'article.publish', draft.slug, { id });
+		recordAudit(db, auth, 'article.publish', draft.slug, { id, overwrite: Boolean(existing), withEnglish: hasEnglish });
 		try {
 			const { body, images } = materializeUploadImages(draft.body, config, group, tempDir);
 			const articlePath = join(tempDir, `${draft.slug}.md`);
-			writeFileSync(articlePath, buildArticleSource({ ...draft, body }), 'utf8');
+			writeFileSync(articlePath, buildArticleSource({
+				slug: draft.slug,
+				lang: 'cn',
+				title: draft.title,
+				description: draft.description,
+				tags: draft.tags,
+				category: draft.category,
+				body,
+				pubDate,
+				updatedDate: existing ? today : undefined,
+			}), 'utf8');
 			const writes = [{ repoPath: `src/content/blog/${draft.slug}.md`, contentPath: articlePath }, ...images];
-			const summary = await release({ writes, message: `admin: 发表文章 ${draft.slug}` });
+			if (hasEnglish) {
+				const en = materializeUploadImages(draft.en_body, config, group, tempDir);
+				const enPath = join(tempDir, `${enSlug}.md`);
+				writeFileSync(enPath, buildArticleSource({
+					slug: enSlug,
+					lang: 'en',
+					title: String(draft.en_title || '').trim() || draft.title,
+					description: String(draft.en_description || '').trim() || draft.description,
+					tags: draft.tags,
+					category: draft.category,
+					body: en.body,
+					pubDate: existingEn?.frontmatter.pubDate || pubDate,
+					updatedDate: existingEn ? today : undefined,
+				}), 'utf8');
+				writes.push({ repoPath: `src/content/blog/${enSlug}.md`, contentPath: enPath }, ...en.images);
+			}
+			const summary = await release({ writes, message: `admin: 发表文章 ${writes.filter((w) => w.repoPath.endsWith('.md')).map((w) => w.repoPath.split('/').at(-1)).join('、')}` });
 			db.prepare('DELETE FROM article_drafts WHERE id = ?').run(id);
-			res.json({ ok: true, slug: draft.slug, release: summary });
+			res.json({ ok: true, slug: draft.slug, enSlug: hasEnglish ? enSlug : null, release: summary });
 		} catch (error) {
 			// 发布失败时草稿保留，管理员可修正后重试。
 			res.status(502).json({ error: `发布失败：${error.message}` });

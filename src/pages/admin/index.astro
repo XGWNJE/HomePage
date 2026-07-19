@@ -377,6 +377,11 @@ import ModalShell from '../../components/ModalShell.astro';
 			info.append(createElement('p', 'mt-1 text-xs text-zinc-500 dark:text-zinc-400', `${article.group} · ${article.pubDate || '未设置日期'}${article.category ? ` · ${article.category}` : ''}`));
 			const actions = createElement('div', 'flex shrink-0 flex-wrap gap-2');
 			actions.append(articleActionButton('查看', 'view', article.id));
+			if (article.format === 'md' && article.lang === 'cn') {
+				const edit = createElement('a', 'rounded-full border border-zinc-200 px-3 py-1.5 text-xs font-medium text-zinc-600 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800', '编辑');
+				edit.href = `/admin/editor/?article=${encodeURIComponent(article.id)}`;
+				actions.append(edit);
+			}
 			if (article.format === 'md') actions.append(articleActionButton('删除', 'delete', article.id, 'danger'));
 			row.append(info, actions);
 			articlesRoot.append(row);

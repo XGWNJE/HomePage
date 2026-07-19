@@ -150,7 +150,7 @@ test('health endpoint reports service status', async () => {
 	assert.equal(body.service, 'homepage-api');
 	assert.equal(body.version, '0.1.0-test');
 	assert.equal(body.revision, 'test-revision');
-	assert.deepEqual(body.readiness, { database: 'ready', schemaVersion: 4, turnstile: 'disabled' });
+	assert.deepEqual(body.readiness, { database: 'ready', schemaVersion: 5, turnstile: 'disabled' });
 });
 
 test('health endpoint exposes enabled Turnstile readiness without revealing keys', async () => {
@@ -165,19 +165,19 @@ test('health endpoint exposes enabled Turnstile readiness without revealing keys
 });
 
 test('health endpoint rejects an unexpected database schema version', async () => {
-	db.exec('PRAGMA user_version = 5');
+	db.exec('PRAGMA user_version = 6');
 	try {
 		const { response, body } = await request('/health');
 		assert.equal(response.status, 503);
 		assert.equal(body.ok, false);
 		assert.deepEqual(body.readiness, {
 			database: 'schema-mismatch',
-			schemaVersion: 5,
-			expectedSchemaVersion: 4,
+			schemaVersion: 6,
+			expectedSchemaVersion: 5,
 			turnstile: 'disabled',
 		});
 	} finally {
-		db.exec('PRAGMA user_version = 4');
+		db.exec('PRAGMA user_version = 5');
 	}
 });
 
