@@ -69,6 +69,7 @@
 - 影响边界清晰的纯静态前端发布默认使用 `FastFrontend`；用户明确要求软件审查/完整验收，或变更触及高风险边界时使用 `FullAudit`。两档都保留版本化制品、哈希、备份、原子切换、回滚和 `Server-infra AfterChange`。
 - 普通 `.md` 文章及其 `public/image/blog/` 图片、`public/file/blog/` 安全附件使用 `npm run publish:content` 的 `ContentOnly` 通道。快速通道校验自生产 release 以来的全部变更只含文章内容与文章专用资源，然后在主工作区直接构建并差量上传；仓库中存在其他未上线代码时通道会拒绝发布并提示走前端或完整发布。`.mdx`、组件、样式、脚本、配置或基础设施改动仍按普通前端或完整发布处理。
 - 修改 Nginx 前先在 `Server-infra` 核对真实配置，备份目标文件并运行 `nginx -t`；仅替换静态文件不需要 reload。
+- VPS 上存在服务器端文章发布地基：`/opt/homepage-site` 是专用发布克隆（deploy key 仅限本仓库读写），`/opt/node22` 是前端构建用的独立 Node 22，`server/scripts/site-release.mjs` 在其上完成"写入文章 → 构建 → 版本化原子切换"。它与本地发布通道共用 flock 和 releases 结构，不得绕过脚本直接改动该克隆或线上静态目录。
 - SQLite 与上传文件属于持久数据，不随代码 release 替换；备份必须保证 SQLite 一致性。
 
 ## Git
