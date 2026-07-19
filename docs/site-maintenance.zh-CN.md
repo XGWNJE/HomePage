@@ -158,7 +158,9 @@ npm run publish:full
 
 网页后台的地基通道：`server/scripts/site-release.mjs` 在 VPS 专用克隆 `/opt/homepage-site` 上完成"写入或删除文章 → frontmatter 与路径白名单校验 → git commit/push → `astro build` → 文章路由存在性检查 → 版本化目录 + 原子切换 + 公网路由验收"。它只接受 `src/content/blog/*.md` 与 `public/image|file/blog/**` 路径，与本地发布通道共用同一个 flock 和 `releases` 结构，manifest 的 `source` 记为 `web-admin`。
 
-运行环境：`/opt/node22` 是前端构建专用 Node（不改动系统 Node，API 继续用系统版本）；仓库通过仅限本仓库的 GitHub deploy key（`vps-site-release`）读写。首次手动验证（2026-07-19）发布与删除各一次约 24 秒。构建失败在 commit 之前中止，不进入 git 历史；切换后公网验收失败自动恢复备份。当前由管理员在服务器上直接调用；后台页面接入（Phase 1/2）前不面向浏览器开放。
+运行环境：`/opt/node22` 是前端构建专用 Node（不改动系统 Node，API 继续用系统版本）；仓库通过仅限本仓库的 GitHub deploy key（`vps-site-release`）读写。首次手动验证（2026-07-19）发布与删除各一次约 24 秒。构建失败在 commit 之前中止，不进入 git 历史；切换后公网验收失败自动恢复备份。
+
+`/admin` 的「文章管理」区块通过 `/api/admin/articles` 系列路由使用这条通道：列出与读取文章直接来自发布克隆（读取前经 `/usr/local/sbin/homepage-site-sync` 同步），删除文章会触发完整重新发布。API（`homepage-api` 用户）通过 sudoers 单条白名单调用发布脚本与同步命令，无其他 root 权限；删除操作写入 `admin_audit` 审计表。
 
 ## 本地清理
 
