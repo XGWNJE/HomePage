@@ -65,7 +65,7 @@ flowchart TB
 
 ### 文章发布是受限的静态差量 release
 
-文章更新会同时改变首页、博客列表、标签、RSS 与 Sitemap，因此本地仍生成完整 `dist/`。`ContentOnly` 快速通道从线上 release manifest 取得生产代码 revision，在临时隔离工作树中只叠加普通 Markdown、`public/image/blog/` 图片和 `public/file/blog/` 安全附件，再与线上完整静态树生成差量。当前分支中的其他未上线代码不会进入隔离构建，也不会阻塞纯文章发布。通道只上传变化的静态文件，在服务器重建完整版本并原子切换；它不部署 API、不修改 Nginx，`.mdx`、组件、样式或脚本改动仍升级到普通前端或完整审查。
+文章更新会同时改变首页、博客列表、标签、RSS 与 Sitemap，因此本地仍生成完整 `dist/`。`ContentOnly` 快速通道从线上 release manifest 取得生产代码 revision，并强制要求该 revision 到 HEAD 的全部变更只含普通 Markdown、`public/image/blog/` 图片和 `public/file/blog/` 安全附件；存在未上线代码改动时通道拒绝发布，提示升级到普通前端或完整审查。校验通过后在主工作区直接构建，与线上完整静态树生成差量，只上传变化的静态文件，在服务器重建完整版本并原子切换；它不部署 API、不修改 Nginx。
 
 ### 后台使用当前管理员会话
 

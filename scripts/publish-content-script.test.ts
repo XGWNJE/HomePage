@@ -2,50 +2,46 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
-const scriptUrl = new URL('./publish-content.ps1', import.meta.url);
+const scriptUrl = new URL('./publish-content.mjs', import.meta.url);
 
 test('content release transports remote scripts through bash stdin', async () => {
 	const source = await readFile(scriptUrl, 'utf8');
 
-	assert.match(source, /@\(\$sshTarget, 'bash', '-s'\)\) -RedirectInput/u);
-	assert.match(source, /Send-ProcessInput -Handle \$snapshotHandle -Value \$snapshotCommand/u);
-	assert.match(source, /Send-ProcessInput -Handle \$uploadHandle -Value \$remoteCommand/u);
-	assert.doesNotMatch(source, /@\(\$sshTarget, \$snapshotCommand\)/u);
-	assert.doesNotMatch(source, /@\(\$sshTarget, \$remoteCommand\)/u);
+	assert.match(source, /'bash', '-s'/u);
+	assert.match(source, /child\.stdin\.write/u);
+	assert.match(source, /input\.replaceAll\('\\r', ''\)/u);
+	assert.doesNotMatch(source, /'bash', '-c'/u);
 });
 
 test('content release separates bundle upload and reports phase timings', async () => {
 	const source = await readFile(scriptUrl, 'utf8');
 
-	assert.match(source, /Invoke-Native -FilePath 'scp\.exe'/u);
-	assert.match(source, /buildAndBundleSeconds =/u);
-	assert.match(source, /uploadSeconds =/u);
-	assert.match(source, /activateSeconds =/u);
-	assert.match(source, /afterChangeSeconds =/u);
+	assert.match(source, /scp\.exe/u);
+	assert.match(source, /buildAndBundleSeconds/u);
+	assert.match(source, /uploadSeconds/u);
+	assert.match(source, /activateSeconds/u);
+	assert.match(source, /afterChangeSeconds/u);
 });
 
-test('content and benchmark releases keep the direct one-build article hot path', async () => {
+test('content release builds the main checkout directly without an isolated worktree', async () => {
 	const source = await readFile(scriptUrl, 'utf8');
 
-	assert.match(source, /content-release-worktree\.mjs/u);
+	assert.doesNotMatch(source, /content-release-worktree|isolatedProjectRoot|publish-content\.ps1/u);
+	assert.match(source, /content-release-scope\.mjs/u);
 	assert.match(source, /content-release-links\.mjs/u);
-	assert.match(source, /\$isolatedProjectRoot/u);
-	assert.match(source, /if \(-not \$PlanOnly\)[\s\S]*?scripts\\check-language-pairs\.mjs/u);
-	assert.match(source, /node_modules\\\.bin\\astro\.cmd[\s\S]*?WorkingDirectory[\s\S]*?\$isolatedProjectRoot/u);
-	assert.match(source, /scripts\\ensure-sitemap-xml\.mjs/u);
-	assert.equal(source.match(/node_modules\\\.bin\\astro\.cmd/gu)?.length, 1);
-	assert.doesNotMatch(source, /preflight\.ps1|-Mode', 'ContentOnly'|test:content-release|npm run verify/u);
+	assert.match(source, /content-delta\.mjs/u);
+	assert.match(source, /check-language-pairs\.mjs/u);
+	assert.match(source, /ensure-sitemap-xml\.mjs/u);
+	assert.equal(source.match(/astro\.mjs/gu)?.length, 1);
+	assert.doesNotMatch(source, /preflight\.ps1|test:content-release|npm run verify/u);
 });
 
-test('content release passes JSON arrays through environment variables on Windows', async () => {
+test('content release gates on a content-only diff against the production revision', async () => {
 	const source = await readFile(scriptUrl, 'utf8');
-	const worktreeHelper = await readFile(new URL('./content-release-worktree.mjs', import.meta.url), 'utf8');
-	const linkHelper = await readFile(new URL('./content-release-links.mjs', import.meta.url), 'utf8');
 
-	assert.match(source, /CONTENT_RELEASE_WORKTREE_PATHS_JSON/u);
-	assert.match(source, /CONTENT_RELEASE_LINK_ROUTES_JSON/u);
-	assert.match(worktreeHelper, /process\.env\.CONTENT_RELEASE_WORKTREE_PATHS_JSON/u);
-	assert.match(linkHelper, /process\.env\.CONTENT_RELEASE_LINK_ROUTES_JSON/u);
-	assert.doesNotMatch(source, /'--paths-json', \$overlayPathsJson/u);
-	assert.doesNotMatch(source, /'--routes-json', \$routesJson/u);
+	assert.match(source, /classifyContentReleasePaths/u);
+	assert.match(source, /\$\{productionRevision\}\.\.HEAD/u);
+	assert.match(source, /selectContentReleasePaths/u);
+	assert.match(source, /use a frontend or full release/u);
+	assert.doesNotMatch(source, /CONTENT_RELEASE_WORKTREE_PATHS_JSON|CONTENT_RELEASE_PATHS_JSON|CONTENT_RELEASE_LINK_ROUTES_JSON/u);
 });

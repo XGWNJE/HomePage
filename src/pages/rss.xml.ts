@@ -1,14 +1,2 @@
-import type { APIContext } from 'astro';
-import { SITE_TITLE, SITE_DESCRIPTION } from '../consts';
-import { getAllPosts, generateRssFeed } from '../utils/rss';
-
-export async function GET(context: APIContext) {
-	const posts = await getAllPosts();
-
-	return generateRssFeed({
-		posts,
-		title: SITE_TITLE,
-		description: SITE_DESCRIPTION,
-		site: context.site,
-	});
-}
+// /rss.xml 是 /feed.xml 的历史别名，外部订阅者仍在使用（见线上访问日志），URL 必须保留。
+export { GET } from './feed.xml';

@@ -19,7 +19,7 @@ description: Release HomePage through a one-command content fast lane, a lightwe
 
 ## 2. 选择并执行本地门禁
 
-文章快速发布要求工作区干净且内容 commit 已推送。脚本从生产 manifest 读取代码 revision，在隔离工作树中只叠加当前内容 revision 里的 Markdown 与文章专用资源；仓库中其他未上线工程提交既不阻塞文章，也不进入制品。直接运行：
+文章快速发布要求工作区干净且内容 commit 已推送。脚本从生产 manifest 读取代码 revision，并校验该 revision 到当前 HEAD 的全部变更只含 Markdown 与文章专用资源——存在其他未上线工程提交时通道直接拒绝，提示改走前端或完整发布。校验通过后直接在主工作区构建。直接运行：
 
 ```powershell
 npm run publish:content

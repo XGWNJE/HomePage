@@ -1,16 +1,2 @@
-import type { APIContext } from 'astro';
-import { SITE_TITLE } from '../consts';
-import { getAllPosts, filterPostsByLang, generateRssFeed } from '../utils/rss';
-
-export async function GET(context: APIContext) {
-	const allPosts = await getAllPosts();
-	const posts = filterPostsByLang(allPosts, 'cn');
-
-	return generateRssFeed({
-		posts,
-		title: `${SITE_TITLE} - 中文`,
-		description: '中文博客文章订阅',
-		site: context.site,
-		language: 'zh-CN',
-	});
-}
+// /rss-zh.xml 是 /feed-zh.xml 的历史别名，外部订阅者仍在使用（见线上访问日志），URL 必须保留。
+export { GET } from './feed-zh.xml';

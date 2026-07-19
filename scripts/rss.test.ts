@@ -61,16 +61,26 @@ test('mixed-language RSS does not declare a channel language', async () => {
 
 test('language-specific endpoints declare only their channel language', async () => {
 	const read = (file: string) => readFile(path.resolve('src/pages', file), 'utf8');
-	const [feedZh, rssZh, feedEn, rssEn, feedMixed, rssMixed] = await Promise.all([
+	const [feedZh, feedEn, feedMixed] = await Promise.all([
 		read('feed-zh.xml.ts'),
-		read('rss-zh.xml.ts'),
 		read('feed-en.xml.ts'),
-		read('rss-en.xml.ts'),
 		read('feed.xml.ts'),
+	]);
+
+	assert.match(feedZh, /language: 'zh-CN'/);
+	assert.match(feedEn, /language: 'en'/);
+	assert.doesNotMatch(feedMixed, /language:/);
+});
+
+test('legacy rss.xml endpoints stay as aliases of the feed.xml endpoints', async () => {
+	const read = (file: string) => readFile(path.resolve('src/pages', file), 'utf8');
+	const [rssZh, rssEn, rssMixed] = await Promise.all([
+		read('rss-zh.xml.ts'),
+		read('rss-en.xml.ts'),
 		read('rss.xml.ts'),
 	]);
 
-	for (const source of [feedZh, rssZh]) assert.match(source, /language: 'zh-CN'/);
-	for (const source of [feedEn, rssEn]) assert.match(source, /language: 'en'/);
-	for (const source of [feedMixed, rssMixed]) assert.doesNotMatch(source, /language:/);
+	assert.match(rssZh, /export \{ GET \} from '\.\/feed-zh\.xml'/);
+	assert.match(rssEn, /export \{ GET \} from '\.\/feed-en\.xml'/);
+	assert.match(rssMixed, /export \{ GET \} from '\.\/feed\.xml'/);
 });

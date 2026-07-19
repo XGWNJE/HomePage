@@ -67,14 +67,14 @@ test('the root package owns frontend tooling and delegates API commands to serve
 	assert.match(packageJson.engines.npm, /10/);
 	assert.equal(packageJson.scripts['api:dev'], 'npm --prefix server start');
 	assert.equal(packageJson.scripts['test:api'], 'npm --prefix server test');
-	assert.equal(packageJson.scripts['publish:content'], 'powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/publish-content.ps1');
-	assert.match(packageJson.scripts['content:release:benchmark'], /-BenchmarkOnly/);
+	assert.equal(packageJson.scripts['publish:content'], 'node scripts/publish-content.mjs');
+	assert.match(packageJson.scripts['content:release:benchmark'], /--benchmark/);
 	assert.match(packageJson.scripts['content:check'], /test:content-release/);
 	assert.equal(packageJson.scripts['clean:local'], 'powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/clean-local.ps1');
 	assert.equal(packageJson.scripts.postbuild, undefined);
 	assert.equal(packageJson.scripts['test:content-reset'], undefined);
 	assert.ok(packageJson.scripts.test);
-	assert.match(packageJson.scripts.test, /npm run test:admin/);
+	assert.match(packageJson.scripts.test, /node scripts\/run-checks\.mjs/);
 	assert.equal(
 		packageJson.scripts['test:admin'],
 		'node scripts/check-admin-page.mjs && node scripts/check-admin-subscriptions.mjs',
@@ -138,7 +138,7 @@ test('the project release skill preserves production safety gates', async () => 
 		path.resolve('.agents/skills/deploy-homepage/scripts/preflight.ps1'),
 		'utf8',
 	);
-	const contentPublisher = await readFile(path.resolve('scripts/publish-content.ps1'), 'utf8');
+	const contentPublisher = await readFile(path.resolve('scripts/publish-content.mjs'), 'utf8');
 	const fullPublisher = await readFile(path.resolve('scripts/publish-full.ps1'), 'utf8');
 	const remoteFrontend = await readFile(
 		path.resolve('.agents/skills/deploy-homepage/scripts/deploy-frontend.sh'),
@@ -166,24 +166,24 @@ test('the project release skill preserves production safety gates', async () => 
 	assert.match(contract, /明确授权.*Nginx/s);
 	assert.match(contract, /current.*previous/s);
 	assert.match(contract, /worktree-<server-sha12>/);
-	assert.match(contentPublisher, /productionRevision\.\.HEAD/);
+	assert.match(contentPublisher, /\$\{productionRevision\}\.\.HEAD/);
 	assert.doesNotMatch(contentPublisher, /ls-remote/);
-	assert.match(contentPublisher, /rev-parse '@\{u\}'/);
-	assert.match(contentPublisher, /CONTENT_RELEASE_SELECT_ONLY/);
-	assert.match(contentPublisher, /content-release-worktree\.mjs/);
-	assert.match(contentPublisher, /revision = \$productionRevision/);
-	assert.match(contentPublisher, /contentSourceRevision = \$head/);
+	assert.match(contentPublisher, /'@\{u\}'/);
+	assert.match(contentPublisher, /selectContentReleasePaths/);
+	assert.doesNotMatch(contentPublisher, /content-release-worktree/);
+	assert.match(contentPublisher, /revision: productionRevision/);
+	assert.match(contentPublisher, /contentSourceRevision: head/);
 	assert.match(contentPublisher, /ignoredRepositoryPaths/);
 	assert.match(contentPublisher, /StrictHostKeyChecking=yes/);
 	assert.match(contentPublisher, /prepare-delta/);
-	assert.match(contentPublisher, /RedirectStandardInput/);
+	assert.match(contentPublisher, /stdin\.write/);
 	assert.match(contentPublisher, /bundleSha/);
 	assert.match(contentPublisher, /cannot turn a published article back into a draft/);
 	assert.match(contentPublisher, /HOMEPAGE_FRONTEND_LOCK_HELD=1/);
 	assert.match(contentPublisher, /curl --fail --silent/);
 	assert.match(contentPublisher, /'-Mode', 'AfterChange'/);
 	assert.match(contentPublisher, /'-Scope', 'homepage'/);
-	assert.match(contentPublisher, /\$rollbackCommand/);
+	assert.match(contentPublisher, /rollbackCommand/);
 	assert.match(fullPublisher, /'package\.json', 'package-lock\.json', 'scripts', 'src', 'test'/);
 	assert.match(fullPublisher, /-Command \$maintainCommand/);
 	assert.match(fullPublisher, /@\('anytls','homepage','homepage-api','visionguard'\)/);

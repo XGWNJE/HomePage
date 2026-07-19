@@ -1,16 +1,2 @@
-import type { APIContext } from 'astro';
-import { SITE_TITLE } from '../consts';
-import { getAllPosts, filterPostsByLang, generateRssFeed } from '../utils/rss';
-
-export async function GET(context: APIContext) {
-	const allPosts = await getAllPosts();
-	const posts = filterPostsByLang(allPosts, 'en');
-
-	return generateRssFeed({
-		posts,
-		title: `${SITE_TITLE} - English`,
-		description: 'English blog posts feed',
-		site: context.site,
-		language: 'en',
-	});
-}
+// /rss-en.xml 是 /feed-en.xml 的历史别名，外部订阅者仍在使用（见线上访问日志），URL 必须保留。
+export { GET } from './feed-en.xml';

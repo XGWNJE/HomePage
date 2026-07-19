@@ -65,7 +65,7 @@ Codex-Journal 只会在用户明确点击“发到主页”后，向 `src/conten
 - 常规文章使用 `.md`；内容源不是 JSON。`.mdx` 只在需要导入 Astro 文章组件、原生 HTML 或构建期计算数据时使用。
 - 站点已支持 GitHub 风格表格、任务列表、语言标注的代码块、`NOTE` / `TIP` / `IMPORTANT` / `WARNING` / `CAUTION` 提示框，以及正文图片预览。
 - 可复用的 MDX 组件放在 `src/components/article/`。`.mdx` 会进入普通前端发布；`ContentOnly` 只接受不包含组件逻辑的 `.md`。
-- 参考 [`mdx-content-showcase-cn.mdx`](../src/content/blog/mdx-content-showcase-cn.mdx) 与英文配对文章。Mermaid、公式渲染、视频/PDF 嵌入和第三方交互图表目前不是已接通能力；先实现集中组件并验收，再在文章中复用。
+- Mermaid、公式渲染、视频/PDF 嵌入和第三方交互图表目前不是已接通能力；需要时先实现集中组件并验收，再在文章中复用。
 
 ### 章节导航与短文布局
 
@@ -101,7 +101,7 @@ Codex-Journal 只会在用户明确点击“发到主页”后，向 `src/conten
 npm run publish:content
 ```
 
-`publish:content` 从线上当前 release manifest 读取生产代码 revision，在临时隔离工作树中只叠加当前内容 revision 里的普通 Markdown 与文章专用资源，再完成一次静态构建。当前分支同时存在其他未上线工程改动时，这些改动会被记录为忽略路径，不阻塞纯文章发布，也不会进入构建树。命令只上传新旧 `dist/` 之间的变化文件，通过一次 SSH 完成校验、完整版本重建和原子切换；成功后只探测本次文章地址并运行 `Server-infra AfterChange`。发布脚本回归测试保留在开发与 CI，不进入每次文章上线；日常发文无需 API 测试、全站浏览器检查、Nginx 检查或完整前端上传。
+`publish:content` 从线上当前 release manifest 读取生产代码 revision，并校验该 revision 到当前 HEAD 的全部变更只含普通 Markdown 与文章专用资源；存在其他未上线工程改动时通道直接拒绝，提示改走前端或完整发布，因此在发文前需要让 `main` 保持可随时发布的状态。校验通过后在主工作区直接完成一次静态构建，只上传新旧 `dist/` 之间的变化文件，通过一次 SSH 完成校验、完整版本重建和原子切换；成功后只探测本次文章地址并运行 `Server-infra AfterChange`。发布脚本回归测试保留在开发与 CI，不进入每次文章上线；日常发文无需 API 测试、全站浏览器检查、Nginx 检查或完整前端上传。
 
 `npm run content:release:plan` 只查看范围，不构建、不上线；`npm run content:release:benchmark` 构建并生成差量制品，但不上传。单篇普通文章的目标是约 10 秒完成公开切换，实际时间仍受本机构建和 SSH 网络影响，命令会分别输出切换时间和总耗时。
 
@@ -153,7 +153,7 @@ npm run verify
 
 发布分为三档：
 
-- `ContentOnly`：普通 Markdown 文章与白名单格式的文章专用图片、下载附件；运行 `npm run publish:content`，在生产代码基线上隔离构建、差量上传并验收本次文章地址。
+- `ContentOnly`：普通 Markdown 文章与白名单格式的文章专用图片、下载附件；运行 `npm run publish:content`，在内容限定门禁下主工作区构建、差量上传并验收本次文章地址。
 - `FastFrontend`（默认）：用于影响边界清晰的静态页面和视觉资产。运行 UI 复用约束、类型检查和生产构建，只发布前端，并验收 API health、首页、404 与受影响路由。
 - `FullAudit`：用户明确要求软件审查、完整验收、全局或端到端验证，或变更触及后端、认证、数据库、依赖锁、构建配置、部署脚本或基础设施时使用。运行 `npm ci`、后端依赖安装、`npm run verify`、服务与其他项目基线检查及完整浏览器矩阵。
 

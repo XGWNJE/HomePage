@@ -71,7 +71,7 @@ npm run verify
 - 不在本仓库复制服务器密码、token、私有 IP 清单或共享 Nginx/SNI 拓扑。
 - 生产发布优先使用项目级 [`deploy-homepage` Skill](./.agents/skills/deploy-homepage/SKILL.md)；前端细节见 [站点维护](./docs/site-maintenance.zh-CN.md)，后端使用版本化 `releases/current/previous` 流程，见 [后端维护](./docs/backend-maintenance.zh-CN.md)。
 - 影响边界清晰的纯静态前端发布默认使用 `FastFrontend`；用户明确要求软件审查/完整验收，或变更触及高风险边界时使用 `FullAudit`。两档都保留版本化制品、哈希、备份、原子切换、回滚和 `Server-infra AfterChange`。
-- 普通 `.md` 文章及其 `public/image/blog/` 图片、`public/file/blog/` 安全附件使用 `npm run publish:content` 的 `ContentOnly` 通道。快速通道从线上 manifest revision 建立隔离工作树，只叠加内容文件再构建；仓库中其他未上线代码不阻塞文章发布，也不得进入文章制品。`.mdx`、组件、样式、脚本、配置或基础设施改动仍按普通前端或完整发布处理。
+- 普通 `.md` 文章及其 `public/image/blog/` 图片、`public/file/blog/` 安全附件使用 `npm run publish:content` 的 `ContentOnly` 通道。快速通道校验自生产 release 以来的全部变更只含文章内容与文章专用资源，然后在主工作区直接构建并差量上传；仓库中存在其他未上线代码时通道会拒绝发布并提示走前端或完整发布。`.mdx`、组件、样式、脚本、配置或基础设施改动仍按普通前端或完整发布处理。
 - 修改 Nginx 前先在 `Server-infra` 核对真实配置，备份目标文件并运行 `nginx -t`；仅替换静态文件不需要 reload。
 - SQLite 与上传文件属于持久数据，不随代码 release 替换；备份必须保证 SQLite 一致性。
 

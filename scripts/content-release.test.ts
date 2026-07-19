@@ -1,6 +1,5 @@
 import assert from 'node:assert/strict';
-import { execFileSync } from 'node:child_process';
-import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
@@ -10,13 +9,6 @@ import {
 	findPublishedArticlesTurnedDraft,
 	getContentReleaseRoutes,
 } from './content-release-scope.mjs';
-
-function runGit(cwd: string, args: string[]) {
-	return execFileSync('git', ['-c', 'safe.directory=*', ...args], {
-		cwd,
-		encoding: 'utf8',
-	}).trim();
-}
 
 test('content release scope accepts posts and dedicated blog assets only', () => {
 	const result = classifyContentReleasePaths([
@@ -82,84 +74,6 @@ test('content release accepts native Markdown but rejects raw HTML', async () =>
 	], root);
 	assert.deepEqual(invalid, ['src/content/blog/html-cn.md']);
 	await rm(root, { recursive: true, force: true });
-});
-
-test('isolated content worktree overlays articles without taking unreleased code', async (context) => {
-	let worktreeModule: typeof import('./content-release-worktree.mjs') | undefined;
-	try {
-		worktreeModule = await import('./content-release-worktree.mjs');
-	} catch {
-		// The RED phase intentionally reaches this branch before the helper exists.
-	}
-	assert.equal(typeof worktreeModule?.prepareIsolatedContentWorktree, 'function');
-	assert.equal(typeof worktreeModule?.removeIsolatedContentWorktree, 'function');
-
-	const root = await mkdtemp(path.join(os.tmpdir(), 'homepage-content-worktree-'));
-	const isolated = path.join(root, 'isolated');
-	context.after(async () => {
-		if (worktreeModule) {
-			await worktreeModule.removeIsolatedContentWorktree({ repositoryRoot: root, worktreeRoot: isolated });
-		}
-		await rm(root, { recursive: true, force: true });
-	});
-
-	runGit(root, ['init']);
-	runGit(root, ['config', 'user.email', 'content-release@example.invalid']);
-	runGit(root, ['config', 'user.name', 'Content Release Test']);
-	await mkdir(path.join(root, 'src', 'pages'), { recursive: true });
-	await writeFile(path.join(root, 'src', 'pages', 'index.astro'), 'production code\n', 'utf8');
-	runGit(root, ['add', '.']);
-	runGit(root, ['commit', '-m', 'production']);
-	const productionRevision = runGit(root, ['rev-parse', 'HEAD']);
-
-	await writeFile(path.join(root, 'src', 'pages', 'index.astro'), 'unreleased code\n', 'utf8');
-	await mkdir(path.join(root, 'src', 'content', 'blog'), { recursive: true });
-	await mkdir(path.join(root, 'public', 'image', 'blog', 'release'), { recursive: true });
-	await writeFile(path.join(root, 'src', 'content', 'blog', 'release-cn.md'), '# Published article\n', 'utf8');
-	await writeFile(path.join(root, 'public', 'image', 'blog', 'release', 'hero.webp'), 'image-bytes', 'utf8');
-	runGit(root, ['add', '.']);
-	runGit(root, ['commit', '-m', 'source']);
-	const sourceRevision = runGit(root, ['rev-parse', 'HEAD']);
-
-	await worktreeModule!.prepareIsolatedContentWorktree({
-		repositoryRoot: root,
-		worktreeRoot: isolated,
-		productionRevision,
-		sourceRevision,
-		contentPaths: [
-			'src/content/blog/release-cn.md',
-			'public/image/blog/release/hero.webp',
-		],
-	});
-
-	assert.equal(
-		(await readFile(path.join(isolated, 'src', 'pages', 'index.astro'), 'utf8')).replaceAll('\r\n', '\n'),
-		'production code\n',
-	);
-	assert.equal(
-		(await readFile(path.join(isolated, 'src', 'content', 'blog', 'release-cn.md'), 'utf8')).replaceAll('\r\n', '\n'),
-		'# Published article\n',
-	);
-	assert.equal(
-		await readFile(path.join(isolated, 'public', 'image', 'blog', 'release', 'hero.webp'), 'utf8'),
-		'image-bytes',
-	);
-});
-
-test('isolated content cleanup refuses targets outside the repository', async () => {
-	const worktreeModule = await import('./content-release-worktree.mjs');
-	const repositoryRoot = await mkdtemp(path.join(os.tmpdir(), 'homepage-content-repository-'));
-	const outsideRoot = await mkdtemp(path.join(os.tmpdir(), 'homepage-content-outside-'));
-	const sentinel = path.join(outsideRoot, 'keep.txt');
-	await writeFile(sentinel, 'keep', 'utf8');
-
-	await assert.rejects(
-		worktreeModule.removeIsolatedContentWorktree({ repositoryRoot, worktreeRoot: outsideRoot }),
-		/inside the repository/u,
-	);
-	assert.equal(await readFile(sentinel, 'utf8'), 'keep');
-	await rm(repositoryRoot, { recursive: true, force: true });
-	await rm(outsideRoot, { recursive: true, force: true });
 });
 
 test('content release reports missing local article images and attachments', async (context) => {
