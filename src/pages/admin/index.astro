@@ -327,7 +327,7 @@ import ModalShell from '../../components/ModalShell.astro';
 			modal.setAttribute('aria-hidden', 'true');
 		}
 	};
-	root?.querySelectorAll('#admin-article-view-modal [data-modal-close], #admin-article-delete-modal [data-modal-close]').forEach((button) => {
+	document.querySelectorAll('#admin-article-view-modal [data-modal-close], #admin-article-delete-modal [data-modal-close]').forEach((button) => {
 		button.addEventListener('click', () => {
 			setModalOpen('admin-article-view-modal', false);
 			setModalOpen('admin-article-delete-modal', false);
@@ -397,9 +397,9 @@ import ModalShell from '../../components/ModalShell.astro';
 			button.disabled = true;
 			try {
 				const detail = await getAdminArticle(id);
-				const title = root.querySelector<HTMLElement>('[data-admin-article-view-title]');
-				const meta = root.querySelector<HTMLElement>('[data-admin-article-view-meta]');
-				const source = root.querySelector<HTMLElement>('[data-admin-article-view-source]');
+				const title = document.querySelector<HTMLElement>('[data-admin-article-view-title]');
+				const meta = document.querySelector<HTMLElement>('[data-admin-article-view-meta]');
+				const source = document.querySelector<HTMLElement>('[data-admin-article-view-source]');
 				if (title) title.textContent = detail.frontmatter.title || detail.id;
 				if (meta) meta.textContent = `src/content/blog/${detail.file}`;
 				if (source) source.textContent = detail.source;
@@ -409,17 +409,17 @@ import ModalShell from '../../components/ModalShell.astro';
 			return;
 		}
 		pendingDeleteId = id;
-		const body = root.querySelector<HTMLElement>('[data-admin-article-delete-body]');
-		const pair = root.querySelector<HTMLInputElement>('[data-admin-article-delete-pair]');
+		const body = document.querySelector<HTMLElement>('[data-admin-article-delete-body]');
+		const pair = document.querySelector<HTMLInputElement>('[data-admin-article-delete-pair]');
 		if (body) body.textContent = `「${id}」将从 git 仓库删除并触发完整重新发布。`;
 		if (pair) pair.checked = false;
 		setModalOpen('admin-article-delete-modal', true);
 	});
 
-	root?.querySelector('[data-admin-article-delete-confirm]')?.addEventListener('click', async (event) => {
+	document.querySelector('[data-admin-article-delete-confirm]')?.addEventListener('click', async (event) => {
 		const confirmButton = event.currentTarget as HTMLButtonElement;
 		if (!pendingDeleteId) return;
-		const pair = root.querySelector<HTMLInputElement>('[data-admin-article-delete-pair]')?.checked ?? false;
+		const pair = document.querySelector<HTMLInputElement>('[data-admin-article-delete-pair]')?.checked ?? false;
 		confirmButton.disabled = true;
 		confirmButton.textContent = '正在发布…';
 		try {

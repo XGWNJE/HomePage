@@ -39,6 +39,8 @@ for (const contract of [
 }
 assert.match(client, /\/api\/admin\/articles/, 'admin client must call the articles endpoint');
 assert.match(client, /pair=1/, 'admin client must support paired article deletion');
+assert.match(page, /document\.querySelector\('\[data-admin-article-delete-confirm\]'\)/, 'article modals live outside data-admin-root and must be queried from document');
+assert.doesNotMatch(page, /root\??\.querySelector(All)?\('[^']*admin-article-(view|delete)/, 'article modal elements must not be queried inside data-admin-root');
 
 const articlesRoute = read('server/src/routes/articles.js');
 assert.match(articlesRoute, /adminAuth/, 'article routes must require admin auth');
