@@ -220,17 +220,26 @@ async function main() {
 	});
 
 	const distRoot = path.join(repo, 'dist');
-	for (const route of articleRoutes) {
-		const relative = route === '/' ? 'index.html' : `${route.replace(/^\/+|\/+$/g, '')}/index.html`;
-		if (!existsSync(path.join(distRoot, ...relative.split('/')))) {
-			throw new Error(`Built route is missing: ${route}`);
+	const routeToDistPath = (route) => {
+		if (route === '/') return 'index.html';
+		const trimmed = route.replace(/^\/+|\/+$/g, '');
+		return route.endsWith('/') ? `${trimmed}/index.html` : trimmed;
+	};
+	try {
+		for (const route of articleRoutes) {
+			if (!existsSync(path.join(distRoot, ...routeToDistPath(route).split('/')))) {
+				throw new Error(`Built route is missing: ${route}`);
+			}
+		}
+	} finally {
+		if (options.dryRun) {
+			// Leave no trace: restore the dedicated clone to origin/main.
+			git(repo, ['reset', '--hard', 'origin/main']);
+			git(repo, ['clean', '-fd', '--', ...writes.map((w) => w.repoPath), ...deletes]);
 		}
 	}
 
 	if (options.dryRun) {
-		// Leave no trace: restore the dedicated clone to origin/main.
-		git(repo, ['reset', '--hard', 'origin/main']);
-		git(repo, ['clean', '-fd', '--', ...writes.map((w) => w.repoPath), ...deletes]);
 		console.log(JSON.stringify({ mode: 'web-admin', dryRun: true, routes: articleRoutes }, null, 2));
 		return;
 	}
