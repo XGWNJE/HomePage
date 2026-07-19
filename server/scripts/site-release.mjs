@@ -144,7 +144,11 @@ function git(repo, args) {
 
 function run(command, args, { cwd, phase } = {}) {
 	return new Promise((resolve, reject) => {
-		const child = spawn(command, args, { cwd, stdio: ['ignore', 'pipe', 'pipe'] });
+		// 不继承调用方环境：API 服务的 BASE_URL 等变量会污染 Astro 构建产物。
+		const env = { ...process.env };
+		delete env.BASE_URL;
+		delete env.PUBLIC_API_BASE_URL;
+		const child = spawn(command, args, { cwd, stdio: ['ignore', 'pipe', 'pipe'], env });
 		let stdout = '';
 		let stderr = '';
 		child.stdout.on('data', (chunk) => {
