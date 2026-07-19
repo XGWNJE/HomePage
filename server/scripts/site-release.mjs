@@ -217,19 +217,12 @@ async function main() {
 	const lockSha = sha256File(path.join(repo, 'package-lock.json'));
 	const lockMarker = `${repo}.package-lock.sha256`;
 	const recordedLockSha = existsSync(lockMarker) ? readFileSync(lockMarker, 'utf8').trim() : '';
-	if (!existsSync(path.join(repo, 'node_modules', 'astro', 'bin', 'astro.mjs')) || recordedLockSha !== lockSha) {
-		await run(npmBin, ['ci'], { cwd: repo, phase: 'npm ci' });
-		writeFileSync(lockMarker, `${lockSha}\n`, 'utf8');
-	}
-	await run(options.nodeBin, [path.join(repo, 'node_modules', 'astro', 'bin', 'astro.mjs'), 'build'], {
-		cwd: repo,
-		phase: 'Astro build',
-	});
-	await run(options.nodeBin, [path.join(repo, 'scripts', 'ensure-sitemap-xml.mjs')], {
-		cwd: repo,
-		phase: 'Sitemap check',
-	});
-
+	const restoreClone = () => {
+		// 构建/校验失败后恢复克隆到 origin/main：未提交的文章文件若残留，
+		// 下一次发布会因「Publishing clone is dirty」直接卡死。
+		git(repo, ['reset', '--hard', 'origin/main']);
+		git(repo, ['clean', '-fd', '--', ...writes.map((w) => w.repoPath), ...deletes]);
+	};
 	const distRoot = path.join(repo, 'dist');
 	const routeToDistPath = (route) => {
 		if (route === '/') return 'index.html';
@@ -237,16 +230,30 @@ async function main() {
 		return route.endsWith('/') ? `${trimmed}/index.html` : trimmed;
 	};
 	try {
+		if (!existsSync(path.join(repo, 'node_modules', 'astro', 'bin', 'astro.mjs')) || recordedLockSha !== lockSha) {
+			await run(npmBin, ['ci'], { cwd: repo, phase: 'npm ci' });
+			writeFileSync(lockMarker, `${lockSha}\n`, 'utf8');
+		}
+		await run(options.nodeBin, [path.join(repo, 'node_modules', 'astro', 'bin', 'astro.mjs'), 'build'], {
+			cwd: repo,
+			phase: 'Astro build',
+		});
+		await run(options.nodeBin, [path.join(repo, 'scripts', 'ensure-sitemap-xml.mjs')], {
+			cwd: repo,
+			phase: 'Sitemap check',
+		});
 		for (const route of articleRoutes) {
 			if (!existsSync(path.join(distRoot, ...routeToDistPath(route).split('/')))) {
 				throw new Error(`Built route is missing: ${route}`);
 			}
 		}
+	} catch (error) {
+		if (!options.dryRun) restoreClone();
+		throw error;
 	} finally {
 		if (options.dryRun) {
 			// Leave no trace: restore the dedicated clone to origin/main.
-			git(repo, ['reset', '--hard', 'origin/main']);
-			git(repo, ['clean', '-fd', '--', ...writes.map((w) => w.repoPath), ...deletes]);
+			restoreClone();
 		}
 	}
 
