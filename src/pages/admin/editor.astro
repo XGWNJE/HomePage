@@ -1,0 +1,349 @@
+---
+import SiteLayout from '../../layouts/SiteLayout.astro';
+---
+
+<SiteLayout title="文章编辑器 | XGWNJE" description="网页端文章编辑器：草稿、预览与发布。">
+	<Fragment slot="head">
+		<meta name="robots" content="noindex, nofollow" />
+	</Fragment>
+	<main class="page-shell page-fade-in py-6 md:py-10" data-editor-root transition:name="page-main" transition:animate="fade">
+		<section class="mx-auto max-w-6xl" data-editor-auth-state>
+			<div class="mt-7 rounded-2xl border border-zinc-200/80 bg-white/80 p-5 shadow-[0_18px_48px_rgba(15,23,42,0.05)] backdrop-blur dark:border-zinc-800/80 dark:bg-zinc-900/75">
+				<p class="m-0 text-sm font-medium text-zinc-700 dark:text-zinc-300" data-editor-auth-message>正在验证当前会话…</p>
+			</div>
+		</section>
+
+		<section class="mx-auto hidden max-w-6xl" data-editor-workspace>
+			<!-- 顶栏 -->
+			<header class="flex flex-wrap items-center gap-3">
+				<a href="/admin/" class="inline-flex items-center rounded-full border border-zinc-200 bg-white px-3.5 py-2 text-sm font-medium text-zinc-600 no-underline hover:border-zinc-300 hover:text-zinc-950 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300" data-editor-back>← 返回列表</a>
+				<h1 class="m-0 text-xl font-semibold tracking-[-0.02em] text-zinc-950 dark:text-zinc-50">文章编辑器</h1>
+				<span class="text-xs text-zinc-400 dark:text-zinc-500" data-editor-save-state aria-live="polite"></span>
+				<div class="ml-auto flex items-center gap-2">
+					<button type="button" class="rounded-full border border-zinc-200 bg-white px-4 py-2 text-sm font-medium text-zinc-600 hover:border-zinc-300 hover:text-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300" data-editor-save>保存草稿</button>
+					<button type="button" class="rounded-full bg-amber-600 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-700 disabled:opacity-60" data-editor-publish>发表 →</button>
+				</div>
+			</header>
+
+			<!-- 校验提示条 -->
+			<div class="mt-4 hidden rounded-xl border border-rose-200 bg-rose-50/80 px-4 py-3 text-sm text-rose-700 dark:border-rose-900 dark:bg-rose-950/30 dark:text-rose-400" data-editor-notice role="alert"></div>
+
+			<!-- 移动端 编辑/预览 切换 -->
+			<div class="mt-5 flex rounded-full border border-zinc-200 bg-white p-1 text-sm font-medium text-zinc-600 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 md:hidden" role="tablist" aria-label="编辑器视图切换">
+				<button type="button" class="flex-1 rounded-full px-4 py-1.5" data-editor-tab="edit" role="tab" aria-selected="true">编辑</button>
+				<button type="button" class="flex-1 rounded-full px-4 py-1.5" data-editor-tab="preview" role="tab" aria-selected="false">预览</button>
+			</div>
+
+			<div class="mt-5 grid gap-5 md:grid-cols-2">
+				<!-- 左列：表单 -->
+				<div class="space-y-4 rounded-2xl border border-zinc-200/80 bg-white/80 p-5 shadow-[0_18px_48px_rgba(15,23,42,0.05)] backdrop-blur dark:border-zinc-800/80 dark:bg-zinc-900/75" data-editor-pane="edit">
+					<label class="block">
+						<span class="text-xs font-semibold uppercase tracking-[0.14em] text-zinc-400 dark:text-zinc-500">标题</span>
+						<input type="text" class="mt-1.5 w-full rounded-xl border border-zinc-200 bg-white px-3.5 py-2.5 text-sm text-zinc-900 outline-none focus:border-amber-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100" data-editor-field="title" placeholder="文章标题" />
+					</label>
+					<label class="block">
+						<span class="text-xs font-semibold uppercase tracking-[0.14em] text-zinc-400 dark:text-zinc-500">Slug（小写字母/数字/连字符，-cn 结尾）</span>
+						<input type="text" class="mt-1.5 w-full rounded-xl border border-zinc-200 bg-white px-3.5 py-2.5 font-mono text-sm text-zinc-900 outline-none focus:border-amber-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100" data-editor-field="slug" placeholder="my-article-slug-cn" />
+					</label>
+					<label class="block">
+						<span class="text-xs font-semibold uppercase tracking-[0.14em] text-zinc-400 dark:text-zinc-500">描述</span>
+						<textarea rows="2" class="mt-1.5 w-full resize-y rounded-xl border border-zinc-200 bg-white px-3.5 py-2.5 text-sm text-zinc-900 outline-none focus:border-amber-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100" data-editor-field="description" placeholder="一两句话概括这篇文章，用于列表与 SEO。"></textarea>
+					</label>
+					<div class="grid gap-4 sm:grid-cols-2">
+						<label class="block">
+							<span class="text-xs font-semibold uppercase tracking-[0.14em] text-zinc-400 dark:text-zinc-500">标签（逗号分隔）</span>
+							<input type="text" class="mt-1.5 w-full rounded-xl border border-zinc-200 bg-white px-3.5 py-2.5 text-sm text-zinc-900 outline-none focus:border-amber-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100" data-editor-field="tags" placeholder="Codex, Notes" />
+						</label>
+						<label class="block">
+							<span class="text-xs font-semibold uppercase tracking-[0.14em] text-zinc-400 dark:text-zinc-500">分类</span>
+							<input type="text" class="mt-1.5 w-full rounded-xl border border-zinc-200 bg-white px-3.5 py-2.5 text-sm text-zinc-900 outline-none focus:border-amber-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100" data-editor-field="category" placeholder="Notes" />
+						</label>
+					</div>
+					<div>
+						<div class="flex items-center justify-between">
+							<span class="text-xs font-semibold uppercase tracking-[0.14em] text-zinc-400 dark:text-zinc-500">正文（Markdown）</span>
+							<button type="button" class="rounded-full border border-zinc-200 px-3 py-1.5 text-xs font-medium text-zinc-600 hover:bg-zinc-50 disabled:opacity-60 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800" data-editor-upload>插入图片</button>
+							<input type="file" accept="image/jpeg,image/png,image/gif,image/webp" class="hidden" data-editor-file />
+						</div>
+						<textarea rows="18" class="mt-1.5 w-full resize-y rounded-xl border border-zinc-200 bg-white px-3.5 py-2.5 font-mono text-sm leading-6 text-zinc-900 outline-none focus:border-amber-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100" data-editor-field="body" placeholder="## 章节标题&#10;&#10;正文……"></textarea>
+					</div>
+				</div>
+
+				<!-- 右列：预览 -->
+				<div class="hidden rounded-2xl border border-zinc-200/80 bg-white/80 p-5 shadow-[0_18px_48px_rgba(15,23,42,0.05)] backdrop-blur dark:border-zinc-800/80 dark:bg-zinc-900/75 md:block" data-editor-pane="preview">
+					<p class="m-0 text-xs font-semibold uppercase tracking-[0.14em] text-zinc-400 dark:text-zinc-500">预览（近似渲染，以上线效果为准）</p>
+					<div class="editor-preview mt-3 min-h-[24rem] text-sm leading-7 text-zinc-800 dark:text-zinc-200" data-editor-preview>
+						<p class="text-zinc-400 dark:text-zinc-500">开始输入正文后，这里会实时预览。</p>
+					</div>
+				</div>
+			</div>
+		</section>
+	</main>
+</SiteLayout>
+
+<style is:global>
+	.editor-preview h2 {
+		margin: 1.6em 0 0.6em;
+		font-size: 1.35rem;
+		font-weight: 650;
+		letter-spacing: -0.02em;
+	}
+	.editor-preview h3 {
+		margin: 1.4em 0 0.5em;
+		font-size: 1.12rem;
+		font-weight: 600;
+	}
+	.editor-preview p { margin: 0.9em 0; }
+	.editor-preview ul, .editor-preview ol { margin: 0.9em 0; padding-left: 1.4em; }
+	.editor-preview li { margin: 0.3em 0; }
+	.editor-preview img { max-width: 100%; border-radius: 0.75rem; }
+	.editor-preview pre {
+		overflow-x: auto;
+		border-radius: 0.75rem;
+		background: rgb(24 24 27);
+		color: rgb(228 228 231);
+		padding: 0.9rem 1rem;
+		font-size: 0.82rem;
+		line-height: 1.6;
+	}
+	.editor-preview code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.86em; }
+	.editor-preview p code, .editor-preview li code {
+		background: rgb(244 244 245);
+		border-radius: 0.35rem;
+		padding: 0.1em 0.35em;
+	}
+	.dark .editor-preview p code, .dark .editor-preview li code { background: rgb(39 39 42); }
+	.editor-preview blockquote {
+		margin: 1em 0;
+		border-left: 3px solid rgb(217 119 6 / 0.5);
+		padding-left: 1em;
+		color: rgb(82 82 91);
+	}
+	.dark .editor-preview blockquote { color: rgb(161 161 170); }
+	.editor-preview a { color: rgb(180 83 9); text-decoration: underline; text-underline-offset: 3px; }
+	.dark .editor-preview a { color: rgb(251 191 36); }
+</style>
+
+<script>
+	import {
+		checkAdmin,
+		getAdminArticleDraft,
+		previewAdminArticle,
+		publishAdminArticle,
+		saveAdminArticleDraft,
+		uploadAdminArticleImage,
+	} from '../../lib/admin';
+
+	const initEditorPage = () => {
+		const root = document.querySelector<HTMLElement>('[data-editor-root]');
+		if (!root || root.dataset.editorInitialized === 'true') return;
+		root.dataset.editorInitialized = 'true';
+
+		const authState = document.querySelector<HTMLElement>('[data-editor-auth-state]');
+		const authMessage = document.querySelector<HTMLElement>('[data-editor-auth-message]');
+		const workspace = document.querySelector<HTMLElement>('[data-editor-workspace]');
+		const saveState = document.querySelector<HTMLElement>('[data-editor-save-state]');
+		const notice = document.querySelector<HTMLElement>('[data-editor-notice]');
+		const saveButton = document.querySelector<HTMLButtonElement>('[data-editor-save]');
+		const publishButton = document.querySelector<HTMLButtonElement>('[data-editor-publish]');
+		const uploadButton = document.querySelector<HTMLButtonElement>('[data-editor-upload]');
+		const fileInput = document.querySelector<HTMLInputElement>('[data-editor-file]');
+		const previewPane = document.querySelector<HTMLElement>('[data-editor-preview]');
+		const field = (name: string) => document.querySelector<HTMLInputElement | HTMLTextAreaElement>(`[data-editor-field="${name}"]`);
+
+		let draftId: string | null = null;
+		let dirty = false;
+		let saving = false;
+		let autoSaveTimer: number | undefined;
+		let previewTimer: number | undefined;
+		let previewSeq = 0;
+
+		const setSaveState = (message: string) => { if (saveState) saveState.textContent = message; };
+		const showNotice = (message: string) => {
+			if (!notice) return;
+			if (!message) {
+				notice.classList.add('hidden');
+				notice.textContent = '';
+				return;
+			}
+			notice.textContent = message;
+			notice.classList.remove('hidden');
+		};
+
+		const collect = () => ({
+			slug: field('slug')?.value.trim() ?? '',
+			title: field('title')?.value ?? '',
+			description: field('description')?.value ?? '',
+			tags: field('tags')?.value ?? '',
+			category: field('category')?.value ?? '',
+			body: field('body')?.value ?? '',
+		});
+
+		const saveDraft = async (silent = false) => {
+			if (saving) return;
+			saving = true;
+			if (!silent) setSaveState('正在保存…');
+			try {
+				const result = await saveAdminArticleDraft({ ...(draftId ? { id: draftId } : {}), ...collect() });
+				draftId = result.draft.id;
+				dirty = false;
+				setSaveState(`已保存 ${new Date(result.draft.updated_at).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}`);
+				showNotice('');
+			} catch (error) {
+				setSaveState('保存失败');
+				if (!silent) showNotice(error instanceof Error ? error.message : '保存失败，请稍后重试。');
+			} finally {
+				saving = false;
+			}
+		};
+
+		const scheduleAutoSave = () => {
+			dirty = true;
+			setSaveState('有未保存的修改');
+			window.clearTimeout(autoSaveTimer);
+			autoSaveTimer = window.setTimeout(() => { void saveDraft(true); }, 30_000);
+		};
+
+		const refreshPreview = async () => {
+			const body = field('body')?.value ?? '';
+			const seq = ++previewSeq;
+			if (!body.trim()) {
+				if (previewPane) previewPane.innerHTML = '<p class="text-zinc-400 dark:text-zinc-500">开始输入正文后，这里会实时预览。</p>';
+				return;
+			}
+			try {
+				const { html } = await previewAdminArticle(body);
+				if (seq !== previewSeq || !previewPane) return;
+				previewPane.innerHTML = html;
+			} catch { /* 预览失败不打断输入 */ }
+		};
+
+		const schedulePreview = () => {
+			window.clearTimeout(previewTimer);
+			previewTimer = window.setTimeout(() => { void refreshPreview(); }, 500);
+		};
+
+		for (const name of ['title', 'slug', 'description', 'tags', 'category', 'body']) {
+			field(name)?.addEventListener('input', () => {
+				scheduleAutoSave();
+				if (name === 'body') schedulePreview();
+			});
+		}
+
+		// 移动端 编辑/预览 切换
+		const tabs = document.querySelectorAll<HTMLButtonElement>('[data-editor-tab]');
+		const editPane = document.querySelector<HTMLElement>('[data-editor-pane="edit"]');
+		const previewPaneWrapper = document.querySelector<HTMLElement>('[data-editor-pane="preview"]');
+		const applyTab = (active: string) => {
+			tabs.forEach((tab) => {
+				const selected = tab.dataset.editorTab === active;
+				tab.setAttribute('aria-selected', String(selected));
+				tab.classList.toggle('bg-amber-600', selected);
+				tab.classList.toggle('text-white', selected);
+			});
+			editPane?.classList.toggle('hidden', active !== 'edit');
+			previewPaneWrapper?.classList.toggle('hidden', active !== 'preview');
+			if (active === 'preview') void refreshPreview();
+		};
+		tabs.forEach((tab) => tab.addEventListener('click', () => applyTab(tab.dataset.editorTab || 'edit')));
+		applyTab('edit');
+
+		// 插入图片：上传后在光标处插入 Markdown 图片语法
+		uploadButton?.addEventListener('click', () => fileInput?.click());
+		fileInput?.addEventListener('change', async () => {
+			const file = fileInput.files?.[0];
+			fileInput.value = '';
+			if (!file || !uploadButton) return;
+			uploadButton.disabled = true;
+			uploadButton.textContent = '上传中…';
+			try {
+				const { url } = await uploadAdminArticleImage(file);
+				const textarea = field('body') as HTMLTextAreaElement | null;
+				if (textarea) {
+					const insert = `![${file.name.replace(/\.[a-z0-9]+$/i, '')}](${url})`;
+					const start = textarea.selectionStart ?? textarea.value.length;
+					textarea.value = `${textarea.value.slice(0, start)}${insert}\n${textarea.value.slice(start)}`;
+					scheduleAutoSave();
+					schedulePreview();
+				}
+			} catch (error) {
+				showNotice(error instanceof Error ? error.message : '图片上传失败。');
+			} finally {
+				uploadButton.disabled = false;
+				uploadButton.textContent = '插入图片';
+			}
+		});
+
+		saveButton?.addEventListener('click', () => { void saveDraft(false); });
+
+		publishButton?.addEventListener('click', async () => {
+			if (!publishButton) return;
+			showNotice('');
+			// 发表前先把最新内容存进草稿，避免发布的是旧版本。
+			await saveDraft(true);
+			if (!draftId) {
+				showNotice('草稿保存失败，无法发表。请检查 slug 是否以 -cn 结尾。');
+				return;
+			}
+			if (!window.confirm('确认发表？将触发服务器端构建与全量上线，大约需要几分钟。')) return;
+			publishButton.disabled = true;
+			publishButton.textContent = '正在发布…';
+			try {
+				const result = await publishAdminArticle(draftId);
+				setSaveState(`已发表，release ${result.release?.releaseId ?? '完成'}`);
+				window.setTimeout(() => { window.location.href = '/admin/'; }, 1200);
+			} catch (error) {
+				showNotice(error instanceof Error ? error.message : '发布失败，草稿已保留。');
+			} finally {
+				publishButton.disabled = false;
+				publishButton.textContent = '发表 →';
+			}
+		});
+
+		window.addEventListener('beforeunload', (event) => {
+			if (dirty) event.preventDefault();
+		});
+
+		const initialize = async () => {
+			const identity = await checkAdmin();
+			if (!identity.isAdmin) {
+				if (authMessage) authMessage.textContent = '无法访问编辑器。请先使用被授予管理员权限的账户登录后重试。';
+				return;
+			}
+			authState?.classList.add('hidden');
+			workspace?.classList.remove('hidden');
+
+			const params = new URLSearchParams(window.location.search);
+			const loadId = params.get('draft');
+			if (loadId) {
+				try {
+					const { draft } = await getAdminArticleDraft(loadId);
+					draftId = draft.id;
+					const setValue = (name: string, value: string) => {
+						const input = field(name);
+						if (input) input.value = value;
+					};
+					setValue('slug', draft.slug);
+					setValue('title', draft.title);
+					setValue('description', draft.description);
+					setValue('tags', draft.tags);
+					setValue('category', draft.category);
+					setValue('body', draft.body);
+					setSaveState('草稿已加载');
+					void refreshPreview();
+				} catch {
+					showNotice('草稿加载失败，可能已被删除。');
+				}
+			}
+		};
+
+		void initialize();
+	};
+
+	document.addEventListener('astro:page-load', initEditorPage);
+	if (document.readyState === 'loading') {
+		document.addEventListener('DOMContentLoaded', initEditorPage, { once: true });
+	} else {
+		initEditorPage();
+	}
+</script>

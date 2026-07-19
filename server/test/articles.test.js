@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { after, before, test } from 'node:test';
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -190,6 +190,224 @@ test('article delete surfaces release failures', async () => {
 		});
 		assert.equal(failed.status, 502);
 		assert.match((await failed.json()).error, /build exploded/);
+	} finally {
+		failingServer.close();
+	}
+});
+
+// ---- 草稿 / 预览 / 发表 ----
+
+async function adminJson(path, init = {}) {
+	const headers = new Headers(init.headers);
+	headers.set('Authorization', 'Bearer test-admin-token');
+	if (init.body && !headers.has('Content-Type')) headers.set('Content-Type', 'application/json');
+	const response = await fetch(`${baseUrl}${path}`, { ...init, headers });
+	return { response, body: await response.json() };
+}
+
+test('draft routes reject unauthenticated requests', async () => {
+	for (const [method, path, init] of [
+		['POST', '/api/admin/article/draft', { body: '{}' }],
+		['GET', '/api/admin/article/drafts', {}],
+		['GET', '/api/admin/article/draft?id=x', {}],
+		['DELETE', '/api/admin/article/draft?id=x', {}],
+		['POST', '/api/admin/article/preview', { body: '{}' }],
+		['POST', '/api/admin/article/publish', { body: '{}' }],
+	]) {
+		const headers = new Headers({ 'Content-Type': 'application/json' });
+		const response = await fetch(`${baseUrl}${path}`, { method, headers, body: init.body });
+		assert.equal(response.status, 403, path);
+	}
+});
+
+test('draft create validates slug and supports full lifecycle', async () => {
+	const bad = await adminJson('/api/admin/article/draft', {
+		method: 'POST',
+		body: JSON.stringify({ slug: 'Bad Slug', title: 'x' }),
+	});
+	assert.equal(bad.response.status, 400);
+	assert.match(bad.body.error, /-cn/);
+
+	const created = await adminJson('/api/admin/article/draft', {
+		method: 'POST',
+		body: JSON.stringify({ slug: 'web-editor-demo-cn', title: '网页编辑器演示', body: '## 你好' }),
+	});
+	assert.equal(created.response.status, 201);
+	const draftId = created.body.draft.id;
+	assert.ok(draftId);
+
+	const updated = await adminJson('/api/admin/article/draft', {
+		method: 'POST',
+		body: JSON.stringify({ id: draftId, slug: 'web-editor-demo-cn', title: '网页编辑器演示 v2', description: '描述' }),
+	});
+	assert.equal(updated.response.status, 200);
+	assert.equal(updated.body.draft.title, '网页编辑器演示 v2');
+
+	const list = await adminJson('/api/admin/article/drafts');
+	assert.ok(list.body.drafts.some((draft) => draft.id === draftId && draft.title === '网页编辑器演示 v2'));
+
+	const got = await adminJson(`/api/admin/article/draft?id=${draftId}`);
+	assert.equal(got.body.draft.slug, 'web-editor-demo-cn');
+	assert.equal(got.body.draft.description, '描述');
+
+	const removed = await adminJson(`/api/admin/article/draft?id=${draftId}`, { method: 'DELETE' });
+	assert.equal(removed.body.ok, true);
+	assert.equal((await adminJson(`/api/admin/article/draft?id=${draftId}`)).response.status, 404);
+});
+
+test('preview renders markdown to html', async () => {
+	const { response, body } = await adminJson('/api/admin/article/preview', {
+		method: 'POST',
+		body: JSON.stringify({ markdown: '## 标题\n\n**加粗** 文本' }),
+	});
+	assert.equal(response.status, 200);
+	assert.match(body.html, /<h2/);
+	assert.match(body.html, /<strong>加粗<\/strong>/);
+});
+
+test('publish rejects incomplete drafts and existing slugs', async () => {
+	const created = await adminJson('/api/admin/article/draft', {
+		method: 'POST',
+		body: JSON.stringify({ slug: 'incomplete-demo-cn', title: '缺描述', body: '正文' }),
+	});
+	const draftId = created.body.draft.id;
+	const incomplete = await adminJson('/api/admin/article/publish', {
+		method: 'POST',
+		body: JSON.stringify({ id: draftId }),
+	});
+	assert.equal(incomplete.response.status, 400);
+	assert.match(incomplete.body.error, /缺少描述/);
+
+	const conflict = await adminJson('/api/admin/article/draft', {
+		method: 'POST',
+		body: JSON.stringify({ slug: 'demo-cn', title: '冲突', description: '描述', body: '正文' }),
+	});
+	const conflicted = await adminJson('/api/admin/article/publish', {
+		method: 'POST',
+		body: JSON.stringify({ id: conflict.body.draft.id }),
+	});
+	assert.equal(conflicted.response.status, 409);
+
+	const missing = await adminJson('/api/admin/article/publish', {
+		method: 'POST',
+		body: JSON.stringify({ id: 'missing-draft' }),
+	});
+	assert.equal(missing.response.status, 404);
+});
+
+test('publish writes article plus upload images, rewrites URLs and removes the draft', async () => {
+	mkdirSync(join(tempDir, 'uploads'), { recursive: true });
+	writeFileSync(join(tempDir, 'uploads', 'img_demo01.webp'), 'fake-webp');
+	db.prepare(
+		'INSERT INTO users (id, github_id, login, created_at, updated_at) VALUES (?, ?, ?, ?, ?)'
+	).run('test-user', 4242, 'test-user', 1, 1);
+	db.prepare(
+		'INSERT INTO images (id, user_id, name, url, path, size, content_type, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+	).run(
+		'img_demo01',
+		'test-user',
+		'demo.webp',
+		'https://api.xgwnje.cn/uploads/img_demo01.webp',
+		join(tempDir, 'uploads', 'img_demo01.webp'),
+		9,
+		'image/webp',
+		Date.now(),
+	);
+
+	let captured = null;
+	const capturing = createApp({
+		db,
+		config: testConfig(),
+		releaseRunner: async (job) => {
+			captured = job.writes.map(({ repoPath, contentPath }) => ({
+				repoPath,
+				source: readFileSync(contentPath, 'utf8'),
+			}));
+			return { releaseId: 'test-release', routes: ['/blog/web-editor-demo-cn/'] };
+		},
+	});
+	const capturingServer = capturing.listen(0, '127.0.0.1');
+	await new Promise((resolve) => capturingServer.once('listening', resolve));
+	try {
+		const capturingBase = `http://127.0.0.1:${capturingServer.address().port}`;
+		const call = async (path, payload) => {
+			const response = await fetch(`${capturingBase}${path}`, {
+				method: 'POST',
+				headers: { Authorization: 'Bearer test-admin-token', 'Content-Type': 'application/json' },
+				body: JSON.stringify(payload),
+			});
+			return { response, body: await response.json() };
+		};
+		const created = await call('/api/admin/article/draft', {
+			slug: 'web-editor-demo-cn',
+			title: '网页编辑器演示',
+			description: '从后台发表的测试文章。',
+			tags: 'Demo, 后台',
+			category: 'Notes',
+			body: '## 正文\n\n![演示图](https://api.xgwnje.cn/uploads/img_demo01.webp)\n',
+		});
+		const draftId = created.body.draft.id;
+
+		const published = await call('/api/admin/article/publish', { id: draftId });
+		assert.equal(published.response.status, 200);
+		assert.equal(published.body.ok, true);
+		assert.equal(published.body.slug, 'web-editor-demo-cn');
+
+		assert.ok(captured);
+		const article = captured.find((write) => write.repoPath === 'src/content/blog/web-editor-demo-cn.md');
+		const image = captured.find((write) => write.repoPath === 'public/image/blog/web-editor-demo/img_demo01.webp');
+		assert.ok(article, 'article write');
+		assert.ok(image, 'image write');
+		assert.equal(image.source, 'fake-webp');
+		assert.match(article.source, /title: "网页编辑器演示"/);
+		assert.match(article.source, /tags: \["Demo", "后台"\]/);
+		assert.match(article.source, /group: "web-editor-demo"/);
+		assert.match(article.source, /lang: "cn"/);
+		assert.match(article.source, /!\[演示图\]\(\/image\/blog\/web-editor-demo\/img_demo01\.webp\)/);
+		assert.doesNotMatch(article.source, /api\.xgwnje\.cn\/uploads/);
+
+		const drafts = db.prepare('SELECT COUNT(*) AS count FROM article_drafts WHERE id = ?').get(draftId);
+		assert.equal(drafts.count, 0);
+		const audit = db.prepare("SELECT action FROM admin_audit WHERE action = 'article.publish' AND target = 'web-editor-demo-cn'").all();
+		assert.equal(audit.length, 1);
+	} finally {
+		capturingServer.close();
+	}
+});
+
+test('publish keeps the draft when the release fails', async () => {
+	const failing = createApp({
+		db,
+		config: testConfig(),
+		releaseRunner: async () => {
+			throw new Error('lock conflict');
+		},
+	});
+	const failingServer = failing.listen(0, '127.0.0.1');
+	await new Promise((resolve) => failingServer.once('listening', resolve));
+	try {
+		const failingBase = `http://127.0.0.1:${failingServer.address().port}`;
+		const call = async (path, payload) => {
+			const response = await fetch(`${failingBase}${path}`, {
+				method: 'POST',
+				headers: { Authorization: 'Bearer test-admin-token', 'Content-Type': 'application/json' },
+				body: JSON.stringify(payload),
+			});
+			return { response, body: await response.json() };
+		};
+		const created = await call('/api/admin/article/draft', {
+			slug: 'failing-demo-cn',
+			title: '失败保留',
+			description: '描述',
+			body: '正文',
+		});
+		const draftId = created.body.draft.id;
+		const published = await call('/api/admin/article/publish', { id: draftId });
+		assert.equal(published.response.status, 502);
+		assert.match(published.body.error, /lock conflict/);
+		const kept = db.prepare('SELECT id FROM article_drafts WHERE id = ?').get(draftId);
+		assert.ok(kept, 'draft should survive a failed release');
+		db.prepare('DELETE FROM article_drafts WHERE id = ?').run(draftId);
 	} finally {
 		failingServer.close();
 	}

@@ -8,16 +8,17 @@
     "node": ">=20.18.0 <25",
     "npm": ">=10 <12"
   },
-	"scripts": {
-		"start": "node src/server.js",
-		"test": "node --test test/*.test.js",
-		"permission:manage": "node scripts/manage-permission.mjs"
-	},
+  "scripts": {
+    "start": "node src/server.js",
+    "test": "node --test test/*.test.js",
+    "permission:manage": "node scripts/manage-permission.mjs"
+  },
   "dependencies": {
     "better-sqlite3": "^12.11.1",
     "busboy": "^1.6.0",
     "cookie": "^1.1.1",
     "express": "^5.2.1",
+    "marked": "^16.4.2",
     "sharp": "^0.35.3"
   }
 }

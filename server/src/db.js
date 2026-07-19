@@ -190,6 +190,26 @@ CREATE INDEX IF NOT EXISTS idx_admin_audit_created_at
 	ON admin_audit(created_at);
 `,
 	},
+	{
+		version: 4,
+		sql: `
+CREATE TABLE IF NOT EXISTS article_drafts (
+	id TEXT PRIMARY KEY,
+	slug TEXT NOT NULL,
+	title TEXT NOT NULL DEFAULT '',
+	description TEXT NOT NULL DEFAULT '',
+	tags TEXT NOT NULL DEFAULT '',
+	category TEXT NOT NULL DEFAULT '',
+	body TEXT NOT NULL DEFAULT '',
+	created_at INTEGER NOT NULL,
+	updated_at INTEGER NOT NULL,
+	author_user_id TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_article_drafts_updated_at
+	ON article_drafts(updated_at);
+`,
+	},
 ];
 
 export const CURRENT_SCHEMA_VERSION = migrations.at(-1)?.version || 0;

@@ -222,3 +222,102 @@ export function deleteAdminArticle(id: string, pair: boolean): Promise<AdminArti
 	const query = pair ? '&pair=1' : '';
 	return adminRequest(`/api/admin/article?id=${encodeURIComponent(id)}${query}`, { method: 'DELETE' });
 }
+
+export interface AdminArticleDraft {
+	id: string;
+	slug: string;
+	title: string;
+	description: string;
+	tags: string;
+	category: string;
+	body: string;
+	created_at: number;
+	updated_at: number;
+}
+
+export interface AdminArticleDraftSummary {
+	id: string;
+	slug: string;
+	title: string;
+	category: string;
+	created_at: number;
+	updated_at: number;
+}
+
+export type AdminArticleDraftInput = Omit<AdminArticleDraft, 'id' | 'created_at' | 'updated_at'> & { id?: string };
+
+export interface AdminArticlePublishResult {
+	ok: boolean;
+	slug: string;
+	release: { releaseId?: string; seconds?: number };
+}
+
+// 发表/预览失败时把服务端 error 透传给编辑器（校验清单、发布失败原因）。
+async function adminRequestWithServerError<T>(path: string, init: RequestInit = {}): Promise<T> {
+	const token = getToken();
+	if (!token) throw new Error('Authentication required');
+	const headers = new Headers(init.headers);
+	headers.set('Authorization', `Bearer ${token}`);
+	if (init.body && !headers.has('Content-Type')) headers.set('Content-Type', 'application/json');
+	const response = await fetch(`${API_BASE}${path}`, { ...init, headers, credentials: 'include', cache: 'no-store' });
+	if (!response.ok) {
+		if (response.status === 401 || response.status === 403) throw new Error('Admin access required');
+		const payload = (await response.json().catch(() => null)) as { error?: string } | null;
+		throw new Error(payload?.error || 'Admin request failed');
+	}
+	return response.json() as Promise<T>;
+}
+
+export function getAdminArticleDrafts(): Promise<{ drafts: AdminArticleDraftSummary[] }> {
+	return adminRequest('/api/admin/article/drafts');
+}
+
+export function getAdminArticleDraft(id: string): Promise<{ draft: AdminArticleDraft }> {
+	return adminRequest(`/api/admin/article/draft?id=${encodeURIComponent(id)}`);
+}
+
+export function saveAdminArticleDraft(input: AdminArticleDraftInput): Promise<{ ok: boolean; draft: AdminArticleDraft }> {
+	return adminRequestWithServerError('/api/admin/article/draft', {
+		method: 'POST',
+		body: JSON.stringify(input),
+	});
+}
+
+export function deleteAdminArticleDraft(id: string): Promise<{ ok: boolean; deleted: string }> {
+	return adminRequest(`/api/admin/article/draft?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+}
+
+export function previewAdminArticle(markdown: string): Promise<{ ok: boolean; html: string }> {
+	return adminRequestWithServerError('/api/admin/article/preview', {
+		method: 'POST',
+		body: JSON.stringify({ markdown }),
+	});
+}
+
+export function publishAdminArticle(id: string): Promise<AdminArticlePublishResult> {
+	return adminRequestWithServerError('/api/admin/article/publish', {
+		method: 'POST',
+		body: JSON.stringify({ id }),
+	});
+}
+
+export async function uploadAdminArticleImage(file: File): Promise<{ url: string }> {
+	const token = getToken();
+	if (!token) throw new Error('Authentication required');
+	const form = new FormData();
+	form.append('file', file);
+	const response = await fetch(`${API_BASE}/api/images`, {
+		method: 'POST',
+		headers: { Authorization: `Bearer ${token}` },
+		body: form,
+		credentials: 'include',
+	});
+	if (!response.ok) {
+		if (response.status === 401 || response.status === 403) throw new Error('Admin access required');
+		const payload = (await response.json().catch(() => null)) as { error?: string } | null;
+		throw new Error(payload?.error || '图片上传失败');
+	}
+	const payload = (await response.json()) as { url?: string };
+	if (!payload.url) throw new Error('图片上传失败');
+	return { url: payload.url };
+}

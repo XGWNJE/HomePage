@@ -46,8 +46,10 @@ import ModalShell from '../../components/ModalShell.astro';
 							<div class="flex items-center gap-3">
 								<span class="text-xs text-zinc-400 dark:text-zinc-500" data-admin-articles-status aria-live="polite"></span>
 								<button type="button" class="rounded-full border border-zinc-200 bg-white px-3.5 py-2 text-sm font-medium text-zinc-600 hover:border-zinc-300 hover:text-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300" data-admin-articles-refresh>刷新</button>
+								<a href="/admin/editor/" class="rounded-full bg-amber-600 px-3.5 py-2 text-sm font-semibold text-white hover:bg-amber-700" data-admin-article-new>新建文章</a>
 							</div>
 						</div>
+						<div class="mb-3 space-y-3" data-admin-drafts aria-live="polite"></div>
 						<div class="space-y-3" data-admin-articles aria-live="polite"></div>
 					</section>
 
@@ -134,6 +136,8 @@ import ModalShell from '../../components/ModalShell.astro';
 		deleteAdminArticle,
 		deleteComment,
 		getAdminArticle,
+		getAdminArticleDrafts,
+		deleteAdminArticleDraft,
 		getAdminArticles,
 		getAdminComments,
 		getAdminContactMessages,
@@ -141,6 +145,7 @@ import ModalShell from '../../components/ModalShell.astro';
 		getAdminStats,
 		rejectComment,
 		type AdminArticle,
+		type AdminArticleDraftSummary,
 		type AdminComment,
 		type AdminContactMessage,
 		type AdminOutboxItem,
@@ -306,6 +311,7 @@ import ModalShell from '../../components/ModalShell.astro';
 	// —— 文章管理（Phase 1：列表 / 查看 / 删除）——
 	const articlesRoot = root?.querySelector<HTMLElement>('[data-admin-articles]');
 	const articlesStatus = root?.querySelector<HTMLElement>('[data-admin-articles-status]');
+	const draftsRoot = root?.querySelector<HTMLElement>('[data-admin-drafts]');
 	let pendingDeleteId: string | null = null;
 
 	const setModalOpen = (id: string, open: boolean) => {
@@ -377,8 +383,40 @@ import ModalShell from '../../components/ModalShell.astro';
 		}
 	};
 
+	const renderDrafts = (drafts: AdminArticleDraftSummary[]) => {
+		if (!draftsRoot) return;
+		draftsRoot.replaceChildren();
+		if (!drafts.length) return;
+		const group = createElement('div', 'rounded-2xl border border-dashed border-amber-300 bg-amber-50/50 p-4 dark:border-amber-900 dark:bg-amber-950/20');
+		group.append(createElement('p', 'm-0 mb-3 text-xs font-semibold uppercase tracking-[0.14em] text-amber-700 dark:text-amber-400', `草稿箱 · ${drafts.length}`));
+		const list = createElement('div', 'space-y-2');
+		for (const draft of drafts) {
+			const row = createElement('div', 'flex flex-col gap-2 rounded-xl bg-white p-3.5 dark:bg-zinc-900 sm:flex-row sm:items-center sm:justify-between');
+			const info = createElement('div', 'min-w-0');
+			info.append(createElement('p', 'm-0 truncate text-sm font-medium text-zinc-900 dark:text-zinc-100', draft.title || '（无标题）'));
+			info.append(createElement('p', 'mt-0.5 text-xs text-zinc-500 dark:text-zinc-400', `${draft.slug} · 更新于 ${formatDate(draft.updated_at)}`));
+			const actions = createElement('div', 'flex shrink-0 gap-2');
+			const edit = createElement('a', 'rounded-full border border-zinc-200 px-3 py-1.5 text-xs font-medium text-zinc-600 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800', '继续编辑');
+			edit.href = `/admin/editor/?draft=${encodeURIComponent(draft.id)}`;
+			const remove = articleActionButton('删除', 'draft-delete', draft.id, 'danger');
+			actions.append(edit, remove);
+			row.append(info, actions);
+			list.append(row);
+		}
+		group.append(list);
+		draftsRoot.append(group);
+	};
+
+	const loadDrafts = async () => {
+		try {
+			const { drafts } = await getAdminArticleDrafts();
+			renderDrafts(drafts);
+		} catch { renderDrafts([]); }
+	};
+
 	const loadArticles = async () => {
 		if (articlesRoot) articlesRoot.replaceChildren(emptyState('正在同步仓库并加载文章…'));
+		void loadDrafts();
 		try {
 			const { articles } = await getAdminArticles();
 			renderArticles(articles);
@@ -414,6 +452,19 @@ import ModalShell from '../../components/ModalShell.astro';
 		if (body) body.textContent = `「${id}」将从 git 仓库删除并触发完整重新发布。`;
 		if (pair) pair.checked = false;
 		setModalOpen('admin-article-delete-modal', true);
+	});
+
+	draftsRoot?.addEventListener('click', async (event) => {
+		const button = (event.target as HTMLElement).closest<HTMLButtonElement>('[data-admin-article-action="draft-delete"]');
+		const id = button?.dataset.articleId;
+		if (!button || !id) return;
+		if (!window.confirm('删除这个草稿？此操作不影响已发布文章。')) return;
+		button.disabled = true;
+		try {
+			await deleteAdminArticleDraft(id);
+			await loadDrafts();
+		} catch { setArticlesStatus('草稿删除失败。'); }
+		finally { button.disabled = false; }
 	});
 
 	document.querySelector('[data-admin-article-delete-confirm]')?.addEventListener('click', async (event) => {

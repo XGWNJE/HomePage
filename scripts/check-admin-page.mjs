@@ -47,6 +47,45 @@ assert.match(articlesRoute, /adminAuth/, 'article routes must require admin auth
 assert.match(articlesRoute, /admin_audit/, 'article routes must record admin audit entries');
 assert.doesNotMatch(articlesRoute, /adminToken/, 'article routes must not special-case the admin token');
 
+// Phase 2：网页编辑器（草稿 + 预览 + 发表）
+const editor = read('src/pages/admin/editor.astro');
+for (const contract of [
+	'data-editor-root',
+	'data-editor-auth-state',
+	'data-editor-workspace',
+	'data-editor-field="title"',
+	'data-editor-field="slug"',
+	'data-editor-field="description"',
+	'data-editor-field="tags"',
+	'data-editor-field="category"',
+	'data-editor-field="body"',
+	'data-editor-preview',
+	'data-editor-save',
+	'data-editor-publish',
+	'data-editor-upload',
+	'data-editor-tab',
+	'data-editor-notice',
+]) {
+	assert.match(editor, new RegExp(contract), `editor page is missing ${contract}`);
+}
+assert.match(editor, /from ['"]\.\.\/\.\.\/lib\/admin['"]/, 'editor page must use the shared admin client');
+assert.match(editor, /checkAdmin/, 'editor page must gate on the admin session');
+assert.match(editor, /astro:page-load/, 'editor page must initialize after ClientRouter navigation');
+assert.match(editor, /editorInitialized/, 'editor page must guard duplicate listeners on the same DOM');
+assert.match(client, /\/api\/admin\/article\/draft/, 'admin client must call the draft endpoint');
+assert.match(client, /\/api\/admin\/article\/preview/, 'admin client must call the preview endpoint');
+assert.match(client, /\/api\/admin\/article\/publish/, 'admin client must call the publish endpoint');
+assert.match(articlesRoute, /article_drafts/, 'article routes must persist drafts');
+assert.match(articlesRoute, /article\.publish/, 'article routes must audit publishes');
+assert.match(articlesRoute, /marked/, 'preview must render through marked');
+// 预览渲染管理员自己的 marked 输出，允许 innerHTML；其余 API 内容仍走 DOM 节点。
+for (const match of editor.matchAll(/\.innerHTML\s*=/g)) {
+	assert.ok(match.index !== undefined);
+	const lineStart = editor.lastIndexOf('\n', match.index);
+	const line = editor.slice(lineStart, editor.indexOf('\n', match.index));
+	assert.match(line, /previewPane\.innerHTML/, `editor page must only inject preview HTML through marked: ${line.trim()}`);
+}
+
 assert.match(client, /getToken/, 'admin client must read the existing authenticated session token');
 assert.match(client, /Authorization/, 'admin client must send a Bearer authorization header');
 assert.match(client, /Bearer\s+\$\{token\}/, 'admin client must use the current token as Bearer auth');
