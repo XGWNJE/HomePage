@@ -39,6 +39,10 @@ process.on('unhandledRejection', (reason) => {
 	console.error(reason instanceof Error ? reason.message : String(reason));
 	process.exit(1);
 });
+process.on('uncaughtException', (error) => {
+	console.error(error instanceof Error ? error.message : String(error));
+	process.exit(1);
+});
 
 function parseArgs(argv) {
 	const options = {
@@ -366,7 +370,7 @@ const manifestPath = path.join(artifactDir, manifestName);
 const sumsPath = path.join(artifactDir, 'SHA256SUMS');
 const helperArtifactPath = path.join(artifactDir, 'deploy-frontend.sh');
 copyFileSync(remoteHelper, helperArtifactPath);
-await run('tar.exe', ['-czf', deltaArchivePath, '-C', distRoot, '-T', changedListPath], { phase: 'Delta archive' });
+await run('tar.exe', ['--force-local', '-czf', deltaArchivePath, '-C', distRoot, '-T', changedListPath], { phase: 'Delta archive' });
 
 const deltaArchiveSha = sha256File(deltaArchivePath);
 const manifest = {
@@ -414,6 +418,7 @@ writeFileSync(sumsPath, `${sumLines.join('\n')}\n`, 'utf8');
 
 const bundlePath = path.join(artifactDir, bundleName);
 await run('tar.exe', [
+	'--force-local',
 	'-czf', bundlePath,
 	'-C', artifactDir,
 	deltaArchiveName,

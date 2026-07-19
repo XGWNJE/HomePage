@@ -103,7 +103,7 @@ npm run publish:content
 
 `publish:content` 从线上当前 release manifest 读取生产代码 revision，并校验该 revision 到当前 HEAD 的全部变更只含普通 Markdown 与文章专用资源；存在其他未上线工程改动时通道直接拒绝，提示改走前端或完整发布，因此在发文前需要让 `main` 保持可随时发布的状态。校验通过后在主工作区直接完成一次静态构建，只上传新旧 `dist/` 之间的变化文件，通过一次 SSH 完成校验、完整版本重建和原子切换；成功后只探测本次文章地址并运行 `Server-infra AfterChange`。发布脚本回归测试保留在开发与 CI，不进入每次文章上线；日常发文无需 API 测试、全站浏览器检查、Nginx 检查或完整前端上传。
 
-`npm run content:release:plan` 只查看范围，不构建、不上线；`npm run content:release:benchmark` 构建并生成差量制品，但不上传。单篇普通文章的目标是约 10 秒完成公开切换，实际时间仍受本机构建和 SSH 网络影响，命令会分别输出切换时间和总耗时。
+`npm run content:release:plan` 只查看范围，不构建、不上线；`npm run content:release:benchmark` 构建并生成差量制品，但不上传。2026-07 实测参考：本地快照、门禁、构建与打包合计约 10 秒，差量包上传约 6 秒，服务器重建与原子切换数秒，`AfterChange` 约 13 秒，端到端约 35 秒；实际时间仍受本机构建和 SSH 网络影响，命令会分别输出各阶段耗时和总耗时。
 
 快速通道只接受：
 
