@@ -67,7 +67,7 @@ flowchart TB
 
 文章更新会同时改变首页、博客列表、标签、RSS 与 Sitemap，因此本地仍生成完整 `dist/`。`ContentOnly` 快速通道从线上 release manifest 取得生产代码 revision，并强制要求该 revision 到 HEAD 的全部变更只含普通 Markdown、`public/image/blog/` 图片和 `public/file/blog/` 安全附件；存在未上线代码改动时通道拒绝发布，提示升级到普通前端或完整审查。校验通过后在主工作区直接构建，与线上完整静态树生成差量，只上传变化的静态文件，在服务器重建完整版本并原子切换；它不部署 API、不修改 Nginx。
 
-服务器端另有一条地基通道：`server/scripts/site-release.mjs` 在 VPS 专用克隆 `/opt/homepage-site` 上以同样的路径白名单与版本化原子切换发布文章，是网页后台（规划中）的发布执行器；两条通道共用 flock 与 releases 结构。
+服务器端另有一条地基通道：`server/scripts/site-release.mjs` 在 VPS 专用克隆 `/opt/homepage-site` 上以同样的路径白名单与版本化原子切换发布文章，是网页后台的发布执行器；两条通道共用 flock 与 releases 结构。网页编辑器（`/admin/editor/`）的草稿存于 SQLite `article_drafts` 表，发表时由 API 组装 frontmatter、把正文引用的 `/uploads/` 图片物化为 `public/image/blog/<group>/` 文章专属资产，再走该通道完整构建上线；第一期仅支持中文稿（slug 以 `-cn` 结尾）。
 
 ### 后台使用当前管理员会话
 

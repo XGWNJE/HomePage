@@ -162,6 +162,8 @@ npm run publish:full
 
 `/admin` 的「文章管理」区块通过 `/api/admin/articles` 系列路由使用这条通道：列出与读取文章直接来自发布克隆（读取前经 `/usr/local/sbin/homepage-site-sync` 同步），删除文章会触发完整重新发布。API 以 `homepage-api` 用户（隶属 `www-data` 组）直接执行发布与同步：`/var/www` 和 releases 目录走属组授权，克隆归 `homepage-api` 持有并配其专属 deploy key（仅限本仓库），不使用 sudo；删除操作写入 `admin_audit` 审计表。
 
+网页编辑器（`/admin/editor/`）同样落在这条通道上：草稿保存在 SQLite `article_drafts` 表（30 秒自动保存，可手动保存），右侧预览由服务端 marked 渲染（与 Astro 管线近似但不逐字一致）。「发表」调用 `POST /api/admin/article/publish`：组装 frontmatter（pubDate 取当日、`lang: cn`、`group` 取 slug 去 `-cn`、tags 逗号转 YAML 数组），把正文里 `/uploads/` 图片复制为 `public/image/blog/<group>/` 文章专属资产并改写 URL，然后走 site-release 完整构建上线；成功后删除草稿，失败保留草稿可修正重试。第一期只支持中文稿（slug 必须 `-cn` 结尾），同名已发布文章会被拒绝（409）。草稿删除与发表均写入 `admin_audit`。
+
 ## 本地清理
 
 清理构建缓存、浏览器临时输出和日志，同时保留发布制品记录与 `server-data/`：
