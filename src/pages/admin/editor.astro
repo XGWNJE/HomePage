@@ -143,9 +143,22 @@ import SiteLayout from '../../layouts/SiteLayout.astro';
 	.dark .editor-preview blockquote { color: rgb(161 161 170); }
 	.editor-preview a { color: rgb(180 83 9); text-decoration: underline; text-underline-offset: 3px; }
 	.dark .editor-preview a { color: rgb(251 191 36); }
+
+	/* EasyMDE 与站点圆角/暗色对齐 */
+	.editor-toolbar { border-radius: 0.75rem 0.75rem 0 0; border-color: rgb(228 228 231); }
+	.CodeMirror { border-radius: 0 0 0.75rem 0.75rem; border-color: rgb(228 228 231); font-size: 0.875rem; line-height: 1.6; }
+	.dark .editor-toolbar { background: rgb(24 24 27); border-color: rgb(63 63 70); }
+	.dark .editor-toolbar button { color: rgb(212 212 216); }
+	.dark .editor-toolbar button:hover, .dark .editor-toolbar button.active { background: rgb(39 39 42); border-color: rgb(63 63 70); }
+	.dark .editor-toolbar i.separator { border-color: rgb(63 63 70); }
+	.dark .CodeMirror { background: rgb(9 9 11); color: rgb(228 228 231); border-color: rgb(63 63 70); }
+	.dark .CodeMirror-cursor { border-color: rgb(228 228 231); }
+	.dark .CodeMirror-selected { background: rgb(63 63 70 / 0.6); }
 </style>
 
 <script>
+	import EasyMDE from 'easymde';
+	import 'easymde/dist/easymde.min.css';
 	import {
 		checkAdmin,
 		getAdminArticle,
@@ -184,6 +197,18 @@ import SiteLayout from '../../layouts/SiteLayout.astro';
 		let previewSeq = 0;
 		let lastBodyField = 'body';
 
+		// EasyMDE 实例挂在正文两个 textarea 上；其余字段仍是原生输入框。
+		const mdEditors = new Map<string, EasyMDE>();
+		const getValue = (name: string) => mdEditors.get(name)?.value() ?? field(name)?.value ?? '';
+		const setFieldValue = (name: string, value: string) => {
+			const editor = mdEditors.get(name);
+			if (editor) editor.value(value);
+			else {
+				const input = field(name);
+				if (input) input.value = value;
+			}
+		};
+
 		const setSaveState = (message: string) => { if (saveState) saveState.textContent = message; };
 		const showNotice = (message: string) => {
 			if (!notice) return;
@@ -202,10 +227,10 @@ import SiteLayout from '../../layouts/SiteLayout.astro';
 			description: field('description')?.value ?? '',
 			tags: field('tags')?.value ?? '',
 			category: field('category')?.value ?? '',
-			body: field('body')?.value ?? '',
+			body: getValue('body'),
 			en_title: field('en_title')?.value ?? '',
 			en_description: field('en_description')?.value ?? '',
-			en_body: field('en_body')?.value ?? '',
+			en_body: getValue('en_body'),
 		});
 
 		const saveDraft = async (silent = false) => {
@@ -247,9 +272,9 @@ import SiteLayout from '../../layouts/SiteLayout.astro';
 					pane.innerHTML = html;
 				} catch { /* 预览失败不打断输入 */ }
 			};
-			const enBody = field('en_body')?.value ?? '';
+			const enBody = getValue('en_body');
 			enPreviewWrap?.classList.toggle('hidden', !enBody.trim());
-			await renderInto(field('body')?.value ?? '', previewPane, '开始输入正文后，这里会实时预览。');
+			await renderInto(getValue('body'), previewPane, '开始输入正文后，这里会实时预览。');
 			await renderInto(enBody, enPreviewPane, '');
 		};
 
@@ -258,14 +283,31 @@ import SiteLayout from '../../layouts/SiteLayout.astro';
 			previewTimer = window.setTimeout(() => { void refreshPreview(); }, 500);
 		};
 
-		for (const name of ['title', 'slug', 'description', 'tags', 'category', 'body', 'en_title', 'en_description', 'en_body']) {
+		// 正文用 EasyMDE（工具栏 + CodeMirror），变更走 codemirror change 事件。
+		const attachMarkdownEditor = (name: string) => {
+			const textarea = field(name) as HTMLTextAreaElement | null;
+			if (!textarea || mdEditors.has(name)) return;
+			const editor = new EasyMDE({
+				element: textarea,
+				spellChecker: false,
+				status: false,
+				autoRefresh: true,
+				placeholder: textarea.getAttribute('placeholder') ?? '',
+				minHeight: '260px',
+				toolbar: ['bold', 'italic', 'heading', '|', 'quote', 'code', 'link', '|', 'unordered-list', 'ordered-list', 'table'],
+			});
+			editor.codemirror.on('change', () => {
+				scheduleAutoSave();
+				schedulePreview();
+			});
+			editor.codemirror.on('focus', () => { lastBodyField = name; });
+			mdEditors.set(name, editor);
+		};
+
+		for (const name of ['title', 'slug', 'description', 'tags', 'category', 'en_title', 'en_description']) {
 			field(name)?.addEventListener('input', () => {
 				scheduleAutoSave();
-				if (name === 'body' || name === 'en_body') schedulePreview();
 			});
-		}
-		for (const name of ['body', 'en_body']) {
-			field(name)?.addEventListener('focus', () => { lastBodyField = name; });
 		}
 
 		// 移动端 编辑/预览 切换
@@ -296,11 +338,10 @@ import SiteLayout from '../../layouts/SiteLayout.astro';
 			uploadButton.textContent = '上传中…';
 			try {
 				const { url } = await uploadAdminArticleImage(file);
-				const textarea = field(lastBodyField) as HTMLTextAreaElement | null;
-				if (textarea) {
-					const insert = `![${file.name.replace(/\.[a-z0-9]+$/i, '')}](${url})`;
-					const start = textarea.selectionStart ?? textarea.value.length;
-					textarea.value = `${textarea.value.slice(0, start)}${insert}\n${textarea.value.slice(start)}`;
+				const editor = mdEditors.get(lastBodyField);
+				if (editor) {
+					const insert = `![${file.name.replace(/\.[a-z0-9]+$/i, '')}](${url})\n`;
+					editor.codemirror.replaceSelection(insert);
 					scheduleAutoSave();
 					schedulePreview();
 				}
@@ -323,7 +364,7 @@ import SiteLayout from '../../layouts/SiteLayout.astro';
 				showNotice('草稿保存失败，无法发表。请检查 slug 是否以 -cn 结尾。');
 				return;
 			}
-			const hasEn = Boolean((field('en_body')?.value ?? '').trim());
+			const hasEn = Boolean(getValue('en_body').trim());
 			const overwriteHint = editingArticleId ? `\n\n注意：「${editingArticleId}」已发布，本次发表将覆盖线上版本（保留原发布日期）。` : '';
 			const enHint = hasEn ? '\n英文版将随中文版一起发表。' : '';
 			if (!window.confirm(`确认发表？将触发服务器端构建与全量上线，大约需要几分钟。${enHint}${overwriteHint}`)) return;
@@ -353,12 +394,12 @@ import SiteLayout from '../../layouts/SiteLayout.astro';
 			}
 			authState?.classList.add('hidden');
 			workspace?.classList.remove('hidden');
+			// 工作区可见后再挂 EasyMDE，避免隐藏容器里尺寸计算异常。
+			attachMarkdownEditor('body');
+			attachMarkdownEditor('en_body');
 
 			const params = new URLSearchParams(window.location.search);
-			const setValue = (name: string, value: string) => {
-				const input = field(name);
-				if (input) input.value = value;
-			};
+			const setValue = setFieldValue;
 			const parseTags = (raw: string) => {
 				try {
 					const parsed = JSON.parse(raw);

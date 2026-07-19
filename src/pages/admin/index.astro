@@ -344,13 +344,6 @@ import ModalShell from '../../components/ModalShell.astro';
 		if (articlesStatus) articlesStatus.textContent = message;
 	};
 
-	const langBadge = (article: AdminArticle) => {
-		if (article.draft) return ['草稿', 'rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-semibold text-amber-700 dark:bg-amber-950/40 dark:text-amber-400'] as const;
-		if (article.lang === 'cn') return ['CN', 'rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400'] as const;
-		if (article.lang === 'en') return ['EN', 'rounded-full bg-zinc-100 px-2.5 py-1 text-[11px] font-semibold text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400'] as const;
-		return ['—', 'rounded-full bg-zinc-100 px-2.5 py-1 text-[11px] font-semibold text-zinc-400 dark:bg-zinc-800'] as const;
-	};
-
 	const articleActionButton = (label: string, action: string, id: string, tone: 'default' | 'danger' = 'default') => {
 		const button = createElement('button', tone === 'danger'
 			? 'rounded-full border border-rose-200 px-3 py-1.5 text-xs font-medium text-rose-700 hover:bg-rose-50 dark:border-rose-900 dark:text-rose-400 dark:hover:bg-rose-950/30'
@@ -365,24 +358,44 @@ import ModalShell from '../../components/ModalShell.astro';
 		if (!articlesRoot) return;
 		articlesRoot.replaceChildren();
 		if (!articles.length) return articlesRoot.append(emptyState('仓库中还没有文章。'));
+		// 按 group 把中英文配对稿合并为一个条目：一个入口管理一篇文章，
+		// 英文版是可选件，缺失时显示「EN 未发布」。
+		const groups = new Map<string, AdminArticle[]>();
 		for (const article of articles) {
+			const key = article.group || article.id;
+			const list = groups.get(key) ?? [];
+			list.push(article);
+			groups.set(key, list);
+		}
+		for (const [group, members] of groups) {
+			const cn = members.find((member) => member.lang === 'cn');
+			const en = members.find((member) => member.lang === 'en');
+			const primary = cn ?? en ?? members[0];
+			const hasMdx = members.some((member) => member.format === 'mdx');
+			const isDraft = members.some((member) => member.draft);
+
 			const row = createElement('article', 'flex flex-col gap-3 rounded-2xl border border-zinc-200/80 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900 sm:flex-row sm:items-center sm:justify-between');
 			const info = createElement('div', 'min-w-0');
 			const titleRow = createElement('div', 'flex flex-wrap items-center gap-2');
-			titleRow.append(createElement('p', 'm-0 truncate text-sm font-semibold text-zinc-900 dark:text-zinc-100', article.title));
-			const [badgeText, badgeClass] = langBadge(article);
-			titleRow.append(createElement('span', badgeClass, badgeText));
-			if (article.format === 'mdx') titleRow.append(createElement('span', 'rounded-full bg-zinc-100 px-2.5 py-1 text-[11px] font-semibold text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400', 'MDX'));
+			titleRow.append(createElement('p', 'm-0 truncate text-sm font-semibold text-zinc-900 dark:text-zinc-100', primary.title));
+			if (isDraft) titleRow.append(createElement('span', 'rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-semibold text-amber-700 dark:bg-amber-950/40 dark:text-amber-400', '草稿'));
+			const langBadge = (label: string, present: boolean) => createElement('span', present
+				? 'rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400'
+				: 'rounded-full border border-dashed border-zinc-300 px-2.5 py-1 text-[11px] font-medium text-zinc-400 dark:border-zinc-700 dark:text-zinc-500',
+				present ? label : `${label} 未发布`);
+			titleRow.append(langBadge('CN', Boolean(cn)));
+			titleRow.append(langBadge('EN', Boolean(en)));
+			if (hasMdx) titleRow.append(createElement('span', 'rounded-full bg-zinc-100 px-2.5 py-1 text-[11px] font-semibold text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400', 'MDX · 仅查看'));
 			info.append(titleRow);
-			info.append(createElement('p', 'mt-1 text-xs text-zinc-500 dark:text-zinc-400', `${article.group} · ${article.pubDate || '未设置日期'}${article.category ? ` · ${article.category}` : ''}`));
+			info.append(createElement('p', 'mt-1 text-xs text-zinc-500 dark:text-zinc-400', `${group} · ${primary.pubDate || '未设置日期'}${primary.category ? ` · ${primary.category}` : ''}`));
 			const actions = createElement('div', 'flex shrink-0 flex-wrap gap-2');
-			actions.append(articleActionButton('查看', 'view', article.id));
-			if (article.format === 'md' && article.lang === 'cn') {
+			actions.append(articleActionButton('查看', 'view', primary.id));
+			if (cn && cn.format === 'md') {
 				const edit = createElement('a', 'rounded-full border border-zinc-200 px-3 py-1.5 text-xs font-medium text-zinc-600 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800', '编辑');
-				edit.href = `/admin/editor/?article=${encodeURIComponent(article.id)}`;
+				edit.href = `/admin/editor/?article=${encodeURIComponent(cn.id)}`;
 				actions.append(edit);
 			}
-			if (article.format === 'md') actions.append(articleActionButton('删除', 'delete', article.id, 'danger'));
+			if (primary.format === 'md' && !hasMdx) actions.append(articleActionButton('删除', 'delete', primary.id, 'danger'));
 			row.append(info, actions);
 			articlesRoot.append(row);
 		}
@@ -455,7 +468,8 @@ import ModalShell from '../../components/ModalShell.astro';
 		const body = document.querySelector<HTMLElement>('[data-admin-article-delete-body]');
 		const pair = document.querySelector<HTMLInputElement>('[data-admin-article-delete-pair]');
 		if (body) body.textContent = `「${id}」将从 git 仓库删除并触发完整重新发布。`;
-		if (pair) pair.checked = false;
+		// 列表按组管理配对稿，默认连同语言配对一起删除。
+		if (pair) pair.checked = true;
 		setModalOpen('admin-article-delete-modal', true);
 	});
 

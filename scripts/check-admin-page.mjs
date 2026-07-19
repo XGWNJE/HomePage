@@ -41,6 +41,7 @@ assert.match(client, /\/api\/admin\/articles/, 'admin client must call the artic
 assert.match(client, /pair=1/, 'admin client must support paired article deletion');
 assert.match(page, /document\.querySelector\('\[data-admin-article-delete-confirm\]'\)/, 'article modals live outside data-admin-root and must be queried from document');
 assert.doesNotMatch(page, /root\??\.querySelector(All)?\('[^']*admin-article-(view|delete)/, 'article modal elements must not be queried inside data-admin-root');
+assert.match(page, /按 group 把中英文配对稿合并/, 'article list must group cn/en pairs into one entry');
 
 const articlesRoute = read('server/src/routes/articles.js');
 assert.match(articlesRoute, /adminAuth/, 'article routes must require admin auth');
@@ -74,6 +75,7 @@ for (const contract of [
 }
 assert.match(editor, /params\.get\('article'\)/, 'editor page must support loading a published article');
 assert.match(editor, /from ['"]\.\.\/\.\.\/lib\/admin['"]/, 'editor page must use the shared admin client');
+assert.match(editor, /from 'easymde'/, 'editor page must use EasyMDE for the body editor');
 assert.match(editor, /checkAdmin/, 'editor page must gate on the admin session');
 assert.match(editor, /astro:page-load/, 'editor page must initialize after ClientRouter navigation');
 assert.match(editor, /editorInitialized/, 'editor page must guard duplicate listeners on the same DOM');

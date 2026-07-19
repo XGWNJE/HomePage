@@ -34,7 +34,7 @@
     "test:links": "node scripts/check-links-page.mjs",
     "test:i18n": "node scripts/check-ui-i18n.mjs",
     "test:about": "node scripts/check-about-page.mjs",
-		"test:admin": "node scripts/check-admin-page.mjs && node scripts/check-admin-subscriptions.mjs",
+    "test:admin": "node scripts/check-admin-page.mjs && node scripts/check-admin-subscriptions.mjs",
     "test:api": "npm --prefix server test",
     "verify": "npm test && npm run typecheck && npm run build && npm run test:api"
   },
@@ -45,6 +45,7 @@
     "@astrojs/sitemap": "^3.7.3",
     "@tailwindcss/vite": "^4.3.2",
     "astro": "^7.0.7",
+    "easymde": "^2.21.0",
     "sharp": "^0.35.3",
     "tailwindcss": "^4.3.2"
   },
