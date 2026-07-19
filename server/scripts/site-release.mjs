@@ -210,9 +210,16 @@ async function main() {
 	if (git(repo, ['status', '--porcelain']) === '') throw new Error('The job produced no repository changes.');
 
 	// Build before committing: a failed build leaves no trace in git history.
+	// 依赖变化检测：lockfile 哈希与上次 npm ci 记录不一致时重装依赖，
+	// 否则新增依赖（如编辑器组件）会让构建找不到模块。标记文件放在克隆外，
+	// 避免弄脏 git 工作区。
 	const npmBin = path.join(path.dirname(options.nodeBin), 'npm');
-	if (!existsSync(path.join(repo, 'node_modules', 'astro', 'bin', 'astro.mjs'))) {
+	const lockSha = sha256File(path.join(repo, 'package-lock.json'));
+	const lockMarker = `${repo}.package-lock.sha256`;
+	const recordedLockSha = existsSync(lockMarker) ? readFileSync(lockMarker, 'utf8').trim() : '';
+	if (!existsSync(path.join(repo, 'node_modules', 'astro', 'bin', 'astro.mjs')) || recordedLockSha !== lockSha) {
 		await run(npmBin, ['ci'], { cwd: repo, phase: 'npm ci' });
+		writeFileSync(lockMarker, `${lockSha}\n`, 'utf8');
 	}
 	await run(options.nodeBin, [path.join(repo, 'node_modules', 'astro', 'bin', 'astro.mjs'), 'build'], {
 		cwd: repo,
