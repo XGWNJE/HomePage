@@ -35,6 +35,11 @@ import { collectTreeManifest, diffTreeManifests, parseTreeTsv } from './content-
 const REVISION_PATTERN = /^[a-f0-9]{40}$/i;
 const RELEASE_ID_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$/;
 
+process.on('unhandledRejection', (reason) => {
+	console.error(reason instanceof Error ? reason.message : String(reason));
+	process.exit(1);
+});
+
 function parseArgs(argv) {
 	const options = {
 		plan: false,
