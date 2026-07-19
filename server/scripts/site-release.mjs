@@ -151,6 +151,9 @@ function run(command, args, { cwd, phase, nodeBin } = {}) {
 		const env = { ...process.env };
 		delete env.BASE_URL;
 		delete env.PUBLIC_API_BASE_URL;
+		// npm ci 在 NODE_ENV=production 下会跳过 devDependencies（Tailwind 插件等
+		// 构建期依赖会被裁掉），构建环境必须保留完整依赖树。
+		delete env.NODE_ENV;
 		env.HOME = env.HOME || os.homedir();
 		if (nodeBin) env.PATH = `${path.dirname(nodeBin)}:${env.PATH || ''}`;
 		const child = spawn(command, args, { cwd, stdio: ['ignore', 'pipe', 'pipe'], env });
