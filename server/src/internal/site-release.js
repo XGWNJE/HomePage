@@ -39,7 +39,9 @@ export function runSiteRelease(config, { writes = [], deletes = [], message }) {
 		child.on('error', reject);
 		child.on('close', (code) => {
 			if (code !== 0) {
-				reject(new Error(`Site release failed with exit code ${code}. ${stderr.trim() || stdout.trim()}`.slice(0, 500)));
+				// 保留输出尾部：npm/构建工具的真正错误通常在大段警告之后。
+				const output = (stderr.trim() || stdout.trim());
+				reject(new Error(`Site release failed with exit code ${code}. ${output.slice(-800)}`));
 				return;
 			}
 			const jsonStart = stdout.lastIndexOf('\n{');

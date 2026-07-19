@@ -9,6 +9,7 @@
 //     --message "提交说明" [--node-bin /opt/node22/bin/node] [--dry-run]
 import { execFileSync, spawn, spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
+import os from 'node:os';
 import {
 	copyFileSync,
 	existsSync,
@@ -142,12 +143,16 @@ function git(repo, args) {
 	return execFileSync('git', ['-c', 'safe.directory=*', '-C', repo, ...args], { encoding: 'utf8' }).trim();
 }
 
-function run(command, args, { cwd, phase } = {}) {
+function run(command, args, { cwd, phase, nodeBin } = {}) {
 	return new Promise((resolve, reject) => {
 		// 不继承调用方环境：API 服务的 BASE_URL 等变量会污染 Astro 构建产物。
+		// systemd 环境没有 HOME，npm 需要它定位缓存；nodeBin 前置到 PATH，
+		// 保证 npm shebang 也使用构建专用 Node 而不是系统旧版本。
 		const env = { ...process.env };
 		delete env.BASE_URL;
 		delete env.PUBLIC_API_BASE_URL;
+		env.HOME = env.HOME || os.homedir();
+		if (nodeBin) env.PATH = `${path.dirname(nodeBin)}:${env.PATH || ''}`;
 		const child = spawn(command, args, { cwd, stdio: ['ignore', 'pipe', 'pipe'], env });
 		let stdout = '';
 		let stderr = '';
@@ -231,16 +236,18 @@ async function main() {
 	};
 	try {
 		if (!existsSync(path.join(repo, 'node_modules', 'astro', 'bin', 'astro.mjs')) || recordedLockSha !== lockSha) {
-			await run(npmBin, ['ci'], { cwd: repo, phase: 'npm ci' });
+			await run(npmBin, ['ci'], { cwd: repo, phase: 'npm ci', nodeBin: options.nodeBin });
 			writeFileSync(lockMarker, `${lockSha}\n`, 'utf8');
 		}
 		await run(options.nodeBin, [path.join(repo, 'node_modules', 'astro', 'bin', 'astro.mjs'), 'build'], {
 			cwd: repo,
 			phase: 'Astro build',
+			nodeBin: options.nodeBin,
 		});
 		await run(options.nodeBin, [path.join(repo, 'scripts', 'ensure-sitemap-xml.mjs')], {
 			cwd: repo,
 			phase: 'Sitemap check',
+			nodeBin: options.nodeBin,
 		});
 		for (const route of articleRoutes) {
 			if (!existsSync(path.join(distRoot, ...routeToDistPath(route).split('/')))) {
