@@ -158,7 +158,9 @@ npm run publish:full
 
 网页后台的地基通道：`server/scripts/site-release.mjs` 在 VPS 专用克隆 `/opt/homepage-site` 上完成"写入或删除文章 → frontmatter 与路径白名单校验 → git commit/push → `astro build` → 文章路由存在性检查 → 版本化目录 + 原子切换 + 公网路由验收"。它只接受 `src/content/blog/*.md` 与 `public/image|file/blog/**` 路径，与本地发布通道共用同一个 flock 和 `releases` 结构，manifest 的 `source` 记为 `web-admin`。
 
-运行环境：`/opt/node22` 是前端构建专用 Node（不改动系统 Node，API 继续用系统版本）；仓库通过仅限本仓库的 GitHub deploy key（`vps-site-release`）读写。首次手动验证（2026-07-19）发布与删除各一次约 24 秒。构建失败在 commit 之前中止，不进入 git 历史；切换后公网验收失败自动恢复备份。
+运行环境：`/opt/node22` 是前端构建专用 Node（不改动系统 Node，API 继续用系统版本）；仓库通过仅限本仓库的 GitHub deploy key（`vps-site-release`）读写。首次手动验证（2026-07-19）发布与删除各一次约 24 秒。构建失败在 commit 之前中止并自动恢复克隆到 `origin/main`（不进入 git 历史，也不残留未提交文件卡死后续发布）；切换后公网验收失败自动恢复备份。
+
+发布克隆的构建环境与 API 服务环境严格隔离：子进程剔除 `BASE_URL`/`PUBLIC_API_BASE_URL`（否则全站链接被拼成 API 域名）与 `NODE_ENV`（否则 `npm ci` 裁掉 devDependencies 中的构建期依赖），补 `HOME`，并把 `/opt/node22/bin` 前置到 PATH。依赖变化按 `package-lock.json` 哈希检测（标记文件是克隆内 gitignore 的 `.site-release-state`），变化时自动 `npm ci`。注意发布脚本从克隆加载，`site-release.mjs` 自身的修改要到下一次发布才生效。
 
 `/admin` 的「文章管理」区块通过 `/api/admin/articles` 系列路由使用这条通道：列出与读取文章直接来自发布克隆（读取前经 `/usr/local/sbin/homepage-site-sync` 同步），删除文章会触发完整重新发布。API 以 `homepage-api` 用户（隶属 `www-data` 组）直接执行发布与同步：`/var/www` 和 releases 目录走属组授权，克隆归 `homepage-api` 持有并配其专属 deploy key（仅限本仓库），不使用 sudo；删除操作写入 `admin_audit` 审计表。
 
