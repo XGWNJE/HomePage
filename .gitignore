@@ -39,3 +39,6 @@ Thumbs.db
 
 # Git protection
 .git_disable/
+
+# site-release 发布克隆内的本地状态（lockfile 哈希标记）
+.site-release-state

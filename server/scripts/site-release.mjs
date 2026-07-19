@@ -216,11 +216,11 @@ async function main() {
 
 	// Build before committing: a failed build leaves no trace in git history.
 	// 依赖变化检测：lockfile 哈希与上次 npm ci 记录不一致时重装依赖，
-	// 否则新增依赖（如编辑器组件）会让构建找不到模块。标记文件放在克隆外，
-	// 避免弄脏 git 工作区。
+	// 否则新增依赖（如编辑器组件）会让构建找不到模块。标记文件是克隆内
+	// 被 gitignore 的本地状态（克隆归 homepage-api 所有，可写且不弄脏工作区）。
 	const npmBin = path.join(path.dirname(options.nodeBin), 'npm');
 	const lockSha = sha256File(path.join(repo, 'package-lock.json'));
-	const lockMarker = `${repo}.package-lock.sha256`;
+	const lockMarker = path.join(repo, '.site-release-state');
 	const recordedLockSha = existsSync(lockMarker) ? readFileSync(lockMarker, 'utf8').trim() : '';
 	const restoreClone = () => {
 		// 构建/校验失败后恢复克隆到 origin/main：未提交的文章文件若残留，
