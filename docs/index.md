@@ -9,7 +9,8 @@
 | [后端开发](./backend-development.md) | 后端开发者 | 本地环境、配置、API 测试和代码职责 |
 | [后端生产维护](./backend-maintenance.zh-CN.md) | 生产维护者 | 版本化发布、SQLite 备份、回滚与健康检查 |
 | [SEO 指南](./seo-guide-zh-CN.md) | 内容与站点维护者 | Sitemap、robots、站长平台、IndexNow 与验证 |
-| [Agent 规则](../AGENTS.md) | Codex / Agent | 文件边界、安全规则、验证与发布限制 |
+| [Agent 规则](../AGENTS.md) | Kimi CLI / Agent | 文件边界、安全规则、验证与发布限制 |
+| [已退役方案与历史边界](./decisions/legacy-boundaries.zh-CN.md) | 维护者 | "不要恢复"类历史决策；`docs/archive/` 保存历史计划稿，不构成当前约束 |
 
 ## 事实归属
 

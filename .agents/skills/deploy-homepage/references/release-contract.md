@@ -29,7 +29,7 @@
 2. 后端制品、服务、数据库、上传目录、环境文件和 Nginx 均保持不变。
 3. 上传并核对前端制品 SHA-256、`index.html`、文件数、总字节数和入口哈希，再用带 `release_id` 的 backup 原子替换静态目录。
 4. 线上只检查 API health、首页、随机 404 和本次受影响路由；仅当响应式行为变化时增加移动端视口。
-5. 使用 Codex 内置浏览器检查受影响页面的布局、资源与 Console；依赖真实登录态、扩展或 Chrome 特有行为时改用真实 Chrome。
+5. 使用临时浏览器实例检查受影响页面的布局、资源与 Console（完成后关闭实例）；依赖真实登录态、扩展或 Chrome 特有行为时改用用户真实 Chrome。
 
 ## FullAudit 门禁与验收
 
@@ -72,7 +72,7 @@
 
 ## 最终验收与清理
 
-- `ContentOnly` 只接受普通 Markdown，不做浏览器验收；自定义交互、嵌入或特殊布局升级 `FastFrontend`。`FastFrontend` 用 Codex 内置浏览器检查受影响页面；`FullAudit` 用真实 Chrome 做桌面与移动端运行态验收。断图检查忽略空 `src` 占位，但任何非空失败 URL 都必须调查。
+- `ContentOnly` 只接受普通 Markdown，不做浏览器验收；自定义交互、嵌入或特殊布局升级 `FastFrontend`。`FastFrontend` 用临时浏览器实例检查受影响页面（完成后关闭）；`FullAudit` 用用户真实 Chrome 做桌面与移动端运行态验收。断图检查忽略空 `src` 占位，但任何非空失败 URL 都必须调查。
 - 三档都重新确认 `current`/`previous` 与前端入口哈希；`FastFrontend` 追加 API readiness 与 404，`FullAudit` 再追加 `nginx -t`、服务状态和各项目基线。
 - 仅删除明确属于本次 `release_id` 的临时 tar、探针和本地临时目录；保留生产 release、数据库 backup、前端 backup 和 Nginx backup。
 - 最终摘要必须列出：档位、范围、release ID、revision、脏工作区状态、manifest/制品哈希、备份、切换结果、Nginx 变更、已运行与跳过的浏览器/接口验证、回滚命令入口、遗留问题。

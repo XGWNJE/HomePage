@@ -66,7 +66,7 @@ npm run publish:full
 ## 5. 验收与交付
 
 - `ContentOnly` 只检查本次公开文章地址；完整静态树哈希保证首页、列表、标签、RSS 与 Sitemap 与本地构建一致。`.mdx`、自定义交互或布局不进入该档位。
-- `FastFrontend` 只检查 API health、首页、404 和本次受影响路由；使用 Codex 内置浏览器检查受影响页面，响应式变更再补一个移动端视口。
+- `FastFrontend` 只检查 API health、首页、404 和本次受影响路由；使用临时浏览器实例检查受影响页面（完成后关闭），响应式变更再补一个移动端视口。
 - `FullAudit` 验证 systemd、Nginx、API readiness、数据库 schema、全部公开路由、404 语义和服务器上其他项目基线；按需要使用用户真实 Chrome 完整检查首页、博客、标签、文章、后台与移动端。
 - 成功后仅清理已精确确认的本地/远端临时制品，保留版本目录和回滚备份。
 - 汇报发布档位、release ID、revision、manifest/制品哈希、`current`/`previous`、备份路径、Nginx 变更、已运行与有意跳过的验证、回滚入口和未解决项。
