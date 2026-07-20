@@ -466,11 +466,12 @@ import PublishProgress from '../../components/admin/PublishProgress.astro';
 			const zebra = index % 2 === 1 ? ' bg-white/70 dark:bg-zinc-900/50' : '';
 			const container = createElement('div', `py-2.5 sm:py-2 ${GRID}${zebra}`);
 			const topLine = createElement('div', 'flex items-center justify-between gap-3 sm:contents');
-			const titleCell = createElement('div', 'flex min-w-0 items-center gap-2 sm:col-start-1');
-			const actionsCell = createElement('div', 'flex shrink-0 items-center gap-2.5 sm:col-start-5');
-			const langCell = createElement('div', 'hidden items-center gap-1.5 sm:col-start-2 sm:flex');
-			const catCell = createElement('div', 'hidden text-[11px] text-zinc-500 dark:text-zinc-400 sm:col-start-3 sm:block');
-			const dateCell = createElement('div', 'hidden text-[11px] text-zinc-400 dark:text-zinc-500 sm:col-start-4 sm:block');
+			// 显式 row-start-1：sparse 自动放置会把 col-start 靠后的单元格挤到下一行。
+			const titleCell = createElement('div', 'flex min-w-0 items-center gap-2 sm:col-start-1 sm:row-start-1');
+			const actionsCell = createElement('div', 'flex shrink-0 items-center gap-2.5 sm:col-start-5 sm:row-start-1');
+			const langCell = createElement('div', 'hidden items-center gap-1.5 sm:col-start-2 sm:row-start-1 sm:flex');
+			const catCell = createElement('div', 'hidden text-[11px] text-zinc-500 dark:text-zinc-400 sm:col-start-3 sm:row-start-1 sm:block');
+			const dateCell = createElement('div', 'hidden text-[11px] text-zinc-400 dark:text-zinc-500 sm:col-start-4 sm:row-start-1 sm:block');
 			const mobileMeta = createElement('div', 'mt-1 text-[11px] text-zinc-400 dark:text-zinc-500 sm:hidden');
 
 			const langBadge = (label: string, color: string) => createElement('span', `text-[10px] font-semibold ${color}`, label);
