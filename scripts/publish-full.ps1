@@ -201,7 +201,16 @@ try {
     Invoke-Remote -Command $frontendActivate | Out-Host
     $frontendActivated = $true
 
-    foreach ($route in @('/', '/about/', '/blog/', '/tags/', '/blog/site-maintenance-cleanup-cn/', '/blog/site-maintenance-cleanup-en/', '/admin/', '/rss.xml', '/sitemap-index.xml')) {
+    # 文章路由探针从本次构建产物动态枚举，不硬编码具体文章（文章会被删除）。
+    $articleRoutes = @()
+    $distBlog = Join-Path $projectRoot 'dist/blog'
+    if (Test-Path $distBlog) {
+        $articleRoutes = Get-ChildItem -Path $distBlog -Directory |
+            Where-Object { Test-Path (Join-Path $_.FullName 'index.html') } |
+            Where-Object { $_.Name -match '^[a-z0-9][a-z0-9-]*-(cn|en)$' } |
+            ForEach-Object { "/blog/$($_.Name)/" }
+    }
+    foreach ($route in @('/', '/about/', '/blog/', '/tags/', '/admin/', '/rss.xml', '/sitemap-index.xml') + $articleRoutes) {
         Test-PublicUrl -Url ("https://xgwnje.cn" + $route)
     }
     Test-PublicUrl -Url ("https://xgwnje.cn/__full-release-probe-$releaseId") -ExpectedStatus 404
