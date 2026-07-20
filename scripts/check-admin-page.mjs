@@ -43,6 +43,9 @@ assert.match(page, /document\.querySelector\('\[data-admin-article-delete-confir
 assert.doesNotMatch(page, /root\??\.querySelector(All)?\('[^']*admin-article-(view|delete)/, 'article modal elements must not be queried inside data-admin-root');
 assert.match(page, /按 group 把中英文配对稿合并/, 'article list must group cn/en pairs into one entry');
 assert.match(page, /data-admin-tab="articles"/, 'admin page must provide section tabs');
+assert.match(page, /data-admin-article-filter="draft"/, 'admin page must merge drafts into the article table with a filter');
+assert.match(page, /data-admin-tab-count="articles"/, 'admin page must show section counts on tabs');
+assert.match(page, /data-admin-auth-error/, 'admin page must keep a dedicated auth error slot');
 assert.match(page, /data-admin-panel="subscriptions"/, 'admin page must keep a dedicated subscriptions panel');
 
 const subscriptionCard = read('src/components/admin/AdminSubscriptionCard.astro');
