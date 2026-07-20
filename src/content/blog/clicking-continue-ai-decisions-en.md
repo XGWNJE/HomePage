@@ -2,7 +2,7 @@
 title: "I Kept Clicking “Continue” Until I Realized I Was No Longer Making Decisions"
 description: "I wanted an AI agent to make content production more efficient. Instead, I ended up with an approval system I did not want to use—and a lesson about how information overload can hollow out human judgment."
 pubDate: 2026-07-16
-updatedDate: 2026-07-16
+updatedDate: 2026-07-20
 lang: "en"
 author: "XGWNJE"
 group: "clicking-continue-ai-decisions"
