@@ -1,6 +1,8 @@
 ---
 import SiteLayout from '../../layouts/SiteLayout.astro';
 import ModalShell from '../../components/ModalShell.astro';
+import AdminSubscriptionCard from '../../components/admin/AdminSubscriptionCard.astro';
+import PublishProgress from '../../components/admin/PublishProgress.astro';
 ---
 
 <SiteLayout title="管理台 | XGWNJE" description="XGWNJE 站点内容与消息管理台。">
@@ -24,73 +26,78 @@ import ModalShell from '../../components/ModalShell.astro';
 					<p class="m-0 text-sm font-medium text-zinc-700 dark:text-zinc-300" data-admin-auth-message>正在验证当前会话…</p>
 				</section>
 
-				<div class="mt-8 hidden space-y-10" data-admin-workspace>
-					<a
-						href="/admin/subscriptions/"
-						class="card-surface card-interactive hidden items-center justify-between gap-5 p-5 no-underline"
-						data-admin-subscriptions-link
-					>
-						<span>
-							<span class="block text-[11px] font-semibold uppercase tracking-[0.16em] text-amber-700 dark:text-amber-400">Private capability</span>
-							<span class="mt-1 block text-lg font-semibold text-zinc-900 dark:text-zinc-100">代理订阅</span>
-							<span class="mt-1 block text-sm leading-6 text-zinc-500 dark:text-zinc-400">按需复制桌面、移动与 CMFA 导入入口。</span>
-						</span>
-						<span class="shrink-0 text-sm font-medium text-zinc-500 dark:text-zinc-400" aria-hidden="true">进入 →</span>
-					</a>
-					<section aria-labelledby="admin-articles-heading">
-						<div class="mb-4 flex items-center justify-between gap-4">
-							<div>
-								<p class="m-0 text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-400 dark:text-zinc-500">Content</p>
-								<h2 id="admin-articles-heading" class="mt-1 text-xl">文章管理</h2>
-							</div>
-							<div class="flex items-center gap-3">
-								<span class="text-xs text-zinc-400 dark:text-zinc-500" data-admin-articles-status aria-live="polite"></span>
-								<button type="button" class="rounded-full border border-zinc-200 bg-white px-3.5 py-2 text-sm font-medium text-zinc-600 hover:border-zinc-300 hover:text-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300" data-admin-articles-refresh>刷新</button>
-								<a href="/admin/editor/" class="rounded-full bg-amber-600 px-3.5 py-2 text-sm font-semibold text-white hover:bg-amber-700" data-admin-article-new>新建文章</a>
-							</div>
-						</div>
-						<div class="mb-3 space-y-3" data-admin-drafts aria-live="polite"></div>
-						<div class="space-y-3" data-admin-articles aria-live="polite"></div>
-					</section>
+				<div class="mt-8 hidden" data-admin-workspace>
+					<nav class="mb-7 flex gap-1.5 overflow-x-auto rounded-full border border-zinc-200/80 bg-white/80 p-1.5 shadow-[0_12px_32px_rgba(15,23,42,0.04)] backdrop-blur dark:border-zinc-800 dark:bg-zinc-900/75" aria-label="管理台分区" data-admin-nav>
+						<button type="button" class="admin-tab" data-admin-tab="articles" aria-pressed="true">文章</button>
+						<button type="button" class="admin-tab" data-admin-tab="comments" aria-pressed="false">评论</button>
+						<button type="button" class="admin-tab" data-admin-tab="messages" aria-pressed="false">消息</button>
+						<button type="button" class="admin-tab" data-admin-tab="subscriptions" aria-pressed="false">订阅</button>
+					</nav>
 
-					<section aria-labelledby="admin-stats-heading">
-						<div class="mb-4 flex items-center justify-between gap-4">
-							<div>
-								<p class="m-0 text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-400 dark:text-zinc-500">Overview</p>
-								<h2 id="admin-stats-heading" class="mt-1 text-xl">评论概览</h2>
+					<div data-admin-panel="articles">
+						<section aria-labelledby="admin-articles-heading">
+							<div class="mb-4 flex items-center justify-between gap-4">
+								<div>
+									<p class="m-0 text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-400 dark:text-zinc-500">Content</p>
+									<h2 id="admin-articles-heading" class="mt-1 text-xl">文章管理</h2>
+								</div>
+								<div class="flex items-center gap-3">
+									<span class="text-xs text-zinc-400 dark:text-zinc-500" data-admin-articles-status aria-live="polite"></span>
+									<button type="button" class="rounded-full border border-zinc-200 bg-white px-3.5 py-2 text-sm font-medium text-zinc-600 hover:border-zinc-300 hover:text-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300" data-admin-articles-refresh>刷新</button>
+									<a href="/admin/editor/" class="rounded-full bg-amber-600 px-3.5 py-2 text-sm font-semibold text-white hover:bg-amber-700" data-admin-article-new>新建文章</a>
+								</div>
 							</div>
-							<button type="button" class="rounded-full border border-zinc-200 bg-white px-3.5 py-2 text-sm font-medium text-zinc-600 hover:border-zinc-300 hover:text-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300" data-admin-refresh>刷新数据</button>
-						</div>
-						<div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4" data-admin-stats>
-							<div class="rounded-2xl border border-zinc-200/80 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900"><p class="m-0 text-xs uppercase tracking-[0.12em] text-zinc-400">全部</p><p class="mt-3 text-3xl font-semibold tabular-nums" data-admin-stat="total">—</p></div>
-							<div class="rounded-2xl border border-amber-200/80 bg-amber-50/70 p-5 dark:border-amber-900/60 dark:bg-amber-950/25"><p class="m-0 text-xs uppercase tracking-[0.12em] text-amber-700 dark:text-amber-400">待审</p><p class="mt-3 text-3xl font-semibold tabular-nums" data-admin-stat="pending">—</p></div>
-							<div class="rounded-2xl border border-emerald-200/80 bg-emerald-50/70 p-5 dark:border-emerald-900/60 dark:bg-emerald-950/25"><p class="m-0 text-xs uppercase tracking-[0.12em] text-emerald-700 dark:text-emerald-400">已批准</p><p class="mt-3 text-3xl font-semibold tabular-nums" data-admin-stat="approved">—</p></div>
-							<div class="rounded-2xl border border-rose-200/80 bg-rose-50/70 p-5 dark:border-rose-900/60 dark:bg-rose-950/25"><p class="m-0 text-xs uppercase tracking-[0.12em] text-rose-700 dark:text-rose-400">已拒绝</p><p class="mt-3 text-3xl font-semibold tabular-nums" data-admin-stat="rejected">—</p></div>
-						</div>
-					</section>
-
-					<section aria-labelledby="admin-comments-heading">
-						<div class="flex flex-col gap-4 border-b border-zinc-200/80 pb-4 dark:border-zinc-800/80 md:flex-row md:items-end md:justify-between">
-							<div><p class="m-0 text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-400 dark:text-zinc-500">Moderation</p><h2 id="admin-comments-heading" class="mt-1 text-xl">评论审阅</h2></div>
-							<div class="flex flex-wrap gap-2" role="group" aria-label="评论状态筛选">
-								<button type="button" class="admin-filter" data-admin-comment-filter="all" aria-pressed="true">全部</button>
-								<button type="button" class="admin-filter" data-admin-comment-filter="pending" aria-pressed="false">待审</button>
-								<button type="button" class="admin-filter" data-admin-comment-filter="approved" aria-pressed="false">已批准</button>
-								<button type="button" class="admin-filter" data-admin-comment-filter="rejected" aria-pressed="false">已拒绝</button>
-							</div>
-						</div>
-						<div class="mt-5 space-y-3" data-admin-comments aria-live="polite"></div>
-					</section>
-
-					<div class="grid gap-8 lg:grid-cols-2">
-						<section aria-labelledby="admin-contact-heading">
-							<div class="border-b border-zinc-200/80 pb-4 dark:border-zinc-800/80"><p class="m-0 text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-400 dark:text-zinc-500">Inbox</p><h2 id="admin-contact-heading" class="mt-1 text-xl">联系消息</h2></div>
-							<div class="mt-5 space-y-3" data-admin-contact-messages></div>
+							<div class="mb-3 space-y-3" data-admin-drafts aria-live="polite"></div>
+							<div class="space-y-3" data-admin-articles aria-live="polite"></div>
 						</section>
-						<section aria-labelledby="admin-outbox-heading">
-							<div class="border-b border-zinc-200/80 pb-4 dark:border-zinc-800/80"><p class="m-0 text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-400 dark:text-zinc-500">Delivery</p><h2 id="admin-outbox-heading" class="mt-1 text-xl">邮件队列</h2></div>
-							<div class="mt-5 space-y-3" data-admin-outbox></div>
+					</div>
+
+					<div class="hidden space-y-10" data-admin-panel="comments">
+						<section aria-labelledby="admin-stats-heading">
+							<div class="mb-4 flex items-center justify-between gap-4">
+								<div>
+									<p class="m-0 text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-400 dark:text-zinc-500">Overview</p>
+									<h2 id="admin-stats-heading" class="mt-1 text-xl">评论概览</h2>
+								</div>
+								<button type="button" class="rounded-full border border-zinc-200 bg-white px-3.5 py-2 text-sm font-medium text-zinc-600 hover:border-zinc-300 hover:text-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300" data-admin-refresh>刷新数据</button>
+							</div>
+							<div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4" data-admin-stats>
+								<div class="rounded-2xl border border-zinc-200/80 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900"><p class="m-0 text-xs uppercase tracking-[0.12em] text-zinc-400">全部</p><p class="mt-3 text-3xl font-semibold tabular-nums" data-admin-stat="total">—</p></div>
+								<div class="rounded-2xl border border-amber-200/80 bg-amber-50/70 p-5 dark:border-amber-900/60 dark:bg-amber-950/25"><p class="m-0 text-xs uppercase tracking-[0.12em] text-amber-700 dark:text-amber-400">待审</p><p class="mt-3 text-3xl font-semibold tabular-nums" data-admin-stat="pending">—</p></div>
+								<div class="rounded-2xl border border-emerald-200/80 bg-emerald-50/70 p-5 dark:border-emerald-900/60 dark:bg-emerald-950/25"><p class="m-0 text-xs uppercase tracking-[0.12em] text-emerald-700 dark:text-emerald-400">已批准</p><p class="mt-3 text-3xl font-semibold tabular-nums" data-admin-stat="approved">—</p></div>
+								<div class="rounded-2xl border border-rose-200/80 bg-rose-50/70 p-5 dark:border-rose-900/60 dark:bg-rose-950/25"><p class="m-0 text-xs uppercase tracking-[0.12em] text-rose-700 dark:text-rose-400">已拒绝</p><p class="mt-3 text-3xl font-semibold tabular-nums" data-admin-stat="rejected">—</p></div>
+							</div>
 						</section>
+
+						<section aria-labelledby="admin-comments-heading">
+							<div class="flex flex-col gap-4 border-b border-zinc-200/80 pb-4 dark:border-zinc-800/80 md:flex-row md:items-end md:justify-between">
+								<div><p class="m-0 text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-400 dark:text-zinc-500">Moderation</p><h2 id="admin-comments-heading" class="mt-1 text-xl">评论审阅</h2></div>
+								<div class="flex flex-wrap gap-2" role="group" aria-label="评论状态筛选">
+									<button type="button" class="admin-filter" data-admin-comment-filter="all" aria-pressed="true">全部</button>
+									<button type="button" class="admin-filter" data-admin-comment-filter="pending" aria-pressed="false">待审</button>
+									<button type="button" class="admin-filter" data-admin-comment-filter="approved" aria-pressed="false">已批准</button>
+									<button type="button" class="admin-filter" data-admin-comment-filter="rejected" aria-pressed="false">已拒绝</button>
+								</div>
+							</div>
+							<div class="mt-5 space-y-3" data-admin-comments aria-live="polite"></div>
+						</section>
+					</div>
+
+					<div class="hidden" data-admin-panel="messages">
+						<div class="grid gap-8 lg:grid-cols-2">
+							<section aria-labelledby="admin-contact-heading">
+								<div class="border-b border-zinc-200/80 pb-4 dark:border-zinc-800/80"><p class="m-0 text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-400 dark:text-zinc-500">Inbox</p><h2 id="admin-contact-heading" class="mt-1 text-xl">联系消息</h2></div>
+								<div class="mt-5 space-y-3" data-admin-contact-messages></div>
+							</section>
+							<section aria-labelledby="admin-outbox-heading">
+								<div class="border-b border-zinc-200/80 pb-4 dark:border-zinc-800/80"><p class="m-0 text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-400 dark:text-zinc-500">Delivery</p><h2 id="admin-outbox-heading" class="mt-1 text-xl">邮件队列</h2></div>
+								<div class="mt-5 space-y-3" data-admin-outbox></div>
+							</section>
+						</div>
+					</div>
+
+					<div class="hidden" data-admin-panel="subscriptions">
+						<AdminSubscriptionCard />
 					</div>
 				</div>
 			</section>
@@ -101,6 +108,12 @@ import ModalShell from '../../components/ModalShell.astro';
 			.admin-filter:hover, .admin-filter[aria-pressed='true'] { border-color: rgb(161 161 170); background: rgb(24 24 27); color: white; }
 			:global(.dark) .admin-filter { border-color: rgb(63 63 70); background: rgba(24,24,27,.78); color: rgb(212 212 216); }
 			:global(.dark) .admin-filter:hover, :global(.dark) .admin-filter[aria-pressed='true'] { border-color: rgb(113 113 122); background: rgb(244 244 245); color: rgb(24 24 27); }
+			.admin-tab { flex: 1 0 auto; border-radius: 9999px; padding: .5rem 1.1rem; font-size: .875rem; font-weight: 500; color: rgb(82 82 91); transition: background-color .18s ease, color .18s ease; }
+			.admin-tab:hover { color: rgb(24 24 27); }
+			.admin-tab[aria-pressed='true'] { background: rgb(217 119 6); color: white; }
+			:global(.dark) .admin-tab { color: rgb(212 212 216); }
+			:global(.dark) .admin-tab:hover { color: white; }
+			:global(.dark) .admin-tab[aria-pressed='true'] { background: rgb(217 119 6); color: white; }
 		</style>
 
 		<ModalShell id="admin-article-view-modal" titleId="admin-article-view-title" contentClass="w-[min(720px,100%)]">
@@ -127,6 +140,8 @@ import ModalShell from '../../components/ModalShell.astro';
 				<button type="button" data-admin-article-delete-confirm class="rounded-full bg-rose-700 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-800 disabled:opacity-60">确认删除</button>
 			</div>
 		</ModalShell>
+
+		<PublishProgress />
 </SiteLayout>
 
 <script>
@@ -143,6 +158,7 @@ import ModalShell from '../../components/ModalShell.astro';
 		getAdminContactMessages,
 		getAdminOutbox,
 		getAdminStats,
+		getSubscriptionStatus,
 		rejectComment,
 		type AdminArticle,
 		type AdminArticleDraftSummary,
@@ -150,6 +166,7 @@ import ModalShell from '../../components/ModalShell.astro';
 		type AdminContactMessage,
 		type AdminOutboxItem,
 	} from '../../lib/admin';
+	import { createPublishProgress } from '../../lib/publishProgress';
 
 	type CommentFilter = AdminComment['status'] | 'all';
 	const initAdminPage = () => {
@@ -159,7 +176,7 @@ import ModalShell from '../../components/ModalShell.astro';
 	const authState = root?.querySelector<HTMLElement>('[data-admin-auth-state]');
 	const authMessage = root?.querySelector<HTMLElement>('[data-admin-auth-message]');
 	const workspace = root?.querySelector<HTMLElement>('[data-admin-workspace]');
-	const subscriptionLink = root?.querySelector<HTMLElement>('[data-admin-subscriptions-link]');
+	const subscriptionTab = root?.querySelector<HTMLButtonElement>('[data-admin-tab="subscriptions"]');
 	const commentsRoot = root?.querySelector<HTMLElement>('[data-admin-comments]');
 	const contactsRoot = root?.querySelector<HTMLElement>('[data-admin-contact-messages]');
 	const outboxRoot = root?.querySelector<HTMLElement>('[data-admin-outbox]');
@@ -269,10 +286,38 @@ import ModalShell from '../../components/ModalShell.astro';
 		if (authState) authState.className = 'mt-7 rounded-2xl border border-emerald-200 bg-emerald-50/80 p-5 dark:border-emerald-900/60 dark:bg-emerald-950/25';
 		if (authMessage) authMessage.textContent = `管理员会话已验证${identity.login ? `：@${identity.login}` : ''}`;
 		workspace?.classList.remove('hidden');
-		subscriptionLink?.classList.toggle('hidden', !identity.permissions.manageSubscriptions);
-		subscriptionLink?.classList.toggle('flex', identity.permissions.manageSubscriptions);
+		subscriptionTab?.classList.toggle('hidden', !identity.permissions.manageSubscriptions);
+		if (identity.permissions.manageSubscriptions) void loadSubscriptionSummary();
 		try { await loadDashboard(); } catch { showFailure('管理数据加载失败。会话可能已过期，请重新登录后重试。'); }
 		void loadArticles();
+	};
+
+	// —— 分区导航：文章 / 评论 / 消息 / 订阅 ——
+	const tabs = root?.querySelectorAll<HTMLButtonElement>('[data-admin-tab]') ?? [];
+	const switchTab = (active: string) => {
+		tabs.forEach((tab) => tab.setAttribute('aria-pressed', String(tab.dataset.adminTab === active)));
+		root?.querySelectorAll<HTMLElement>('[data-admin-panel]').forEach((panel) => {
+			panel.classList.toggle('hidden', panel.dataset.adminPanel !== active);
+		});
+	};
+	tabs.forEach((tab) => tab.addEventListener('click', () => switchTab(tab.dataset.adminTab || 'articles')));
+
+	const loadSubscriptionSummary = async () => {
+		const state = document.querySelector<HTMLElement>('[data-admin-subscription-state]');
+		const expiry = document.querySelector<HTMLElement>('[data-admin-subscription-expiry]');
+		try {
+			const status = await getSubscriptionStatus();
+			const unlocked = Boolean(status.unlocked);
+			if (state) {
+				state.textContent = unlocked ? '已解锁' : '未解锁';
+				state.className = unlocked
+					? 'rounded-full bg-emerald-50 px-2.5 py-1 font-medium text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400'
+					: 'rounded-full bg-zinc-100 px-2.5 py-1 font-medium text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400';
+			}
+			if (expiry) expiry.textContent = unlocked && status.expiresAt ? `到期 ${formatDate(status.expiresAt)}` : '';
+		} catch {
+			if (state) state.textContent = '状态不可用';
+		}
 	};
 
 	root?.querySelector('[data-admin-refresh]')?.addEventListener('click', async () => {
@@ -486,22 +531,26 @@ import ModalShell from '../../components/ModalShell.astro';
 		finally { button.disabled = false; }
 	});
 
+	const publishProgress = createPublishProgress();
+
 	document.querySelector('[data-admin-article-delete-confirm]')?.addEventListener('click', async (event) => {
 		const confirmButton = event.currentTarget as HTMLButtonElement;
 		if (!pendingDeleteId) return;
 		const pair = document.querySelector<HTMLInputElement>('[data-admin-article-delete-pair]')?.checked ?? false;
 		confirmButton.disabled = true;
-		confirmButton.textContent = '正在发布…';
+		setModalOpen('admin-article-delete-modal', false);
+		publishProgress.show('正在删除并重新发布…');
+		publishProgress.setStage('release', '服务器构建中，通常约 25 秒…');
 		try {
 			const result = await deleteAdminArticle(pendingDeleteId, pair);
-			setModalOpen('admin-article-delete-modal', false);
-			setArticlesStatus(`已删除 ${result.deleted.length} 个文件，release ${result.release?.releaseId ?? '完成'}`);
+			publishProgress.succeed(`已删除 ${result.deleted.length} 个文件并重新上线`);
+			setArticlesStatus(`已删除，release ${result.release?.releaseId ?? '完成'}`);
+			window.setTimeout(() => { publishProgress.hide(); }, 1600);
 			await loadArticles();
 		} catch (error) {
-			setArticlesStatus(error instanceof Error ? error.message : '删除发布失败。');
+			publishProgress.fail(error instanceof Error ? error.message : '删除发布失败。');
 		} finally {
 			confirmButton.disabled = false;
-			confirmButton.textContent = '确认删除';
 			pendingDeleteId = null;
 		}
 	});

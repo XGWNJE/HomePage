@@ -1,5 +1,6 @@
 ---
 import SiteLayout from '../../layouts/SiteLayout.astro';
+import PublishProgress from '../../components/admin/PublishProgress.astro';
 ---
 
 <SiteLayout title="文章编辑器 | XGWNJE" description="网页端文章编辑器：草稿、预览与发布。">
@@ -100,6 +101,8 @@ import SiteLayout from '../../layouts/SiteLayout.astro';
 			</div>
 		</section>
 	</main>
+
+	<PublishProgress />
 </SiteLayout>
 
 <style is:global>
@@ -168,6 +171,7 @@ import SiteLayout from '../../layouts/SiteLayout.astro';
 		saveAdminArticleDraft,
 		uploadAdminArticleImage,
 	} from '../../lib/admin';
+	import { createPublishProgress } from '../../lib/publishProgress';
 
 	const initEditorPage = () => {
 		const root = document.querySelector<HTMLElement>('[data-editor-root]');
@@ -355,30 +359,34 @@ import SiteLayout from '../../layouts/SiteLayout.astro';
 
 		saveButton?.addEventListener('click', () => { void saveDraft(false); });
 
+		const publishProgress = createPublishProgress();
+
 		publishButton?.addEventListener('click', async () => {
 			if (!publishButton) return;
 			showNotice('');
-			// 发表前先把最新内容存进草稿，避免发布的是旧版本。
-			await saveDraft(true);
-			if (!draftId) {
-				showNotice('草稿保存失败，无法发表。请检查 slug 是否以 -cn 结尾。');
-				return;
-			}
 			const hasEn = Boolean(getValue('en_body').trim());
 			const overwriteHint = editingArticleId ? `\n\n注意：「${editingArticleId}」已发布，本次发表将覆盖线上版本（保留原发布日期）。` : '';
 			const enHint = hasEn ? '\n英文版将随中文版一起发表。' : '';
 			if (!window.confirm(`确认发表？将触发服务器端构建与全量上线，大约需要几分钟。${enHint}${overwriteHint}`)) return;
 			publishButton.disabled = true;
-			publishButton.textContent = '正在发布…';
+			publishProgress.show('正在保存草稿…');
+			publishProgress.setStage('save');
+			// 发表前先把最新内容存进草稿，避免发布的是旧版本。
+			await saveDraft(true);
+			if (!draftId) {
+				publishProgress.fail('草稿保存失败，无法发表。请检查 slug 是否以 -cn 结尾。');
+				publishButton.disabled = false;
+				return;
+			}
+			publishProgress.setStage('release', '服务器构建与上线中，通常 20–60 秒…');
 			try {
 				const result = await publishAdminArticle(draftId);
-				setSaveState(`已发表，release ${result.release?.releaseId ?? '完成'}`);
-				window.setTimeout(() => { window.location.href = '/admin/'; }, 1200);
+				publishProgress.succeed(`发表完成 · release ${result.release?.releaseId ?? '已上线'}`);
+				window.setTimeout(() => { window.location.href = '/admin/'; }, 1600);
 			} catch (error) {
+				publishProgress.fail(error instanceof Error ? error.message : '发布失败，草稿已保留。');
 				showNotice(error instanceof Error ? error.message : '发布失败，草稿已保留。');
-			} finally {
 				publishButton.disabled = false;
-				publishButton.textContent = '发表 →';
 			}
 		});
 

@@ -49,6 +49,7 @@ const allowedInlineSvgFiles = new Set([
 	'src/components/PostCard.astro',
 	'src/components/SettingsModal.astro',
 	'src/components/TocDrawer.astro',
+	'src/components/admin/PublishProgress.astro',
 	'src/layouts/BlogPost.astro',
 	'src/pages/blog/important.astro',
 	'src/pages/blog/index.astro',
