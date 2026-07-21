@@ -15,11 +15,24 @@ const PREVIEW_LOGIN = 'preview-admin';
 const PREVIEW_NAME = 'Preview Admin';
 
 const children = [];
+let shuttingDown = false;
+const killTree = (child) => {
+	if (!child || child.killed || child.exitCode !== null) return;
+	try {
+		if (process.platform === 'win32') {
+			// Windows 上 kill 不会波及子进程树，用 taskkill 整棵树结束
+			spawn('taskkill', ['/PID', String(child.pid), '/T', '/F'], { stdio: 'ignore' });
+		} else {
+			child.kill('SIGTERM');
+		}
+	} catch { /* 已退出 */ }
+};
 const shutdown = (code = 0) => {
-	for (const child of children) {
-		try { child.kill('SIGTERM'); } catch { /* 已退出 */ }
-	}
-	process.exit(code);
+	if (shuttingDown) return;
+	shuttingDown = true;
+	for (const child of children) killTree(child);
+	// 给 taskkill 一点时间再退出，避免子进程残留占端口
+	setTimeout(() => process.exit(code), 500);
 };
 process.on('SIGINT', () => shutdown(0));
 process.on('SIGTERM', () => shutdown(0));
@@ -38,6 +51,7 @@ const spawnChild = (command, args, options, tag) => {
 	const child = spawn(command, args, { cwd: ROOT, ...options });
 	pipeLogs(child, tag);
 	child.on('exit', (code) => {
+		if (shuttingDown) return;
 		console.log(`[${tag}] 进程退出 (code ${code})，预览结束`);
 		shutdown(code ?? 1);
 	});
@@ -57,7 +71,7 @@ const waitFor = async (fn, label, attempts = 60) => {
 };
 
 // 1. 启动本地后端（DEV_LOGIN=true，仅非生产可用）
-spawnChild('node', ['server/src/server.js'], {
+spawnChild(process.execPath, ['server/src/server.js'], {
 	env: {
 		...process.env,
 		NODE_ENV: 'development',
@@ -82,9 +96,8 @@ const token = await waitFor(async () => {
 }, '后端 dev-login');
 console.log(`[preview] 验收管理员账号 ${PREVIEW_LOGIN} 登录成功`);
 
-// 3. 启动前端 dev server
-const npmCmd = process.platform === 'win32' ? 'npm' : 'npm';
-spawnChild(npmCmd, ['run', 'dev', '--', '--port', String(WEB_PORT)], { shell: process.platform === 'win32' }, 'web');
+// 3. 启动前端 dev server（直接 spawn astro 入口，避免 shell 包装导致进程树杀不干净）
+spawnChild(process.execPath, ['node_modules/astro/bin/astro.mjs', 'dev', '--port', String(WEB_PORT)], {}, 'web');
 
 await waitFor(async () => {
 	const res = await fetch(WEB_ORIGIN);
