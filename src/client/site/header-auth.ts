@@ -1,4 +1,5 @@
 import { getToken, getUser, logout, storeTokenFromHash, type User } from '../../lib/auth';
+import { checkAdmin } from '../../lib/admin';
 
 const fallbackAvatar = '/image/favicon-192.png';
 let documentBindingsInstalled = false;
@@ -52,7 +53,16 @@ const showLoginButton = (): void => {
 	loginButton?.classList.add('inline-flex');
 	dropdown?.classList.add('hidden');
 	if (dropdown) dropdown.style.display = '';
+	const adminLink = document.getElementById('header-admin-link');
+	if (adminLink) adminLink.style.display = 'none';
 	closeDropdown();
+};
+
+const refreshAdminEntry = async (): Promise<void> => {
+	const adminLink = document.getElementById('header-admin-link');
+	if (!adminLink) return;
+	const { isAdmin } = await checkAdmin();
+	if (adminLink.isConnected) adminLink.style.display = isAdmin ? '' : 'none';
 };
 
 const showUserDropdown = (): void => {
@@ -142,6 +152,7 @@ export const initHeaderAuth = async (): Promise<void> => {
 		if (user) {
 			showUserDropdown();
 			applyUserToUi(user);
+			await refreshAdminEntry();
 		} else {
 			showLoginButton();
 		}

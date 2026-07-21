@@ -43,18 +43,6 @@ const T = getUiText(DEFAULT_UI_LANG);
 		</div>
 
 		<div class="space-y-4">
-			<a
-				id="settings-admin-link"
-				href="/admin/"
-				style="display: none"
-				class="flex items-center gap-2 rounded-xl border border-zinc-200 p-4 text-sm font-medium text-zinc-700 hover:bg-zinc-50 dark:border-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-800"
-			>
-				<svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-					<path fill-rule="evenodd" d="M5.5 2a.5.5 0 0 1 5.5.5h4a.5.5 0 0 1 .5.5v4H15a.5.5 0 0 1 0 1h-3.5v3.5a.5.5 0 0 1-.5.5h-4a.5.5 0 0 1-.5-.5V8H5a.5.5 0 0 1 0-1h3.5V2.5A.5.5 0 0 1 5.5 2Z" clip-rule="evenodd" />
-				</svg>
-				<span data-i18n="settings.admin">{T['settings.admin']}</span>
-			</a>
-
 			<div class="rounded-2xl border border-zinc-200/80 bg-white/50 p-4 dark:border-zinc-800/80 dark:bg-zinc-950/30">
 				<p class="text-sm font-medium text-zinc-900 dark:text-zinc-100" data-i18n="settings.avatarUrl">{T['settings.avatarUrl']}</p>
 				<p class="mt-1 text-xs text-zinc-500 dark:text-zinc-400" data-i18n="settings.avatarHelp">{T['settings.avatarHelp']}</p>
@@ -106,7 +94,6 @@ const T = getUiText(DEFAULT_UI_LANG);
 
 <script>
 	import { updateProfileAvatar, updateProfileUsername } from '../lib/auth';
-	import { checkAdmin } from '../lib/admin';
 
 	const initSettingsModal = () => {
 		const modal = document.getElementById('settings-modal');
@@ -119,7 +106,6 @@ const T = getUiText(DEFAULT_UI_LANG);
 		const saveButton = document.getElementById('settings-save') as HTMLButtonElement | null;
 		const resetButton = document.getElementById('settings-reset') as HTMLButtonElement | null;
 		const status = document.getElementById('settings-status');
-		const adminLink = document.getElementById('settings-admin-link');
 		const fallbackAvatar = '/image/favicon-192.png';
 		const i18nText = (key: string, fallback: string) => (window as any).__xgwnjeI18n?.text?.(key) ?? fallback;
 		if (!modal || modal.dataset.settingsInitialized === 'true') return;
@@ -130,7 +116,6 @@ const T = getUiText(DEFAULT_UI_LANG);
 
 		const openModal = async () => {
 			if (!modal) return;
-			if (adminLink) adminLink.style.display = 'none';
 
 			// Fetch current user info
 			const { getCurrentUser } = (window as any).__auth || {};
@@ -150,18 +135,6 @@ const T = getUiText(DEFAULT_UI_LANG);
 					}
 				} catch (e) {
 					console.error('Failed to load user info:', e);
-				}
-			}
-
-			// Check admin status with the current authenticated Bearer session.
-			try {
-				const { isAdmin } = await checkAdmin();
-				if (adminLink) {
-					adminLink.style.display = isAdmin ? '' : 'none';
-				}
-			} catch (e) {
-				if (adminLink) {
-					adminLink.style.display = 'none';
 				}
 			}
 

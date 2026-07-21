@@ -22,6 +22,7 @@
     "indexnow": "node scripts/indexnow.mjs",
     "indexnow:sitemap": "node scripts/indexnow.mjs sitemap",
     "preview": "astro preview",
+    "preview:admin": "node scripts/local-preview.mjs",
     "astro": "astro",
     "typecheck": "astro check && tsc --noEmit",
     "test": "npm run test:unit && node scripts/run-checks.mjs",

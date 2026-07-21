@@ -7,7 +7,6 @@ const read = (path) => readFileSync(resolve(root, path), 'utf8');
 
 const page = read('src/pages/admin/index.astro');
 const client = read('src/lib/admin.ts');
-const settings = read('src/components/SettingsModal.astro');
 
 assert.doesNotMatch(page, /Astro\.response\.status\s*=\s*404/, 'admin page must not return the legacy 404');
 for (const contract of [
@@ -114,7 +113,9 @@ assert.match(client, /Authorization/, 'admin client must send a Bearer authoriza
 assert.match(client, /Bearer\s+\$\{token\}/, 'admin client must use the current token as Bearer auth');
 assert.doesNotMatch(client, /CF-Access-Authenticated-User-Email|Cloudflare Access|placeholder\.com/i, 'admin client must not retain Cloudflare Access placeholders');
 
-assert.match(settings, /checkAdmin\(\)/, 'settings must check admin status through the authenticated client');
-assert.match(settings, /settings-admin-link/, 'settings must keep the guarded admin entry');
+const header = read('src/components/Header.astro');
+const headerAuth = read('src/client/site/header-auth.ts');
+assert.match(header, /header-admin-link/, 'header dropdown must keep the guarded admin entry');
+assert.match(headerAuth, /checkAdmin\(\)/, 'header auth runtime must check admin status through the authenticated client');
 
 console.log('Admin page contract check passed.');
