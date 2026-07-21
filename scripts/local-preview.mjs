@@ -1,10 +1,11 @@
 // 本地验收预览：同时启动后端（DEV_LOGIN）与前端 dev server，
 // 自动用专用验收管理员账号 preview-admin 登录并打开浏览器。
 // 仅本地可用：DEV_LOGIN 在生产环境会被 config 拒绝启动，token 不落盘、不提交。
-import { spawn } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { setTimeout as delay } from 'node:timers/promises';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
+import { mkdirSync, writeFileSync } from 'node:fs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const API_PORT = 8787;
@@ -13,6 +14,25 @@ const API_ORIGIN = `http://127.0.0.1:${API_PORT}`;
 const WEB_ORIGIN = `http://localhost:${WEB_PORT}`;
 const PREVIEW_LOGIN = 'preview-admin';
 const PREVIEW_NAME = 'Preview Admin';
+const DATA_DIR = join(ROOT, 'server-data');
+const TMP_DIR = join(ROOT, 'tmp');
+
+// 订阅功能的本地的 fixture：假订阅地址 + 本地 QR 图片，只用于让后台「订阅」分区在预览中可用。
+// 不含真实订阅内容，tmp/ 已在 gitignore 中。
+const FIXTURE_REGISTRY_PATH = join(TMP_DIR, 'subscription-registry-fixture.json');
+const FIXTURE_QR_PATH = join(ROOT, 'public', 'image', 'favicon-192.png');
+const writeSubscriptionFixture = () => {
+	mkdirSync(TMP_DIR, { recursive: true });
+	writeFileSync(FIXTURE_REGISTRY_PATH, JSON.stringify({
+		schemaVersion: 1,
+		generatedAt: new Date().toISOString(),
+		endpoints: {
+			desktop: { url: 'https://sub.xgwnje.cn/fixture-desktop-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.yaml' },
+			mobile: { url: 'https://sub.xgwnje.cn/fixture-mobile-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.yaml' },
+		},
+		artifacts: { mobileQrPngPath: '/var/lib/vps-proxies-subscription/access/fixture.png' },
+	}));
+};
 
 const children = [];
 let shuttingDown = false;
@@ -70,7 +90,8 @@ const waitFor = async (fn, label, attempts = 60) => {
 	throw new Error(`${label} 等待超时`);
 };
 
-// 1. 启动本地后端（DEV_LOGIN=true，仅非生产可用）
+// 1. 启动本地后端（DEV_LOGIN=true，仅非生产可用；订阅走本地 fixture，不触真实订阅内容）
+writeSubscriptionFixture();
 spawnChild(process.execPath, ['server/src/server.js'], {
 	env: {
 		...process.env,
@@ -78,8 +99,12 @@ spawnChild(process.execPath, ['server/src/server.js'], {
 		DEV_LOGIN: 'true',
 		PORT: String(API_PORT),
 		HOST: '127.0.0.1',
-		HOMEPAGE_API_DATA_DIR: join(ROOT, 'server-data'),
+		HOMEPAGE_API_DATA_DIR: DATA_DIR,
 		PUBLIC_ALLOWED_ORIGIN: WEB_ORIGIN,
+		SUBSCRIPTION_ACCESS_ENABLED: 'true',
+		SUBSCRIPTION_ACCESS_FIXTURE: 'true',
+		SUBSCRIPTION_ACCESS_REGISTRY: FIXTURE_REGISTRY_PATH,
+		SUBSCRIPTION_ACCESS_FIXTURE_QR: FIXTURE_QR_PATH,
 	},
 }, 'api');
 
@@ -95,6 +120,16 @@ const token = await waitFor(async () => {
 	return payload.ok && payload.token ? payload.token : null;
 }, '后端 dev-login');
 console.log(`[preview] 验收管理员账号 ${PREVIEW_LOGIN} 登录成功`);
+
+// 2.1 授予订阅管理权限（幂等；后台「订阅」分区按此权限显示）
+const grant = spawnSync(
+	process.execPath,
+	['server/scripts/manage-permission.mjs', 'grant', '--login', PREVIEW_LOGIN],
+	{ cwd: ROOT, env: { ...process.env, HOMEPAGE_API_DATA_DIR: DATA_DIR }, encoding: 'utf8' },
+);
+if (grant.status !== 0) {
+	console.warn(`[preview] 订阅权限授予失败（不影响预览其余功能）：${(grant.stderr || grant.stdout || '').trim().split('\n')[0]}`);
+}
 
 // 3. 启动前端 dev server（直接 spawn astro 入口，避免 shell 包装导致进程树杀不干净）
 spawnChild(process.execPath, ['node_modules/astro/bin/astro.mjs', 'dev', '--port', String(WEB_PORT)], {}, 'web');

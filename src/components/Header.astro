@@ -162,12 +162,12 @@ const { showTocButton = false } = Astro.props as Props;
 					</svg>
 					<span class="sr-only" data-i18n="theme.toggle">{T['theme.toggle']}</span>
 				</button>
-
-				<!-- Login button (shown when not logged in) -->
-				<button type="button" id="auth-button" class="header-toolbar-button hidden h-9 items-center justify-center px-3 text-sm font-medium" data-auth-login>
-					<span data-i18n="account.login">{T['account.login']}</span>
-				</button>
 			</div>
+
+			<!-- Login button (shown when not logged in); placed outside the desktop-only toolbar group so mobile keeps a login entry. -->
+			<button type="button" id="auth-button" class="header-toolbar-button hidden h-9 items-center justify-center px-3 text-sm font-medium" data-auth-login>
+				<span data-i18n="account.login">{T['account.login']}</span>
+			</button>
 
 			<button
 				type="button"

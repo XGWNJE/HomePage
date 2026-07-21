@@ -153,11 +153,14 @@ export const initHeaderAuth = async (): Promise<void> => {
 			showUserDropdown();
 			applyUserToUi(user);
 			await refreshAdminEntry();
+		} else if (getToken()) {
+			// getUser 返回 null 但 token 仍在 = 网络抖动而非 401（401 会清 token）；
+			// 保持现有界面，避免移动端把头像切成不可见的登录按钮。
 		} else {
 			showLoginButton();
 		}
 	} catch (error) {
 		console.error('Auth error:', error);
-		if (loginButton.isConnected) showLoginButton();
+		if (loginButton.isConnected && !getToken()) showLoginButton();
 	}
 };
