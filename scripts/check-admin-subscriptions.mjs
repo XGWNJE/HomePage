@@ -12,7 +12,9 @@ const fixture = read('server/test/fixtures/subscription-access.v1.json');
 const fixtureValues = Object.values(JSON.parse(fixture).endpoints).map((entry) => entry.url);
 
 assert.match(page, /SiteLayout/, 'subscription page must reuse SiteLayout');
-assert.match(page, /PageHeading/, 'subscription page must reuse PageHeading');
+assert.doesNotMatch(page, /PageHeading/, 'subscription page uses a compact inline header instead of PageHeading');
+assert.match(page, /<h1[^>]*>代理订阅<\/h1>/, 'subscription page must render a compact h1 title');
+assert.match(page, /href="\/admin\/"[^>]*>返回管理台/, 'subscription page must link back to the admin dashboard');
 assert.match(page, /ModalShell/, 'QR dialog must reuse ModalShell');
 for (const contract of [
 	'data-subscription-root',

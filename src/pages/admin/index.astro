@@ -53,46 +53,34 @@ import PublishProgress from '../../components/admin/PublishProgress.astro';
 						</section>
 					</div>
 
-					<div class="hidden space-y-10" data-admin-panel="comments">
-						<section aria-labelledby="admin-stats-heading">
-							<div class="mb-4 flex items-center justify-between gap-4">
-								<div>
-									<p class="m-0 text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-400 dark:text-zinc-500">Overview</p>
-									<h2 id="admin-stats-heading" class="mt-1 text-xl">评论概览</h2>
-								</div>
-								<button type="button" class="rounded-full border border-zinc-200 bg-white px-3.5 py-2 text-sm font-medium text-zinc-600 hover:border-zinc-300 hover:text-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300" data-admin-refresh>刷新数据</button>
-							</div>
-							<div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4" data-admin-stats>
-								<div class="rounded-2xl border border-zinc-200/80 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900"><p class="m-0 text-xs uppercase tracking-[0.12em] text-zinc-400">全部</p><p class="mt-3 text-3xl font-semibold tabular-nums" data-admin-stat="total">—</p></div>
-								<div class="rounded-2xl border border-amber-200/80 bg-amber-50/70 p-5 dark:border-amber-900/60 dark:bg-amber-950/25"><p class="m-0 text-xs uppercase tracking-[0.12em] text-amber-700 dark:text-amber-400">待审</p><p class="mt-3 text-3xl font-semibold tabular-nums" data-admin-stat="pending">—</p></div>
-								<div class="rounded-2xl border border-emerald-200/80 bg-emerald-50/70 p-5 dark:border-emerald-900/60 dark:bg-emerald-950/25"><p class="m-0 text-xs uppercase tracking-[0.12em] text-emerald-700 dark:text-emerald-400">已批准</p><p class="mt-3 text-3xl font-semibold tabular-nums" data-admin-stat="approved">—</p></div>
-								<div class="rounded-2xl border border-rose-200/80 bg-rose-50/70 p-5 dark:border-rose-900/60 dark:bg-rose-950/25"><p class="m-0 text-xs uppercase tracking-[0.12em] text-rose-700 dark:text-rose-400">已拒绝</p><p class="mt-3 text-3xl font-semibold tabular-nums" data-admin-stat="rejected">—</p></div>
-							</div>
-						</section>
-
+					<div class="hidden" data-admin-panel="comments">
 						<section aria-labelledby="admin-comments-heading">
-							<div class="flex flex-col gap-4 border-b border-zinc-200/80 pb-4 dark:border-zinc-800/80 md:flex-row md:items-end md:justify-between">
-								<div><p class="m-0 text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-400 dark:text-zinc-500">Moderation</p><h2 id="admin-comments-heading" class="mt-1 text-xl">评论审阅</h2></div>
-								<div class="flex flex-wrap gap-2" role="group" aria-label="评论状态筛选">
-									<button type="button" class="admin-filter" data-admin-comment-filter="all" aria-pressed="true">全部</button>
-									<button type="button" class="admin-filter" data-admin-comment-filter="pending" aria-pressed="false">待审</button>
-									<button type="button" class="admin-filter" data-admin-comment-filter="approved" aria-pressed="false">已批准</button>
-									<button type="button" class="admin-filter" data-admin-comment-filter="rejected" aria-pressed="false">已拒绝</button>
+							<h2 id="admin-comments-heading" class="sr-only">评论审阅</h2>
+							<div class="flex flex-wrap items-center justify-between gap-3 py-2">
+								<div class="flex items-center gap-3.5" role="group" aria-label="评论状态筛选">
+									<button type="button" class="admin-mini-filter" data-admin-comment-filter="all" aria-pressed="true">全部</button>
+									<button type="button" class="admin-mini-filter" data-admin-comment-filter="pending" aria-pressed="false">待审</button>
+									<button type="button" class="admin-mini-filter" data-admin-comment-filter="approved" aria-pressed="false">已批准</button>
+									<button type="button" class="admin-mini-filter" data-admin-comment-filter="rejected" aria-pressed="false">已拒绝</button>
+								</div>
+								<div class="flex items-center gap-3.5">
+									<span class="text-[11px] text-zinc-400 dark:text-zinc-500" data-admin-stats>全部 <span data-admin-stat="total">—</span> · 待审 <span data-admin-stat="pending">—</span> · 已批准 <span data-admin-stat="approved">—</span> · 已拒绝 <span data-admin-stat="rejected">—</span></span>
+									<button type="button" class="text-[11px] text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100" data-admin-refresh>刷新</button>
 								</div>
 							</div>
-							<div class="mt-5 space-y-3" data-admin-comments aria-live="polite"></div>
+							<div class="divide-y divide-zinc-200/70 border-y border-zinc-200/80 dark:divide-zinc-800/70 dark:border-zinc-800/80" data-admin-comments aria-live="polite"></div>
 						</section>
 					</div>
 
 					<div class="hidden" data-admin-panel="messages">
 						<div class="grid gap-8 lg:grid-cols-2">
 							<section aria-labelledby="admin-contact-heading">
-								<div class="border-b border-zinc-200/80 pb-4 dark:border-zinc-800/80"><p class="m-0 text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-400 dark:text-zinc-500">Inbox</p><h2 id="admin-contact-heading" class="mt-1 text-xl">联系消息</h2></div>
-								<div class="mt-5 space-y-3" data-admin-contact-messages></div>
+								<div class="border-b border-zinc-200/80 pb-2 dark:border-zinc-800/80"><h2 id="admin-contact-heading" class="m-0 text-sm font-semibold text-zinc-900 dark:text-zinc-100">联系消息</h2></div>
+								<div class="divide-y divide-zinc-200/70 dark:divide-zinc-800/70" data-admin-contact-messages></div>
 							</section>
 							<section aria-labelledby="admin-outbox-heading">
-								<div class="border-b border-zinc-200/80 pb-4 dark:border-zinc-800/80"><p class="m-0 text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-400 dark:text-zinc-500">Delivery</p><h2 id="admin-outbox-heading" class="mt-1 text-xl">邮件队列</h2></div>
-								<div class="mt-5 space-y-3" data-admin-outbox></div>
+								<div class="border-b border-zinc-200/80 pb-2 dark:border-zinc-800/80"><h2 id="admin-outbox-heading" class="m-0 text-sm font-semibold text-zinc-900 dark:text-zinc-100">邮件队列</h2></div>
+								<div class="divide-y divide-zinc-200/70 dark:divide-zinc-800/70" data-admin-outbox></div>
 							</section>
 						</div>
 					</div>
@@ -105,10 +93,6 @@ import PublishProgress from '../../components/admin/PublishProgress.astro';
 		</main>
 
 		<style>
-			.admin-filter { border: 1px solid rgb(228 228 231); border-radius: 9999px; background: rgba(255,255,255,.82); padding: .45rem .85rem; color: rgb(82 82 91); font-size: .8125rem; font-weight: 500; transition: border-color .18s ease, background-color .18s ease, color .18s ease; }
-			.admin-filter:hover, .admin-filter[aria-pressed='true'] { border-color: rgb(161 161 170); background: rgb(24 24 27); color: white; }
-			:global(.dark) .admin-filter { border-color: rgb(63 63 70); background: rgba(24,24,27,.78); color: rgb(212 212 216); }
-			:global(.dark) .admin-filter:hover, :global(.dark) .admin-filter[aria-pressed='true'] { border-color: rgb(113 113 122); background: rgb(244 244 245); color: rgb(24 24 27); }
 			.admin-tab { position: relative; padding: 0 0 2px; font-size: .75rem; font-weight: 500; color: rgb(161 161 170); transition: color .15s ease; white-space: nowrap; }
 			.admin-tab:hover { color: rgb(82 82 91); }
 			.admin-tab[aria-pressed='true'] { color: rgb(180 83 9); font-weight: 600; }
@@ -203,12 +187,18 @@ import PublishProgress from '../../components/admin/PublishProgress.astro';
 
 	const actionButton = (label: string, action: string, id: string, tone: 'default' | 'danger' = 'default') => {
 		const button = createElement('button', tone === 'danger'
-			? 'rounded-full border border-rose-200 px-3 py-1.5 text-xs font-medium text-rose-700 hover:bg-rose-50 dark:border-rose-900 dark:text-rose-400 dark:hover:bg-rose-950/30'
-			: 'rounded-full border border-zinc-200 px-3 py-1.5 text-xs font-medium text-zinc-600 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800', label);
+			? 'text-[11px] text-rose-600 hover:text-rose-800 dark:text-rose-400 dark:hover:text-rose-300'
+			: 'text-[11px] text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100', label);
 		button.type = 'button';
 		button.setAttribute('data-admin-action', action);
 		button.dataset.commentId = id;
 		return button;
+	};
+
+	const COMMENT_STATUS_TONE: Record<string, string> = {
+		pending: 'text-amber-700 dark:text-amber-400',
+		approved: 'text-emerald-600 dark:text-emerald-400',
+		rejected: 'text-rose-600 dark:text-rose-400',
 	};
 
 	const renderComments = (comments: AdminComment[]) => {
@@ -216,22 +206,22 @@ import PublishProgress from '../../components/admin/PublishProgress.astro';
 		commentsRoot.replaceChildren();
 		if (!comments.length) return commentsRoot.append(emptyState('当前筛选条件下没有评论。'));
 		for (const comment of comments) {
-			const article = createElement('article', 'rounded-2xl border border-zinc-200/80 bg-white p-5 shadow-[0_12px_32px_rgba(15,23,42,0.04)] dark:border-zinc-800 dark:bg-zinc-900');
-			const header = createElement('div', 'flex flex-wrap items-start justify-between gap-3');
-			const meta = createElement('div');
-			meta.append(createElement('p', 'm-0 text-sm font-semibold text-zinc-900 dark:text-zinc-100', comment.name || comment.login));
-			meta.append(createElement('p', 'mt-1 text-xs text-zinc-500 dark:text-zinc-400', `@${comment.login} · ${formatDate(comment.created_at)}`));
-			const badge = createElement('span', 'rounded-full border border-zinc-200 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-zinc-500 dark:border-zinc-700 dark:text-zinc-400', comment.status);
-			header.append(meta, badge);
-			article.append(header);
-			article.append(createElement('p', 'mt-4 whitespace-pre-wrap break-words text-sm leading-6 text-zinc-700 dark:text-zinc-300', comment.body));
-			article.append(createElement('p', 'mt-3 break-all font-mono text-[11px] text-zinc-400 dark:text-zinc-500', comment.post_slug));
-			const actions = createElement('div', 'mt-4 flex flex-wrap gap-2');
+			const row = createElement('article', 'py-3');
+			const header = createElement('div', 'flex flex-wrap items-baseline gap-x-2.5 gap-y-1');
+			header.append(createElement('span', 'text-xs font-semibold text-zinc-900 dark:text-zinc-100', comment.name || comment.login));
+			header.append(createElement('span', 'text-[11px] text-zinc-400 dark:text-zinc-500', `@${comment.login} · ${formatDate(comment.created_at)}`));
+			header.append(createElement('span', `text-[10px] font-semibold uppercase tracking-[0.08em] ${COMMENT_STATUS_TONE[comment.status] ?? 'text-zinc-400 dark:text-zinc-500'}`, comment.status));
+			row.append(header);
+			row.append(createElement('p', 'm-0 mt-1.5 whitespace-pre-wrap break-words text-sm leading-6 text-zinc-700 dark:text-zinc-300', comment.body));
+			const footer = createElement('div', 'mt-1.5 flex flex-wrap items-center gap-x-2.5 gap-y-1');
+			footer.append(createElement('span', 'break-all font-mono text-[11px] text-zinc-400 dark:text-zinc-500', comment.post_slug));
+			const actions = createElement('span', 'ml-auto flex items-center gap-2.5');
 			if (comment.status !== 'approved') actions.append(actionButton('批准', 'approve', comment.id));
 			if (comment.status !== 'rejected') actions.append(actionButton('拒绝', 'reject', comment.id));
 			actions.append(actionButton('删除', 'delete', comment.id, 'danger'));
-			article.append(actions);
-			commentsRoot.append(article);
+			footer.append(actions);
+			row.append(footer);
+			commentsRoot.append(row);
 		}
 	};
 
@@ -240,11 +230,11 @@ import PublishProgress from '../../components/admin/PublishProgress.astro';
 		contactsRoot.replaceChildren();
 		if (!messages.length) return contactsRoot.append(emptyState('暂无联系消息。'));
 		for (const message of messages) {
-			const card = createElement('article', 'rounded-2xl border border-zinc-200/80 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900');
-			card.append(createElement('p', 'm-0 text-sm font-semibold text-zinc-900 dark:text-zinc-100', message.name));
-			card.append(createElement('p', 'mt-1 break-all text-xs text-zinc-500 dark:text-zinc-400', `${message.email} · ${formatDate(message.created_at)}`));
-			card.append(createElement('p', 'mt-4 whitespace-pre-wrap break-words text-sm leading-6 text-zinc-700 dark:text-zinc-300', message.message));
-			contactsRoot.append(card);
+			const row = createElement('article', 'py-3');
+			row.append(createElement('p', 'm-0 text-xs font-semibold text-zinc-900 dark:text-zinc-100', message.name));
+			row.append(createElement('p', 'm-0 mt-0.5 break-all text-[11px] text-zinc-400 dark:text-zinc-500', `${message.email} · ${formatDate(message.created_at)}`));
+			row.append(createElement('p', 'm-0 mt-1.5 whitespace-pre-wrap break-words text-sm leading-6 text-zinc-700 dark:text-zinc-300', message.message));
+			contactsRoot.append(row);
 		}
 	};
 
@@ -253,11 +243,11 @@ import PublishProgress from '../../components/admin/PublishProgress.astro';
 		outboxRoot.replaceChildren();
 		if (!items.length) return outboxRoot.append(emptyState('邮件队列为空。'));
 		for (const item of items) {
-			const card = createElement('article', 'rounded-2xl border border-zinc-200/80 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900');
-			card.append(createElement('p', 'm-0 text-sm font-semibold text-zinc-900 dark:text-zinc-100', item.subject || item.type));
-			card.append(createElement('p', 'mt-1 break-all text-xs text-zinc-500 dark:text-zinc-400', `${item.recipient || '未指定收件人'} · ${item.status} · ${formatDate(item.created_at)}`));
-			card.append(createElement('p', 'mt-4 line-clamp-5 whitespace-pre-wrap break-words font-mono text-xs leading-5 text-zinc-600 dark:text-zinc-400', item.body));
-			outboxRoot.append(card);
+			const row = createElement('article', 'py-3');
+			row.append(createElement('p', 'm-0 text-xs font-semibold text-zinc-900 dark:text-zinc-100', item.subject || item.type));
+			row.append(createElement('p', 'm-0 mt-0.5 break-all text-[11px] text-zinc-400 dark:text-zinc-500', `${item.recipient || '未指定收件人'} · ${item.status} · ${formatDate(item.created_at)}`));
+			row.append(createElement('p', 'm-0 mt-1.5 line-clamp-5 whitespace-pre-wrap break-words font-mono text-[11px] leading-5 text-zinc-500 dark:text-zinc-400', item.body));
+			outboxRoot.append(row);
 		}
 	};
 
@@ -320,8 +310,8 @@ import PublishProgress from '../../components/admin/PublishProgress.astro';
 			if (state) {
 				state.textContent = unlocked ? '已解锁' : '未解锁';
 				state.className = unlocked
-					? 'rounded-full bg-emerald-50 px-2.5 py-1 font-medium text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400'
-					: 'rounded-full bg-zinc-100 px-2.5 py-1 font-medium text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400';
+					? 'text-[11px] font-semibold text-emerald-600 dark:text-emerald-400'
+					: 'text-[11px] font-semibold text-zinc-400 dark:text-zinc-500';
 			}
 			if (expiry) expiry.textContent = unlocked && status.expiresAt ? `到期 ${formatDate(status.expiresAt)}` : '';
 		} catch {

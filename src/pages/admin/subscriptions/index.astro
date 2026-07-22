@@ -1,6 +1,5 @@
 ---
 import ModalShell from '../../../components/ModalShell.astro';
-import PageHeading from '../../../components/PageHeading.astro';
 import SiteLayout from '../../../layouts/SiteLayout.astro';
 ---
 
@@ -9,103 +8,74 @@ import SiteLayout from '../../../layouts/SiteLayout.astro';
 		<meta name="robots" content="noindex, nofollow" />
 	</Fragment>
 
-	<main class="page-shell page-fade-in py-10 md:py-14" data-subscription-root transition:name="page-main" transition:animate="fade">
+	<main class="page-shell page-fade-in py-6 md:py-8" data-subscription-root transition:name="page-main" transition:animate="fade">
 		<section class="mx-auto max-w-5xl">
-			<PageHeading
-				eyebrow="Operations / Private"
-				title="代理订阅"
-				accent="Access"
-				subtitle="只在需要时把单个入口写入剪贴板；页面不会展示、保存或记录订阅内容。"
-			>
-				<a slot="actions" href="/admin/" class="apple-meta-pill no-underline">
-					<span class="apple-meta-pill-label">返回管理台</span>
-				</a>
-			</PageHeading>
+			<header class="flex items-center justify-between gap-4 border-b border-zinc-200/80 pb-3 dark:border-zinc-800/80">
+				<h1 class="m-0 text-base font-semibold text-zinc-950 dark:text-zinc-50">代理订阅</h1>
+				<a href="/admin/" class="text-xs font-medium text-amber-700 no-underline hover:underline dark:text-amber-400">返回管理台 →</a>
+			</header>
+			<p class="m-0 mt-2 text-[11px] text-zinc-400 dark:text-zinc-500">只在需要时把单个入口写入剪贴板；页面不会展示、保存或记录订阅内容。</p>
 
-			<section class="card-surface mt-8 p-5" data-subscription-auth-state aria-live="polite">
+			<section class="mt-4 rounded-lg border border-zinc-200/80 p-3 dark:border-zinc-800/80" data-subscription-auth-state aria-live="polite">
 				<p class="m-0 text-sm font-medium text-zinc-700 dark:text-zinc-300">正在检查当前会话…</p>
 			</section>
 
-			<section class="card-surface mt-6 hidden border-amber-200/80 p-5 dark:border-amber-900/60" data-subscription-lock-state aria-live="polite">
-				<div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-					<div>
-						<p class="m-0 text-sm font-semibold text-zinc-900 dark:text-zinc-100">敏感会话尚未解锁</p>
-						<p class="mt-1 text-sm leading-6 text-zinc-500 dark:text-zinc-400">完成身份验证后才可复制入口或打开二维码。</p>
-					</div>
-					<button type="button" class="apple-visit-button rounded-xl border border-zinc-200 px-4 py-2.5 text-sm font-medium dark:border-zinc-700" data-subscription-unlock>
-						<span class="apple-visit-label">验证身份</span>
-					</button>
+			<section class="mt-4 hidden rounded-lg border border-amber-200/80 p-3 dark:border-amber-900/60" data-subscription-lock-state aria-live="polite">
+				<div class="flex flex-wrap items-center justify-between gap-3">
+					<p class="m-0 text-xs text-zinc-600 dark:text-zinc-400"><span class="font-semibold text-zinc-900 dark:text-zinc-100">敏感会话尚未解锁。</span>完成身份验证后才可复制入口或打开二维码。</p>
+					<button type="button" class="rounded-md bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-amber-700 disabled:opacity-60" data-subscription-unlock>验证身份</button>
 				</div>
 			</section>
 
-			<section class="card-surface mt-6 hidden border-emerald-200/80 p-5 dark:border-emerald-900/60" data-subscription-active-state aria-live="polite">
-				<div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-					<div>
-						<p class="m-0 text-sm font-semibold text-zinc-900 dark:text-zinc-100">敏感会话已临时解锁</p>
-						<p class="mt-1 text-sm leading-6 text-zinc-500 dark:text-zinc-400">会话最多持续 5 分钟；离开前可以立即锁定。</p>
-					</div>
-					<button type="button" class="apple-meta-pill justify-center" data-subscription-lock>
-						<span class="apple-meta-pill-label">立即锁定</span>
-					</button>
+			<section class="mt-4 hidden rounded-lg border border-emerald-200/80 p-3 dark:border-emerald-900/60" data-subscription-active-state aria-live="polite">
+				<div class="flex flex-wrap items-center justify-between gap-3">
+					<p class="m-0 text-xs text-zinc-600 dark:text-zinc-400"><span class="font-semibold text-zinc-900 dark:text-zinc-100">敏感会话已临时解锁。</span>会话最多持续 5 分钟；离开前可以立即锁定。</p>
+					<button type="button" class="rounded-md border border-zinc-200 px-3 py-1.5 text-xs font-medium text-zinc-600 hover:border-zinc-300 hover:text-zinc-900 disabled:opacity-60 dark:border-zinc-700 dark:text-zinc-300 dark:hover:text-zinc-100" data-subscription-lock>立即锁定</button>
 				</div>
 			</section>
 
-			<div class="mt-8 hidden" data-subscription-workspace>
+			<div class="mt-5 hidden" data-subscription-workspace>
 				<div class="grid gap-4 md:grid-cols-3">
-					<article class="card-surface card-interactive flex min-w-0 flex-col p-5" data-subscription-card="desktop">
-						<p class="m-0 text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-400 dark:text-zinc-500">Desktop</p>
-						<h2 class="mt-2 text-xl font-semibold text-zinc-900 dark:text-zinc-100">桌面订阅</h2>
-						<p class="mt-2 flex-1 text-sm leading-6 text-zinc-500 dark:text-zinc-400">写入 Clash Verge Rev 使用的订阅入口。</p>
-						<p class="mt-4 text-xs font-medium text-zinc-400" data-subscription-availability>检查中</p>
-						<button type="button" class="apple-visit-button mt-4 rounded-xl border border-zinc-200 px-4 py-2.5 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700" data-subscription-copy="desktop" disabled>
-							<span class="apple-visit-label">复制桌面入口</span>
-						</button>
+					<article class="rounded-xl border border-zinc-200/80 p-4 dark:border-zinc-800/80" data-subscription-card="desktop">
+						<p class="m-0 text-sm font-semibold text-zinc-900 dark:text-zinc-100">桌面订阅</p>
+						<p class="m-0 mt-1 text-xs leading-5 text-zinc-500 dark:text-zinc-400">写入 Clash Verge Rev 使用的订阅入口。</p>
+						<p class="m-0 mt-3 text-[11px] font-medium text-zinc-400" data-subscription-availability>检查中</p>
+						<button type="button" class="mt-3 rounded-md bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-amber-700 disabled:cursor-not-allowed disabled:opacity-50" data-subscription-copy="desktop" disabled>复制桌面入口</button>
 					</article>
 
-					<article class="card-surface card-interactive flex min-w-0 flex-col p-5" data-subscription-card="mobile">
-						<p class="m-0 text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-400 dark:text-zinc-500">Mobile</p>
-						<h2 class="mt-2 text-xl font-semibold text-zinc-900 dark:text-zinc-100">移动订阅</h2>
-						<p class="mt-2 flex-1 text-sm leading-6 text-zinc-500 dark:text-zinc-400">写入 Clash Meta for Android 使用的订阅入口。</p>
-						<p class="mt-4 text-xs font-medium text-zinc-400" data-subscription-availability>检查中</p>
-						<button type="button" class="apple-visit-button mt-4 rounded-xl border border-zinc-200 px-4 py-2.5 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700" data-subscription-copy="mobile" disabled>
-							<span class="apple-visit-label">复制移动入口</span>
-						</button>
+					<article class="rounded-xl border border-zinc-200/80 p-4 dark:border-zinc-800/80" data-subscription-card="mobile">
+						<p class="m-0 text-sm font-semibold text-zinc-900 dark:text-zinc-100">移动订阅</p>
+						<p class="m-0 mt-1 text-xs leading-5 text-zinc-500 dark:text-zinc-400">写入 Clash Meta for Android 使用的订阅入口。</p>
+						<p class="m-0 mt-3 text-[11px] font-medium text-zinc-400" data-subscription-availability>检查中</p>
+						<button type="button" class="mt-3 rounded-md bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-amber-700 disabled:cursor-not-allowed disabled:opacity-50" data-subscription-copy="mobile" disabled>复制移动入口</button>
 					</article>
 
-					<article class="card-surface card-interactive flex min-w-0 flex-col p-5" data-subscription-card="cmfa-import">
-						<p class="m-0 text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-400 dark:text-zinc-500">CMFA</p>
-						<h2 class="mt-2 text-xl font-semibold text-zinc-900 dark:text-zinc-100">快捷导入</h2>
-						<p class="mt-2 flex-1 text-sm leading-6 text-zinc-500 dark:text-zinc-400">复制 CMFA 导入入口，或临时打开移动端二维码。</p>
-						<p class="mt-4 text-xs font-medium text-zinc-400" data-subscription-availability>检查中</p>
-						<div class="mt-4 grid gap-2 sm:grid-cols-2 md:grid-cols-1 lg:grid-cols-2">
-							<button type="button" class="apple-visit-button rounded-xl border border-zinc-200 px-3 py-2.5 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700" data-subscription-copy="cmfa-import" disabled>
-								<span class="apple-visit-label">复制导入入口</span>
-							</button>
-							<button type="button" class="apple-meta-pill justify-center disabled:cursor-not-allowed disabled:opacity-50" data-subscription-qr disabled>
-								<span class="apple-meta-pill-label">查看二维码</span>
-							</button>
+					<article class="rounded-xl border border-zinc-200/80 p-4 dark:border-zinc-800/80" data-subscription-card="cmfa-import">
+						<p class="m-0 text-sm font-semibold text-zinc-900 dark:text-zinc-100">快捷导入</p>
+						<p class="m-0 mt-1 text-xs leading-5 text-zinc-500 dark:text-zinc-400">复制 CMFA 导入入口，或临时打开移动端二维码。</p>
+						<p class="m-0 mt-3 text-[11px] font-medium text-zinc-400" data-subscription-availability>检查中</p>
+						<div class="mt-3 flex flex-wrap gap-2">
+							<button type="button" class="rounded-md bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-amber-700 disabled:cursor-not-allowed disabled:opacity-50" data-subscription-copy="cmfa-import" disabled>复制导入入口</button>
+							<button type="button" class="rounded-md border border-zinc-200 px-3 py-1.5 text-xs font-medium text-zinc-600 hover:border-zinc-300 hover:text-zinc-900 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:text-zinc-100" data-subscription-qr disabled>查看二维码</button>
 						</div>
 					</article>
 				</div>
 
-				<p class="mt-5 min-h-6 text-sm text-zinc-500 dark:text-zinc-400" data-subscription-feedback aria-live="polite"></p>
+				<p class="mt-4 min-h-6 text-xs text-zinc-500 dark:text-zinc-400" data-subscription-feedback aria-live="polite"></p>
 			</div>
 		</section>
 	</main>
 
 	<ModalShell id="subscription-qr-modal" titleId="subscription-qr-title" contentClass="w-[min(92vw,28rem)]">
 		<div class="flex items-start justify-between gap-4">
-			<div>
-				<p class="m-0 text-[11px] font-semibold uppercase tracking-[0.16em] text-amber-700 dark:text-amber-400">Temporary view</p>
-				<h2 id="subscription-qr-title" class="mt-1 text-xl font-semibold text-zinc-900 dark:text-zinc-100">移动端导入二维码</h2>
-			</div>
-			<button type="button" class="rounded-lg border border-zinc-200 px-3 py-1.5 text-sm text-zinc-600 dark:border-zinc-700 dark:text-zinc-300" data-modal-close data-subscription-qr-close>关闭</button>
+			<h2 id="subscription-qr-title" class="m-0 text-base font-semibold text-zinc-900 dark:text-zinc-100">移动端导入二维码</h2>
+			<button type="button" class="rounded-md border border-zinc-200 px-3 py-1.5 text-xs font-medium text-zinc-600 hover:border-zinc-300 hover:text-zinc-900 dark:border-zinc-700 dark:text-zinc-300 dark:hover:text-zinc-100" data-modal-close data-subscription-qr-close>关闭</button>
 		</div>
-		<div class="mt-5 flex min-h-64 items-center justify-center rounded-2xl bg-white p-4">
+		<div class="mt-4 flex min-h-64 items-center justify-center rounded-xl border border-zinc-200/80 bg-white p-4 dark:border-zinc-800/80">
 			<img class="hidden h-auto w-full max-w-72" alt="移动端订阅导入二维码" data-subscription-qr-image />
 			<p class="text-sm text-zinc-500" data-subscription-qr-loading>正在读取二维码…</p>
 		</div>
-		<p class="mt-4 text-sm leading-6 text-zinc-500 dark:text-zinc-400">关闭弹窗或离开页面后，临时图片引用会立即释放。</p>
+		<p class="mt-3 text-xs leading-5 text-zinc-500 dark:text-zinc-400">关闭弹窗或离开页面后，临时图片引用会立即释放。</p>
 	</ModalShell>
 </SiteLayout>
 
@@ -148,7 +118,7 @@ import SiteLayout from '../../../layouts/SiteLayout.astro';
 			messageNode.className = 'm-0 text-sm font-medium';
 			messageNode.textContent = message;
 			authState.append(messageNode);
-			authState.className = 'card-surface mt-8 p-5';
+			authState.className = 'mt-4 rounded-lg border border-zinc-200/80 p-3 dark:border-zinc-800/80';
 			if (tone === 'error') authState.classList.add('border-rose-200', 'text-rose-700', 'dark:border-rose-900/60', 'dark:text-rose-400');
 			else if (tone === 'success') authState.classList.add('border-emerald-200', 'text-emerald-700', 'dark:border-emerald-900/60', 'dark:text-emerald-400');
 			else authState.classList.add('text-zinc-700', 'dark:text-zinc-300');
@@ -158,8 +128,8 @@ import SiteLayout from '../../../layouts/SiteLayout.astro';
 			if (!feedback) return;
 			feedback.textContent = message;
 			feedback.className = error
-				? 'mt-5 min-h-6 text-sm text-rose-600 dark:text-rose-400'
-				: 'mt-5 min-h-6 text-sm text-emerald-700 dark:text-emerald-400';
+				? 'mt-4 min-h-6 text-xs text-rose-600 dark:text-rose-400'
+				: 'mt-4 min-h-6 text-xs text-emerald-700 dark:text-emerald-400';
 		};
 
 		const cleanupQr = () => {
