@@ -90,12 +90,12 @@ import PublishProgress from '../../components/admin/PublishProgress.astro';
 				<!-- 右列：预览 -->
 				<div class="hidden rounded-2xl border border-zinc-200/80 bg-white/80 p-5 shadow-[0_18px_48px_rgba(15,23,42,0.05)] backdrop-blur dark:border-zinc-800/80 dark:bg-zinc-900/75 md:block" data-editor-pane="preview">
 					<p class="m-0 text-xs font-semibold uppercase tracking-[0.14em] text-zinc-400 dark:text-zinc-500">预览（近似渲染，以上线效果为准）</p>
-					<div class="editor-preview mt-3 min-h-[16rem] text-sm leading-7 text-zinc-800 dark:text-zinc-200" data-editor-preview>
+					<div class="md-preview mt-3 min-h-[16rem] text-sm leading-7 text-zinc-800 dark:text-zinc-200" data-editor-preview>
 						<p class="text-zinc-400 dark:text-zinc-500">开始输入正文后，这里会实时预览。</p>
 					</div>
 					<div class="mt-6 hidden border-t border-zinc-200/80 pt-4 dark:border-zinc-700" data-editor-en-preview-wrap>
 						<p class="m-0 text-xs font-semibold uppercase tracking-[0.14em] text-zinc-400 dark:text-zinc-500">English 预览</p>
-						<div class="editor-preview mt-3 text-sm leading-7 text-zinc-800 dark:text-zinc-200" data-editor-en-preview></div>
+						<div class="md-preview mt-3 text-sm leading-7 text-zinc-800 dark:text-zinc-200" data-editor-en-preview></div>
 					</div>
 				</div>
 			</div>
@@ -106,46 +106,55 @@ import PublishProgress from '../../components/admin/PublishProgress.astro';
 </SiteLayout>
 
 <style is:global>
-	.editor-preview h2 {
+	.md-preview h2 {
 		margin: 1.6em 0 0.6em;
 		font-size: 1.35rem;
 		font-weight: 650;
 		letter-spacing: -0.02em;
 	}
-	.editor-preview h3 {
+	.md-preview h3 {
 		margin: 1.4em 0 0.5em;
 		font-size: 1.12rem;
 		font-weight: 600;
 	}
-	.editor-preview p { margin: 0.9em 0; }
-	.editor-preview ul, .editor-preview ol { margin: 0.9em 0; padding-left: 1.4em; }
-	.editor-preview li { margin: 0.3em 0; }
-	.editor-preview img { max-width: 100%; border-radius: 0.75rem; }
-	.editor-preview pre {
+	.md-preview p { margin: 0.9em 0; }
+	.md-preview ul, .md-preview ol { margin: 0.9em 0; padding-left: 1.4em; }
+	.md-preview li { margin: 0.3em 0; }
+	.md-preview img { max-width: 100%; border-radius: 0.75rem; }
+	.md-preview pre {
 		overflow-x: auto;
 		border-radius: 0.75rem;
-		background: rgb(24 24 27);
-		color: rgb(228 228 231);
+		border: 1px solid rgb(228 228 231);
+		background: rgb(250 250 250);
+		color: rgb(39 39 42);
 		padding: 0.9rem 1rem;
 		font-size: 0.82rem;
 		line-height: 1.6;
 	}
-	.editor-preview code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.86em; }
-	.editor-preview p code, .editor-preview li code {
+	.dark .md-preview pre {
+		border-color: rgb(63 63 70);
+		background: rgb(24 24 27);
+		color: rgb(244 244 245);
+	}
+	.md-preview code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.86em; }
+	.md-preview p code, .md-preview li code {
 		background: rgb(244 244 245);
 		border-radius: 0.35rem;
 		padding: 0.1em 0.35em;
 	}
-	.dark .editor-preview p code, .dark .editor-preview li code { background: rgb(39 39 42); }
-	.editor-preview blockquote {
+	.dark .md-preview p code, .dark .md-preview li code { background: rgb(39 39 42); }
+	.md-preview blockquote {
 		margin: 1em 0;
 		border-left: 3px solid rgb(217 119 6 / 0.5);
 		padding-left: 1em;
 		color: rgb(82 82 91);
 	}
-	.dark .editor-preview blockquote { color: rgb(161 161 170); }
-	.editor-preview a { color: rgb(180 83 9); text-decoration: underline; text-underline-offset: 3px; }
-	.dark .editor-preview a { color: rgb(251 191 36); }
+	.dark .md-preview blockquote { color: rgb(161 161 170); }
+	.md-preview a { color: rgb(180 83 9); text-decoration: underline; text-underline-offset: 3px; }
+	.dark .md-preview a { color: rgb(251 191 36); }
+	.md-preview table { border-collapse: collapse; margin: 1em 0; }
+	.md-preview th, .md-preview td { border: 1px solid rgb(212 212 216); padding: 0.35em 0.7em; }
+	.dark .md-preview th, .dark .md-preview td { border-color: rgb(63 63 70); }
 
 	/* EasyMDE 与站点圆角/暗色对齐 */
 	.editor-toolbar { border-radius: 0.75rem 0.75rem 0 0; border-color: rgb(228 228 231); }
