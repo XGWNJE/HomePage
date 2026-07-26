@@ -14,7 +14,7 @@
     "permission:manage": "node scripts/manage-permission.mjs"
   },
   "dependencies": {
-    "better-sqlite3": "^12.11.1",
+    "better-sqlite3": "^13.0.1",
     "busboy": "^1.6.0",
     "cookie": "^1.1.1",
     "express": "^5.2.1",
