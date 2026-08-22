@@ -45,6 +45,7 @@ API 默认监听 `http://127.0.0.1:8787`，本地数据写入已忽略的 `serve
 | `UPLOAD_USER_QUOTA_BYTES` | 每个用户可持久保存的上传文件总量 |
 | `UPLOAD_RATE_LIMIT_PER_USER` / `UPLOAD_RATE_LIMIT_PER_IP` / `UPLOAD_RATE_LIMIT_WINDOW_MS` | 上传尝试的用户/IP 固定窗口限流 |
 | `UPLOAD_MAX_CONCURRENT_DECODES` | 单个 API 进程同时执行的 Sharp 完整图片解码数量 |
+| `PAGE_AGENT_TOKEN` | 只允许 Agent 上传 HTML 灰度版本的独立 Bearer token；不具备批准、发布或撤回权限 |
 | `DEV_LOGIN` | 仅在显式设为 `true` 时启用本地测试登录；生产环境禁止启用 |
 | `BASE_URL` / `FRONTEND_URL` | OAuth 和返回地址 |
 | `TURNSTILE_SITE_KEY` / `TURNSTILE_SECRET_KEY` | 成对启用邮件登录与联系表单的服务端人机验证；站点密钥必须与前端 `PUBLIC_TURNSTILE_SITE_KEY` 相同 |
@@ -89,17 +90,54 @@ npm --prefix server run permission:manage -- grant --login dev_user manage_subsc
 | `server/src/internal/subscription-access.js` | v1 注册表、URL 与二维码的严格消费方验证 |
 | `server/src/internal/sensitive-session.js` | 哈希存储、HttpOnly Cookie、过期与撤销 |
 | `server/src/routes/admin-subscriptions.js` | 权限、GitHub 重新认证、主动锁定、按需复制、二维码和脱敏审计 |
+| `server/src/routes/pages.js` | Agent HTML 制品上传、不可变版本、边界报告和管理员审核流 |
 | `server/test/api.test.js` | API 集成测试 |
 
 数据库层会优先使用当前 Node 提供的 `node:sqlite`，不可用时回退到 `better-sqlite3`。图片上传使用服务端直接依赖的 Sharp 严格解码，客户端 MIME 和扩展名不能替代真实格式检查。schema 变更按 `PRAGMA user_version` 顺序迁移；每次变更都要新增版本并测试新库、旧库升级和重复启动。生产 Node 版本与本地版本不一致时，要明确验证生产实际使用的驱动和 Sharp 原生模块。
 
 ## 验证
 
+### Agent 上传接口
+
+Agent 应先读取站点格式目录，再创建灰度版本：
+
+```http
+GET /api/page-formats
+GET /api/page-formats/blog-article-v1
+```
+
+`blog-article-v1` 返回博客文章的 starter HTML、设计 token、必需结构和资源限制；`custom` 不限制视觉结构。上传时用 `formatId` 固定该版本采用的格式：
+
+```http
+POST /api/pages
+Authorization: Bearer <PAGE_AGENT_TOKEN>
+Content-Type: application/json
+
+{
+  "slug": "example-page",
+  "title": "Example page",
+  "summary": "Short public summary",
+	"formatId": "blog-article-v1",
+  "html": "<!doctype html><html>...</html>"
+}
+```
+
+返回的 `versionId` 和 `sha256` 是后续审核的唯一版本身份。审核报告中的 `format.conforms` 与 `format.issues` 会提示预设结构是否满足；它是审核线索，不代替管理员判断。Agent token 请求任何 `/api/admin/pages/**` 接口均应被拒绝。
+
 后端快速验证：
 
 ```powershell
 npm run test:api
 ```
+
+历史内容导入（先在仓库根目录构建）：
+
+```powershell
+npm run build
+npm run content:import-legacy
+```
+
+导入以 slug 为幂等键：已有页面不会覆盖，旧文章按原 `pubDate` 进入已发布状态，并在后台页面审核列表统一显示。
 
 提交前统一验证：
 

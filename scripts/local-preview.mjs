@@ -14,6 +14,7 @@ const API_ORIGIN = `http://127.0.0.1:${API_PORT}`;
 const WEB_ORIGIN = `http://localhost:${WEB_PORT}`;
 const PREVIEW_LOGIN = 'preview-admin';
 const PREVIEW_NAME = 'Preview Admin';
+const PAGE_AGENT_TOKEN = 'local-agent-html-preview';
 const DATA_DIR = join(ROOT, 'server-data');
 const TMP_DIR = join(ROOT, 'tmp');
 
@@ -100,6 +101,7 @@ spawnChild(process.execPath, ['server/src/server.js'], {
 		PORT: String(API_PORT),
 		HOST: '127.0.0.1',
 		HOMEPAGE_API_DATA_DIR: DATA_DIR,
+		PAGE_AGENT_TOKEN,
 		PUBLIC_ALLOWED_ORIGIN: WEB_ORIGIN,
 		SUBSCRIPTION_ACCESS_ENABLED: 'true',
 		SUBSCRIPTION_ACCESS_FIXTURE: 'true',

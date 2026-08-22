@@ -183,146 +183,70 @@ export function revokeSubscriptionQrObjectUrl(url: string | null): void {
 	if (url) URL.revokeObjectURL(url);
 }
 
-export interface AdminArticle {
-	id: string;
-	file: string;
-	format: 'md' | 'mdx';
-	title: string;
-	lang: string;
-	group: string;
-	draft: boolean;
-	pubDate: string;
-	category: string;
-	tags: string;
-}
+export type AdminPageStatus = 'draft' | 'approved' | 'published' | 'archived';
 
-export interface AdminArticleDetail {
-	id: string;
-	file: string;
-	format: 'md' | 'mdx';
-	frontmatter: Record<string, string>;
-	source: string;
-	body: string;
-}
-
-export interface AdminArticleDeleteResult {
-	ok: boolean;
-	deleted: string[];
-	release: { releaseId?: string; seconds?: number };
-}
-
-export function getAdminArticles(): Promise<{ articles: AdminArticle[]; sync: boolean }> {
-	return adminRequest('/api/admin/articles');
-}
-
-export function getAdminArticle(id: string): Promise<AdminArticleDetail> {
-	return adminRequest(`/api/admin/article?id=${encodeURIComponent(id)}`);
-}
-
-export function deleteAdminArticle(id: string, pair: boolean): Promise<AdminArticleDeleteResult> {
-	const query = pair ? '&pair=1' : '';
-	return adminRequest(`/api/admin/article?id=${encodeURIComponent(id)}${query}`, { method: 'DELETE' });
-}
-
-export interface AdminArticleDraft {
-	id: string;
+export interface AdminPageSummary {
 	slug: string;
-	title: string;
-	description: string;
-	tags: string;
-	category: string;
-	body: string;
-	en_title: string;
-	en_description: string;
-	en_body: string;
-	created_at: number;
-	updated_at: number;
+	published_version_id: string | null;
+	version_count: number;
+	draft_count: number;
+	title?: string;
+	status?: AdminPageStatus;
+	updated_at?: number;
 }
 
-export interface AdminArticleDraftSummary {
+export interface AdminPageRecord {
+	slug: string;
+	title?: string;
+	status?: AdminPageStatus;
+	published_version_id?: string | null;
+	archived_at?: number | null;
+	updated_at?: number;
+}
+
+export interface AdminPageVersion {
 	id: string;
-	slug: string;
-	title: string;
-	category: string;
-	created_at: number;
-	updated_at: number;
+	sha256: string;
+	status: AdminPageStatus;
+	title?: string;
+	metadata?: Record<string, unknown>;
+	html?: string;
+	review?: Record<string, unknown> | null;
+	format_id?: string;
+	preview_url?: string | null;
+	created_at?: number;
+	updated_at?: number;
 }
 
-export type AdminArticleDraftInput = Omit<AdminArticleDraft, 'id' | 'created_at' | 'updated_at'> & { id?: string };
-
-export interface AdminArticlePublishResult {
-	ok: boolean;
-	slug: string;
-	enSlug: string | null;
-	release: { releaseId?: string; seconds?: number };
+export function getAdminPages(): Promise<{ items: AdminPageSummary[] }> {
+	return adminRequest('/api/admin/pages');
 }
 
-// 发表/预览失败时把服务端 error 透传给编辑器（校验清单、发布失败原因）。
-async function adminRequestWithServerError<T>(path: string, init: RequestInit = {}): Promise<T> {
-	const token = getToken();
-	if (!token) throw new Error('Authentication required');
-	const headers = new Headers(init.headers);
-	headers.set('Authorization', `Bearer ${token}`);
-	if (init.body && !headers.has('Content-Type')) headers.set('Content-Type', 'application/json');
-	const response = await fetch(`${API_BASE}${path}`, { ...init, headers, credentials: 'include', cache: 'no-store' });
-	if (!response.ok) {
-		if (response.status === 401 || response.status === 403) throw new Error('Admin access required');
-		const payload = (await response.json().catch(() => null)) as { error?: string } | null;
-		throw new Error(payload?.error || 'Admin request failed');
-	}
-	return response.json() as Promise<T>;
+export function getAdminPage(slug: string): Promise<{ page: AdminPageRecord; versions: AdminPageVersion[] }> {
+	return adminRequest(`/api/admin/pages/${encodeURIComponent(slug)}`);
 }
 
-export function getAdminArticleDrafts(): Promise<{ drafts: AdminArticleDraftSummary[] }> {
-	return adminRequest('/api/admin/article/drafts');
+export function getAdminPageVersion(slug: string, versionId: string): Promise<{ version: AdminPageVersion }> {
+	return adminRequest(`/api/admin/pages/${encodeURIComponent(slug)}/versions/${encodeURIComponent(versionId)}`);
 }
 
-export function getAdminArticleDraft(id: string): Promise<{ draft: AdminArticleDraft }> {
-	return adminRequest(`/api/admin/article/draft?id=${encodeURIComponent(id)}`);
-}
-
-export function saveAdminArticleDraft(input: AdminArticleDraftInput): Promise<{ ok: boolean; draft: AdminArticleDraft }> {
-	return adminRequestWithServerError('/api/admin/article/draft', {
+export function approveAdminPageVersion(slug: string, versionId: string): Promise<{ ok: boolean }> {
+	return adminRequest(`/api/admin/pages/${encodeURIComponent(slug)}/versions/${encodeURIComponent(versionId)}/approve`, {
 		method: 'POST',
-		body: JSON.stringify(input),
+		body: JSON.stringify({}),
 	});
 }
 
-export function deleteAdminArticleDraft(id: string): Promise<{ ok: boolean; deleted: string }> {
-	return adminRequest(`/api/admin/article/draft?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
-}
-
-export function previewAdminArticle(markdown: string): Promise<{ ok: boolean; html: string }> {
-	return adminRequestWithServerError('/api/admin/article/preview', {
+export function publishAdminPageVersion(slug: string, versionId: string, sha256: string): Promise<{ ok: boolean }> {
+	return adminRequest(`/api/admin/pages/${encodeURIComponent(slug)}/versions/${encodeURIComponent(versionId)}/publish`, {
 		method: 'POST',
-		body: JSON.stringify({ markdown }),
+		body: JSON.stringify({ sha256 }),
 	});
 }
 
-export function publishAdminArticle(id: string): Promise<AdminArticlePublishResult> {
-	return adminRequestWithServerError('/api/admin/article/publish', {
+export function archiveAdminPage(slug: string): Promise<{ ok: boolean }> {
+	return adminRequest(`/api/admin/pages/${encodeURIComponent(slug)}/archive`, {
 		method: 'POST',
-		body: JSON.stringify({ id }),
+		body: JSON.stringify({}),
 	});
-}
-
-export async function uploadAdminArticleImage(file: File): Promise<{ url: string }> {
-	const token = getToken();
-	if (!token) throw new Error('Authentication required');
-	const form = new FormData();
-	form.append('file', file);
-	const response = await fetch(`${API_BASE}/api/images`, {
-		method: 'POST',
-		headers: { Authorization: `Bearer ${token}` },
-		body: form,
-		credentials: 'include',
-	});
-	if (!response.ok) {
-		if (response.status === 401 || response.status === 403) throw new Error('Admin access required');
-		const payload = (await response.json().catch(() => null)) as { error?: string } | null;
-		throw new Error(payload?.error || '图片上传失败');
-	}
-	const payload = (await response.json()) as { url?: string };
-	if (!payload.url) throw new Error('图片上传失败');
-	return { url: payload.url };
 }

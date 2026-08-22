@@ -228,6 +228,55 @@ ALTER TABLE article_drafts ADD COLUMN en_body TEXT NOT NULL DEFAULT '';
 				.join('\n');
 		},
 	},
+	{
+		version: 6,
+		sql: `
+CREATE TABLE IF NOT EXISTS pages (
+	id TEXT PRIMARY KEY,
+	slug TEXT NOT NULL UNIQUE,
+	published_version_id TEXT,
+	created_at INTEGER NOT NULL,
+	updated_at INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS page_versions (
+	id TEXT PRIMARY KEY,
+	page_id TEXT NOT NULL,
+	title TEXT NOT NULL,
+	summary TEXT NOT NULL DEFAULT '',
+	html TEXT NOT NULL,
+	sha256 TEXT NOT NULL,
+	status TEXT NOT NULL DEFAULT 'draft',
+	created_at INTEGER NOT NULL,
+	created_by TEXT NOT NULL,
+	approved_at INTEGER,
+	approved_by TEXT,
+	review_json TEXT NOT NULL DEFAULT '{}',
+	FOREIGN KEY (page_id) REFERENCES pages(id) ON DELETE CASCADE,
+	UNIQUE (page_id, sha256),
+	CHECK (status IN ('draft', 'approved', 'published', 'archived'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_page_versions_page_created
+	ON page_versions(page_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_page_versions_status
+	ON page_versions(status);
+	`,
+	},
+	{
+		version: 7,
+		sql: ``,
+		guard: (db) => {
+			const columns = new Set(
+				db.prepare("SELECT name FROM pragma_table_info('page_versions')").all().map((row) => row.name),
+			);
+			if (columns.has('format_id')) return '';
+			return `
+ALTER TABLE page_versions ADD COLUMN format_id TEXT NOT NULL DEFAULT 'custom';
+UPDATE page_versions SET format_id = 'legacy-blog-v1' WHERE created_by = 'legacy-import';
+`;
+		},
+	},
 ];
 
 export const CURRENT_SCHEMA_VERSION = migrations.at(-1)?.version || 0;

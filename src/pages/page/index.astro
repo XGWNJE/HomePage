@@ -1,0 +1,46 @@
+---
+import SiteLayout from '../../layouts/SiteLayout.astro';
+import { SITE_TITLE } from '../../consts';
+---
+
+<SiteLayout title={`内容页 | ${SITE_TITLE}`} description="通用 HTML 内容页">
+	<main class="page-shell page-fade-in py-6 md:py-10" transition:name="page-main" transition:animate="fade">
+		<div class="mb-4 flex items-center justify-between gap-4">
+			<a href="/blog/" class="text-sm text-zinc-500 no-underline hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100">← 返回内容列表</a>
+			<span class="text-xs text-zinc-400" data-page-state>正在加载…</span>
+		</div>
+		<iframe
+			data-public-page-frame
+			title="通用内容页"
+			sandbox="allow-popups allow-popups-to-escape-sandbox"
+			referrerpolicy="no-referrer"
+			class="min-h-[76vh] w-full rounded-2xl border border-zinc-200 bg-white dark:border-zinc-700"
+		></iframe>
+	</main>
+	<script>
+		import { API_BASE } from '../../lib/config';
+		import { SITE_TITLE } from '../../consts';
+		const state = document.querySelector<HTMLElement>('[data-page-state]');
+		const frame = document.querySelector<HTMLIFrameElement>('[data-public-page-frame]');
+		const slug = new URLSearchParams(window.location.search).get('slug') || '';
+		if (!slug || !frame) {
+			if (state) state.textContent = '页面地址无效';
+		} else {
+			fetch(`${API_BASE}/api/pages/${encodeURIComponent(slug)}`, { cache: 'no-store' })
+				.then(async (response) => {
+					if (!response.ok) throw new Error('Page not found');
+					return response.json();
+				})
+				.then(({ page }) => {
+					frame.srcdoc = page.html;
+					frame.title = page.title;
+					document.title = `${page.title} | ${SITE_TITLE}`;
+					if (state) state.textContent = '已发布 · 隔离显示';
+				})
+				.catch(() => {
+					if (state) state.textContent = '页面不存在或已撤回';
+					frame.srcdoc = '<!doctype html><meta charset="utf-8"><style>body{font-family:system-ui;padding:3rem;color:#666}</style><h1>页面不可用</h1><p>该内容不存在或已经撤回。</p>';
+				});
+		}
+	</script>
+</SiteLayout>

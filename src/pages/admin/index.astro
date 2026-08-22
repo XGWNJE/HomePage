@@ -2,7 +2,6 @@
 import SiteLayout from '../../layouts/SiteLayout.astro';
 import ModalShell from '../../components/ModalShell.astro';
 import AdminSubscriptionCard from '../../components/admin/AdminSubscriptionCard.astro';
-import PublishProgress from '../../components/admin/PublishProgress.astro';
 ---
 
 <SiteLayout title="管理台 | XGWNJE" description="XGWNJE 站点内容与消息管理台。">
@@ -25,7 +24,7 @@ import PublishProgress from '../../components/admin/PublishProgress.astro';
 
 				<div class="hidden" data-admin-workspace>
 					<nav class="flex items-center gap-5 overflow-x-auto border-b border-zinc-200/80 py-2.5 dark:border-zinc-800/80" aria-label="管理台分区" data-admin-nav>
-						<button type="button" class="admin-tab" data-admin-tab="articles" aria-pressed="true">文章 <span data-admin-tab-count="articles"></span></button>
+						<button type="button" class="admin-tab" data-admin-tab="articles" aria-pressed="true">页面审核 <span data-admin-tab-count="articles"></span></button>
 						<button type="button" class="admin-tab" data-admin-tab="comments" aria-pressed="false">评论 <span data-admin-tab-count="comments"></span></button>
 						<button type="button" class="admin-tab" data-admin-tab="messages" aria-pressed="false">消息 <span data-admin-tab-count="messages"></span></button>
 						<button type="button" class="admin-tab" data-admin-tab="subscriptions" aria-pressed="false">订阅</button>
@@ -33,20 +32,19 @@ import PublishProgress from '../../components/admin/PublishProgress.astro';
 
 					<div class="pt-2" data-admin-panel="articles">
 						<section aria-labelledby="admin-articles-heading">
-							<h2 id="admin-articles-heading" class="sr-only">文章管理</h2>
+							<h2 id="admin-articles-heading" class="sr-only">页面审核</h2>
 							<div class="flex items-center justify-between gap-4 py-2">
-								<div class="flex items-center gap-3.5" role="group" aria-label="文章筛选">
+								<div class="flex items-center gap-3.5" role="group" aria-label="页面状态筛选">
 									<button type="button" class="admin-mini-filter" data-admin-article-filter="all" aria-pressed="true">全部 <span data-admin-filter-count="all"></span></button>
-									<button type="button" class="admin-mini-filter" data-admin-article-filter="draft" aria-pressed="false">草稿 <span data-admin-filter-count="draft"></span></button>
+									<button type="button" class="admin-mini-filter" data-admin-article-filter="draft" aria-pressed="false">待审核 <span data-admin-filter-count="draft"></span></button>
+									<button type="button" class="admin-mini-filter" data-admin-article-filter="approved" aria-pressed="false">已批准 <span data-admin-filter-count="approved"></span></button>
 									<button type="button" class="admin-mini-filter" data-admin-article-filter="published" aria-pressed="false">已发布 <span data-admin-filter-count="published"></span></button>
+									<button type="button" class="admin-mini-filter" data-admin-article-filter="archived" aria-pressed="false">已归档 <span data-admin-filter-count="archived"></span></button>
 								</div>
-								<div class="flex items-center gap-3.5">
-									<button type="button" class="text-[11px] text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100" data-admin-articles-refresh>刷新</button>
-									<a href="/admin/editor/" class="rounded-md bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-amber-700" data-admin-article-new>＋ 新建文章</a>
-								</div>
+								<button type="button" class="text-[11px] text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100" data-admin-articles-refresh>刷新</button>
 							</div>
-							<div class="hidden border-b border-zinc-200/80 pb-1.5 text-[10px] font-semibold uppercase tracking-[0.1em] text-zinc-400 dark:border-zinc-800/80 dark:text-zinc-500 sm:grid sm:grid-cols-[minmax(0,1fr)_90px_110px_100px_130px]" aria-hidden="true">
-								<span>标题</span><span>语言</span><span>分类</span><span>日期</span><span>操作</span>
+							<div class="hidden border-b border-zinc-200/80 pb-1.5 text-[10px] font-semibold uppercase tracking-[0.1em] text-zinc-400 dark:border-zinc-800/80 dark:text-zinc-500 sm:grid sm:grid-cols-[minmax(0,1fr)_110px_150px_180px]" aria-hidden="true">
+								<span>页面</span><span>状态</span><span>更新时间</span><span>审核操作</span>
 							</div>
 							<div class="divide-y divide-zinc-200/70 border-b border-zinc-200/80 dark:divide-zinc-800/70 dark:border-zinc-800/80" data-admin-articles aria-live="polite"></div>
 							<p class="m-0 pt-2.5 text-[11px] text-zinc-400 dark:text-zinc-500" data-admin-articles-status aria-live="polite"></p>
@@ -106,57 +104,44 @@ import PublishProgress from '../../components/admin/PublishProgress.astro';
 			:global(.dark) .admin-mini-filter[aria-pressed='true'] { color: rgb(244 244 245); }
 		</style>
 
-		<ModalShell id="admin-article-view-modal" titleId="admin-article-view-title" contentClass="w-[min(720px,100%)]">
+		<ModalShell id="admin-article-view-modal" titleId="admin-article-view-title" contentClass="w-[min(780px,100%)]">
 			<div class="flex items-start justify-between gap-4">
 				<div>
-					<h3 id="admin-article-view-title" class="m-0 text-lg font-semibold text-zinc-950 dark:text-zinc-50" data-admin-article-view-title>文章详情</h3>
+					<h3 id="admin-article-view-title" class="m-0 text-lg font-semibold text-zinc-950 dark:text-zinc-50" data-admin-article-view-title>页面详情</h3>
 					<p class="mt-1 font-mono text-[11px] text-zinc-400 dark:text-zinc-500" data-admin-article-view-meta></p>
 				</div>
 				<button type="button" data-modal-close class="rounded-full border border-zinc-200 px-3 py-1.5 text-xs font-medium text-zinc-500 hover:border-zinc-300 hover:text-zinc-800 dark:border-zinc-700 dark:text-zinc-300">关闭</button>
 			</div>
-			<pre class="mt-4 max-h-[60dvh] overflow-auto whitespace-pre-wrap break-words rounded-xl bg-zinc-50 p-4 font-mono text-xs leading-5 text-zinc-700 dark:bg-zinc-800/60 dark:text-zinc-300" data-admin-article-view-source></pre>
-		</ModalShell>
-
-		<ModalShell id="admin-article-delete-modal" titleId="admin-article-delete-title" contentClass="w-[min(520px,100%)]">
-			<h3 id="admin-article-delete-title" class="m-0 text-lg font-semibold text-zinc-950 dark:text-zinc-50">删除这篇文章？</h3>
-			<p class="mt-3 text-sm leading-6 text-zinc-600 dark:text-zinc-400" data-admin-article-delete-body></p>
-			<div class="mt-3 rounded-lg bg-rose-50 px-3 py-2 text-xs leading-5 text-rose-700 dark:bg-rose-950/30 dark:text-rose-300">仅删除一种语言会破坏中英配对检查；如果另一语言版本存在，建议勾选一并删除。删除会触发一次完整重新发布（约 25 秒），线上立即下架，可通过 git 历史找回。</div>
-			<label class="mt-4 flex items-center gap-2 text-sm text-zinc-600 dark:text-zinc-300">
-				<input type="checkbox" data-admin-article-delete-pair class="h-4 w-4 accent-rose-700" />
-				同时删除对应语言版本（-cn / -en）
-			</label>
-			<div class="mt-5 flex justify-end gap-2">
-				<button type="button" data-modal-close class="rounded-full border border-zinc-200 px-4 py-2 text-sm font-medium text-zinc-600 hover:border-zinc-300 hover:text-zinc-900 dark:border-zinc-700 dark:text-zinc-300">取消</button>
-				<button type="button" data-admin-article-delete-confirm class="rounded-full bg-rose-700 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-800 disabled:opacity-60">确认删除</button>
+			<div class="mt-4 overflow-hidden rounded-xl border border-zinc-200 bg-white dark:border-zinc-700">
+				<iframe class="h-[42dvh] w-full" sandbox="" referrerpolicy="no-referrer" title="页面隔离预览" data-admin-page-preview></iframe>
 			</div>
+			<pre class="mt-4 max-h-[55dvh] overflow-auto whitespace-pre-wrap break-words rounded-xl bg-zinc-50 p-4 font-mono text-xs leading-5 text-zinc-700 dark:bg-zinc-800/60 dark:text-zinc-300" data-admin-article-view-source></pre>
 		</ModalShell>
-
-		<PublishProgress />
 </SiteLayout>
 
 <script>
 	import {
+		approveAdminPageVersion,
+		archiveAdminPage,
 		approveComment,
 		checkAdmin,
-		deleteAdminArticle,
 		deleteComment,
-		getAdminArticle,
-		getAdminArticleDrafts,
-		deleteAdminArticleDraft,
-		getAdminArticles,
+		getAdminPage,
+		getAdminPageVersion,
+		getAdminPages,
 		getAdminComments,
 		getAdminContactMessages,
 		getAdminOutbox,
 		getAdminStats,
 		getSubscriptionStatus,
 		rejectComment,
-		type AdminArticle,
-		type AdminArticleDraftSummary,
+		publishAdminPageVersion,
+		type AdminPageVersion,
+		type AdminPageStatus,
 		type AdminComment,
 		type AdminContactMessage,
 		type AdminOutboxItem,
 	} from '../../lib/admin';
-	import { createPublishProgress } from '../../lib/publishProgress';
 
 	type CommentFilter = AdminComment['status'] | 'all';
 	const initAdminPage = () => {
@@ -352,10 +337,9 @@ import PublishProgress from '../../components/admin/PublishProgress.astro';
 		finally { button.disabled = false; }
 	});
 
-	// —— 文章管理（Phase 1：列表 / 查看 / 删除）——
+	// —— 页面审核：Agent 上传页面，管理员只负责查看与状态切换 ——
 	const articlesRoot = root?.querySelector<HTMLElement>('[data-admin-articles]');
 	const articlesStatus = root?.querySelector<HTMLElement>('[data-admin-articles-status]');
-	let pendingDeleteId: string | null = null;
 
 	const setModalOpen = (id: string, open: boolean) => {
 		const modal = document.getElementById(id);
@@ -376,10 +360,9 @@ import PublishProgress from '../../components/admin/PublishProgress.astro';
 			modal.setAttribute('aria-hidden', 'true');
 		}
 	};
-	document.querySelectorAll('#admin-article-view-modal [data-modal-close], #admin-article-delete-modal [data-modal-close]').forEach((button) => {
+	document.querySelectorAll('#admin-article-view-modal [data-modal-close]').forEach((button) => {
 		button.addEventListener('click', () => {
 			setModalOpen('admin-article-view-modal', false);
-			setModalOpen('admin-article-delete-modal', false);
 		});
 	});
 
@@ -387,10 +370,18 @@ import PublishProgress from '../../components/admin/PublishProgress.astro';
 		if (articlesStatus) articlesStatus.textContent = message;
 	};
 
-	// V2 高密度表格：草稿与已发布合并为一个表，文字式操作链接。
-	let articleFilter: 'all' | 'draft' | 'published' = 'all';
-	let cachedArticles: AdminArticle[] = [];
-	let cachedDrafts: AdminArticleDraftSummary[] = [];
+	type ReviewRow = {
+		slug: string;
+		title: string;
+		status: AdminPageStatus;
+		publishedVersionId: string | null;
+		versionCount: number;
+		draftCount: number;
+		updatedAt: number;
+		latestVersion: AdminPageVersion | null;
+	};
+	let articleFilter: AdminPageStatus | 'all' = 'all';
+	let cachedPages: ReviewRow[] = [];
 
 	const textActionButton = (label: string, action: string, id: string, tone: 'default' | 'danger' = 'default') => {
 		const button = createElement('button', tone === 'danger'
@@ -398,128 +389,92 @@ import PublishProgress from '../../components/admin/PublishProgress.astro';
 			: 'text-[11px] text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100', label);
 		button.type = 'button';
 		button.setAttribute('data-admin-article-action', action);
-		button.dataset.articleId = id;
+		button.dataset.pageId = id;
 		return button;
-	};
-	const textActionLink = (label: string, href: string) => {
-		const link = createElement('a', 'text-[11px] text-zinc-500 no-underline hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100', label);
-		link.href = href;
-		return link;
 	};
 	const setTabCount = (name: string, count: number | '') => {
 		const target = root?.querySelector<HTMLElement>(`[data-admin-tab-count="${name}"]`);
 		if (target) target.textContent = count === '' ? '' : String(count);
 	};
 
+	const PAGE_STATUS_LABEL: Record<AdminPageStatus, string> = { draft: '待审核', approved: '已批准', published: '已发布', archived: '已归档' };
+	const PAGE_STATUS_TONE: Record<AdminPageStatus, string> = {
+		draft: 'text-amber-700 dark:text-amber-400',
+		approved: 'text-sky-700 dark:text-sky-400',
+		published: 'text-emerald-600 dark:text-emerald-400',
+		archived: 'text-zinc-400 dark:text-zinc-500',
+	};
+
 	const renderTable = () => {
 		if (!articlesRoot) return;
 		articlesRoot.replaceChildren();
-
-		// 按 group 把中英文配对稿合并为一个条目：一个入口管理一篇文章。
-		const groups = new Map<string, AdminArticle[]>();
-		for (const article of cachedArticles) {
-			const key = article.group || article.id;
-			const list = groups.get(key) ?? [];
-			list.push(article);
-			groups.set(key, list);
-		}
-		const published = [...groups.entries()]
-			.map(([group, members]) => ({
-				group,
-				members,
-				primary: members.find((member) => member.lang === 'cn') ?? members[0],
-				hasMdx: members.some((member) => member.format === 'mdx'),
-			}))
-			.sort((a, b) => (b.primary.pubDate || '').localeCompare(a.primary.pubDate || ''));
-
-		setTabCount('articles', groups.size);
-		const counts = { all: cachedDrafts.length + published.length, draft: cachedDrafts.length, published: published.length };
-		for (const key of ['all', 'draft', 'published'] as const) {
+		setTabCount('articles', cachedPages.length);
+		const counts = {
+			all: cachedPages.length,
+			draft: cachedPages.filter((page) => page.status === 'draft').length,
+			approved: cachedPages.filter((page) => page.status === 'approved').length,
+			published: cachedPages.filter((page) => page.status === 'published').length,
+			archived: cachedPages.filter((page) => page.status === 'archived').length,
+		};
+		for (const key of ['all', 'draft', 'approved', 'published', 'archived'] as const) {
 			const target = root?.querySelector<HTMLElement>(`[data-admin-filter-count="${key}"]`);
 			if (target) target.textContent = String(counts[key]);
 		}
-
-		type Row =
-			| { kind: 'draft'; draft: AdminArticleDraftSummary }
-			| { kind: 'published'; entry: (typeof published)[number] };
-		const rows: Row[] = [
-			...(articleFilter !== 'published' ? cachedDrafts.map((draft) => ({ kind: 'draft' as const, draft })) : []),
-			...(articleFilter !== 'draft' ? published.map((entry) => ({ kind: 'published' as const, entry })) : []),
-		];
+		const rows = cachedPages
+			.filter((page) => articleFilter === 'all' || page.status === articleFilter)
+			.sort((a, b) => b.updatedAt - a.updatedAt);
 		if (!rows.length) {
-			articlesRoot.append(emptyState(articleFilter === 'draft' ? '没有草稿。' : '没有文章。'));
+			articlesRoot.append(emptyState(articleFilter === 'draft' ? '没有待审核页面。' : '当前状态下没有页面。'));
 			return;
 		}
-
-		const GRID = 'sm:grid sm:grid-cols-[minmax(0,1fr)_90px_110px_100px_130px] sm:items-center';
-		rows.forEach((row, index) => {
+		const GRID = 'sm:grid sm:grid-cols-[minmax(0,1fr)_110px_150px_180px] sm:items-center';
+		rows.forEach((page, index) => {
 			const zebra = index % 2 === 1 ? ' bg-white/70 dark:bg-zinc-900/50' : '';
 			const container = createElement('div', `py-2.5 sm:py-2 ${GRID}${zebra}`);
 			const topLine = createElement('div', 'flex items-center justify-between gap-3 sm:contents');
-			// 显式 row-start-1：sparse 自动放置会把 col-start 靠后的单元格挤到下一行。
-			const titleCell = createElement('div', 'flex min-w-0 items-center gap-2 sm:col-start-1 sm:row-start-1');
-			const actionsCell = createElement('div', 'flex shrink-0 items-center gap-2.5 sm:col-start-5 sm:row-start-1');
-			const langCell = createElement('div', 'hidden items-center gap-1.5 sm:col-start-2 sm:row-start-1 sm:flex');
-			const catCell = createElement('div', 'hidden text-[11px] text-zinc-500 dark:text-zinc-400 sm:col-start-3 sm:row-start-1 sm:block');
-			const dateCell = createElement('div', 'hidden whitespace-nowrap text-[11px] text-zinc-400 dark:text-zinc-500 sm:col-start-4 sm:row-start-1 sm:block');
+			const titleCell = createElement('div', 'min-w-0 sm:col-start-1 sm:row-start-1');
+			const titleLine = createElement('div', 'flex min-w-0 items-center gap-2');
+			titleLine.append(createElement('span', 'truncate text-xs font-medium text-zinc-900 dark:text-zinc-100', page.title || '（无标题）'));
+			titleCell.append(titleLine, createElement('p', 'm-0 mt-0.5 truncate font-mono text-[10px] text-zinc-400 dark:text-zinc-500', `${page.slug} · ${page.versionCount} 个版本`));
+			const actionsCell = createElement('div', 'flex shrink-0 items-center gap-2.5 sm:col-start-4 sm:row-start-1');
+			const statusCell = createElement('div', `hidden text-[11px] font-semibold sm:col-start-2 sm:row-start-1 sm:block ${PAGE_STATUS_TONE[page.status]}`, PAGE_STATUS_LABEL[page.status]);
+			const dateCell = createElement('div', 'hidden whitespace-nowrap text-[11px] text-zinc-400 dark:text-zinc-500 sm:col-start-3 sm:row-start-1 sm:block', formatDate(page.updatedAt));
 			const mobileMeta = createElement('div', 'mt-1 text-[11px] text-zinc-400 dark:text-zinc-500 sm:hidden');
-
-			const langBadge = (label: string, color: string) => createElement('span', `text-[10px] font-semibold ${color}`, label);
-
-			if (row.kind === 'draft') {
-				const { draft } = row;
-				const draftDate = new Date(draft.updated_at);
-				const isToday = draftDate.toDateString() === new Date().toDateString();
-				const draftDateText = isToday
-					? `更新于 ${draftDate.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}`
-					: draftDate.toLocaleDateString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit' });
-				titleCell.append(createElement('span', 'text-[10px] font-semibold text-amber-700 dark:text-amber-400', '草稿'));
-				titleCell.append(createElement('span', 'truncate text-xs font-medium text-zinc-900 dark:text-zinc-100', draft.title || '（无标题）'));
-				langCell.append(createElement('span', 'text-[11px] text-zinc-300 dark:text-zinc-600', '—'));
-				catCell.textContent = '—';
-				dateCell.textContent = draftDateText;
-				mobileMeta.textContent = `${draft.slug} · ${draftDateText}`;
-				actionsCell.append(textActionLink('继续编辑', `/admin/editor/?draft=${encodeURIComponent(draft.id)}`));
-				actionsCell.append(textActionButton('删除', 'draft-delete', draft.id, 'danger'));
-			} else {
-				const { group, members, primary, hasMdx } = row.entry;
-				const cn = members.find((member) => member.lang === 'cn');
-				const en = members.find((member) => member.lang === 'en');
-				if (members.some((member) => member.draft)) titleCell.append(createElement('span', 'text-[10px] font-semibold text-amber-700 dark:text-amber-400', '草稿'));
-				titleCell.append(createElement('span', 'truncate text-xs font-medium text-zinc-900 dark:text-zinc-100', primary.title));
-				titleCell.append(createElement('span', 'hidden truncate text-[11px] text-zinc-400 dark:text-zinc-500 lg:inline', group));
-				langCell.append(langBadge('CN', 'text-emerald-600 dark:text-emerald-400'));
-				langCell.append(en
-					? langBadge('EN', 'text-zinc-400 dark:text-zinc-500')
-					: createElement('span', 'text-[10px] text-zinc-300 dark:text-zinc-600', 'EN –'));
-				if (hasMdx) langCell.append(langBadge('MDX', 'text-zinc-400 dark:text-zinc-500'));
-				catCell.textContent = primary.category || '—';
-				dateCell.textContent = primary.pubDate || '未设置日期';
-				mobileMeta.textContent = `${en ? 'CN · EN' : 'CN · EN –'} · ${primary.category || '—'} · ${primary.pubDate || '未设置日期'}`;
-				actionsCell.append(textActionButton('查看', 'view', primary.id));
-				if (cn && cn.format === 'md') actionsCell.append(textActionLink('编辑', `/admin/editor/?article=${encodeURIComponent(cn.id)}`));
-				if (primary.format === 'md' && !hasMdx) actionsCell.append(textActionButton('删除', 'delete', primary.id, 'danger'));
-			}
-
+			mobileMeta.textContent = `${PAGE_STATUS_LABEL[page.status]} · ${formatDate(page.updatedAt)}`;
+			actionsCell.append(textActionButton('查看', 'view', page.slug));
+			if (page.status === 'draft') actionsCell.append(textActionButton('批准', 'approve', page.slug));
+			if (page.status === 'approved') actionsCell.append(textActionButton('发布', 'publish', page.slug));
+			if (page.publishedVersionId) actionsCell.append(textActionButton('撤回当前公开版', 'archive', page.slug, 'danger'));
 			topLine.append(titleCell, actionsCell);
-			container.append(topLine, langCell, catCell, dateCell, mobileMeta);
+			container.append(topLine, statusCell, dateCell, mobileMeta);
 			articlesRoot.append(container);
 		});
 	};
 
 	const loadArticles = async () => {
-		if (articlesRoot) articlesRoot.replaceChildren(emptyState('正在同步仓库并加载文章…'));
+		if (articlesRoot) articlesRoot.replaceChildren(emptyState('正在加载页面审核队列…'));
 		try {
-			const [{ articles }, { drafts }] = await Promise.all([
-				getAdminArticles(),
-				getAdminArticleDrafts(),
-			]);
-			cachedArticles = articles;
-			cachedDrafts = drafts;
+			const { items } = await getAdminPages();
+			cachedPages = await Promise.all(items.map(async (item): Promise<ReviewRow> => {
+				const { page, versions } = await getAdminPage(item.slug);
+				const ordered = [...versions].sort((a, b) => (b.created_at ?? b.updated_at ?? 0) - (a.created_at ?? a.updated_at ?? 0));
+				const latestVersion = ordered[0] ?? null;
+				const status = page.archived_at ? 'archived' : (latestVersion?.status ?? page.status ?? item.status ?? 'draft');
+				return {
+					slug: item.slug,
+					title: latestVersion?.title || page.title || item.title || item.slug,
+					status,
+					publishedVersionId: item.published_version_id,
+					versionCount: item.version_count,
+					draftCount: item.draft_count,
+					updatedAt: latestVersion?.updated_at ?? latestVersion?.created_at ?? page.updated_at ?? item.updated_at ?? 0,
+					latestVersion,
+				};
+			}));
 			renderTable();
-			setArticlesStatus(`${new Map(cachedArticles.map((article) => [article.group || article.id, article])).size} 组 · ${cachedArticles.length} 篇 · 同步于 ${new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}`);
+			setArticlesStatus(`${items.length} 个页面 · 同步于 ${new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}`);
 		} catch {
-			if (articlesRoot) articlesRoot.replaceChildren(emptyState('文章仓库在此主机不可用。'));
+			if (articlesRoot) articlesRoot.replaceChildren(emptyState('页面审核接口暂不可用。'));
 			setArticlesStatus('');
 		}
 	};
@@ -534,66 +489,42 @@ import PublishProgress from '../../components/admin/PublishProgress.astro';
 
 	articlesRoot?.addEventListener('click', async (event) => {
 		const button = (event.target as HTMLElement).closest<HTMLButtonElement>('[data-admin-article-action]');
-		const id = button?.dataset.articleId;
+		const id = button?.dataset.pageId;
 		if (!button || !id) return;
 		const action = button.dataset.adminArticleAction;
 		if (action === 'view') {
 			button.disabled = true;
 			try {
-				const detail = await getAdminArticle(id);
+				const page = cachedPages.find((item) => item.slug === id);
+				if (!page?.latestVersion) throw new Error('No page version');
+				const { version } = await getAdminPageVersion(id, page.latestVersion.id);
 				const title = document.querySelector<HTMLElement>('[data-admin-article-view-title]');
 				const meta = document.querySelector<HTMLElement>('[data-admin-article-view-meta]');
 				const source = document.querySelector<HTMLElement>('[data-admin-article-view-source]');
-				if (title) title.textContent = detail.frontmatter.title || detail.id;
-				if (meta) meta.textContent = `src/content/blog/${detail.file}`;
-				if (source) source.textContent = detail.source;
+				const preview = document.querySelector<HTMLIFrameElement>('[data-admin-page-preview]');
+				if (title) title.textContent = version.title || page.title;
+				if (meta) meta.textContent = `${page.slug} · ${version.id} · ${PAGE_STATUS_LABEL[version.status]}`;
+				if (source) source.textContent = JSON.stringify({ formatId: version.format_id || 'custom', review: version.review, html: version.html }, null, 2);
+				if (preview) preview.srcdoc = version.html || '<p>No preview available.</p>';
 				setModalOpen('admin-article-view-modal', true);
-			} catch { setArticlesStatus('文章读取失败。'); }
+			} catch { setArticlesStatus('页面详情读取失败。'); }
 			finally { button.disabled = false; }
 			return;
 		}
-		if (action === 'draft-delete') {
-			if (!window.confirm('删除这个草稿？此操作不影响已发布文章。')) return;
-			button.disabled = true;
-			try {
-				await deleteAdminArticleDraft(id);
-				cachedDrafts = cachedDrafts.filter((draft) => draft.id !== id);
-				renderTable();
-			} catch { setArticlesStatus('草稿删除失败。'); }
-			finally { button.disabled = false; }
-			return;
-		}
-		pendingDeleteId = id;
-		const body = document.querySelector<HTMLElement>('[data-admin-article-delete-body]');
-		const pair = document.querySelector<HTMLInputElement>('[data-admin-article-delete-pair]');
-		if (body) body.textContent = `「${id}」将从 git 仓库删除并触发完整重新发布。`;
-		// 列表按组管理配对稿，默认连同语言配对一起删除。
-		if (pair) pair.checked = true;
-		setModalOpen('admin-article-delete-modal', true);
-	});
-
-	const publishProgress = createPublishProgress();
-
-	document.querySelector('[data-admin-article-delete-confirm]')?.addEventListener('click', async (event) => {
-		const confirmButton = event.currentTarget as HTMLButtonElement;
-		if (!pendingDeleteId) return;
-		const pair = document.querySelector<HTMLInputElement>('[data-admin-article-delete-pair]')?.checked ?? false;
-		confirmButton.disabled = true;
-		setModalOpen('admin-article-delete-modal', false);
-		publishProgress.show('正在删除并重新发布…');
-		publishProgress.setStage('release', '服务器构建中，通常约 25 秒…');
+		const page = cachedPages.find((item) => item.slug === id);
+		if (!page) return;
+		if (!page.latestVersion) return;
+		if (action === 'archive' && !window.confirm(`撤回「${page.title}」？公开访问将立即停止。`)) return;
+		button.disabled = true;
 		try {
-			const result = await deleteAdminArticle(pendingDeleteId, pair);
-			publishProgress.succeed(`已删除 ${result.deleted.length} 个文件并重新上线`);
-			setArticlesStatus(`已删除，release ${result.release?.releaseId ?? '完成'}`);
-			window.setTimeout(() => { publishProgress.hide(); }, 1600);
+			if (action === 'approve') await approveAdminPageVersion(page.slug, page.latestVersion.id);
+			else if (action === 'publish') await publishAdminPageVersion(page.slug, page.latestVersion.id, page.latestVersion.sha256);
+			else if (action === 'archive') await archiveAdminPage(page.slug);
+			else return;
+			setArticlesStatus(action === 'approve' ? '版本已批准，可以正式发布。' : action === 'publish' ? '页面已正式发布。' : '页面已撤回并归档。');
 			await loadArticles();
-		} catch (error) {
-			publishProgress.fail(error instanceof Error ? error.message : '删除发布失败。');
-		} finally {
-			confirmButton.disabled = false;
-			pendingDeleteId = null;
-		}
+		} catch { setArticlesStatus(action === 'approve' ? '版本批准失败。' : action === 'publish' ? '页面发布失败。' : '页面撤回失败。'); }
+		finally { button.disabled = false; }
 	});
 
 	root?.querySelector('[data-admin-articles-refresh]')?.addEventListener('click', () => { void loadArticles(); });

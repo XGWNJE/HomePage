@@ -68,7 +68,7 @@ const fileChecks = [
 	['src/components/BlogViewTabs.astro', ['data-i18n={tab.labelKey}', "labelKey: 'blog.important'", "labelKey: 'blog.latest'", "labelKey: 'blog.archive'"]],
 	['src/components/Comment.astro', ['data-i18n="comments.title"']],
 	['src/pages/index.astro', ['data-i18n="home.latestPosts"', 'data-i18n="home.viewAll"']],
-	['src/pages/blog/index.astro', ['<BlogViewTabs', 'data-i18n-content-lang']],
+	['src/pages/blog/index.astro', ['<UniversalPageList', 'eyebrowKey="blog.eyebrow"']],
 	['src/pages/tags/index.astro', ['titleKey="tags.title"']],
 	['src/pages/links/index.astro', ['data-i18n={group.titleKey}', 'data-i18n={group.subtitleKey}', '<LinkCard']],
 ];

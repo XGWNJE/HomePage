@@ -26,6 +26,7 @@ export function loadConfig(env = process.env) {
 	const dataDir = env.HOMEPAGE_API_DATA_DIR || join(process.cwd(), 'server-data');
 	const sessionSecret = env.SESSION_SECRET || env.HOMEPAGE_SESSION_SECRET || randomBytes(32).toString('hex');
 	const adminToken = env.ADMIN_TOKEN || env.HOMEPAGE_ADMIN_TOKEN || '';
+	const pageAgentToken = env.PAGE_AGENT_TOKEN || '';
 	const frontendUrl = normalizeOrigin(env.FRONTEND_URL || 'https://xgwnje.cn');
 	const defaultAllowedOrigins = env.NODE_ENV === 'production'
 		? frontendUrl
@@ -93,6 +94,7 @@ export function loadConfig(env = process.env) {
 		githubClientId: env.GITHUB_CLIENT_ID || '',
 		githubClientSecret: env.GITHUB_CLIENT_SECRET || '',
 		adminToken,
+		pageAgentToken,
 		adminGithubLogins: splitList(env.ADMIN_GITHUB_LOGINS),
 		adminEmails: splitList(env.ADMIN_EMAILS).map((email) => email.toLowerCase()),
 		devLogin,

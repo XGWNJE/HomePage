@@ -71,23 +71,21 @@ test('article language variants stay together when pages are split into six grou
 	assert.deepEqual(groups.slice(6).flat().map((post) => post.id), ['group-7-cn', 'group-7-en']);
 });
 
-test('home and blog pagination apply limits to article groups', async () => {
-	const [home, blog, paginatedBlog] = await Promise.all([
+test('home and primary content list use the runtime universal page source', async () => {
+	const [home, blog, component] = await Promise.all([
 		readFile(path.join(repositoryRoot, 'src/pages/index.astro'), 'utf8'),
 		readFile(path.join(repositoryRoot, 'src/pages/blog/index.astro'), 'utf8'),
-		readFile(path.join(repositoryRoot, 'src/pages/blog/page/[...page].astro'), 'utf8'),
+		readFile(path.join(repositoryRoot, 'src/components/UniversalPageList.astro'), 'utf8'),
 	]);
 
-	assert.match(home, /groupPostsByArticle[\s\S]*\.slice\(0, 6\)\.flat\(\)/);
-	assert.match(blog, /postGroups\.slice\(0, PAGE_SIZE\)\.flat\(\)/);
-	assert.match(blog, /Math\.ceil\(postGroups\.length \/ PAGE_SIZE\)/);
-	assert.match(paginatedBlog, /paginate\(postGroups, \{ pageSize: PAGE_SIZE \}\)/);
+	assert.match(home, /<UniversalPageList limit=\{6\}/);
+	assert.match(blog, /<UniversalPageList/);
+	assert.match(component, /\/api\/pages/);
+	assert.match(component, /cache:\s*'no-store'/);
 });
 
-test('every public blog reader uses the shared published-post query', async () => {
+test('legacy archive, tags, details and feeds keep using the filtered legacy query', async () => {
 	const readers = [
-		'src/pages/index.astro',
-		'src/pages/blog/index.astro',
 		'src/pages/blog/important.astro',
 		'src/pages/blog/archive.astro',
 		'src/pages/blog/page/[...page].astro',

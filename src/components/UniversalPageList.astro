@@ -1,0 +1,66 @@
+---
+interface Props {
+	limit?: number | null;
+	emptyText?: string;
+}
+
+const { limit = null, emptyText = '暂无已发布内容。' } = Astro.props as Props;
+---
+
+<div data-universal-pages data-limit={limit ?? ''} data-empty-text={emptyText}>
+	<p class="rounded-2xl border border-zinc-200 bg-white p-5 text-sm text-zinc-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400" data-universal-pages-status>
+		正在读取内容…
+	</p>
+	<ul class="grid gap-4" data-universal-pages-list hidden></ul>
+</div>
+
+<script>
+	import { API_BASE } from '../lib/config';
+
+	type PublicPage = { slug: string; title: string; summary: string; published_at: number; render_mode?: 'legacy' | 'sandbox' };
+
+	const escapeHtml = (value: string) => value.replace(/[&<>'"]/g, (character) => ({
+		'&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;',
+	}[character] || character));
+
+	const renderUniversalPages = async (root: HTMLElement) => {
+		if (root.dataset.loaded === 'true') return;
+		root.dataset.loaded = 'true';
+		const status = root.querySelector<HTMLElement>('[data-universal-pages-status]');
+		const list = root.querySelector<HTMLUListElement>('[data-universal-pages-list]');
+		if (!status || !list) return;
+		try {
+			const response = await fetch(`${API_BASE}/api/pages`, { cache: 'no-store' });
+			if (!response.ok) throw new Error('Page list request failed');
+			const payload = await response.json() as { items?: PublicPage[] };
+			const configuredLimit = Number(root.dataset.limit || 0);
+			const items = configuredLimit > 0 ? (payload.items || []).slice(0, configuredLimit) : (payload.items || []);
+			if (!items.length) {
+				status.textContent = root.dataset.emptyText || '暂无已发布内容。';
+				return;
+			}
+			list.innerHTML = items.map((page) => {
+				const href = page.render_mode === 'legacy'
+					? `/blog/${encodeURIComponent(page.slug)}/`
+					: `/page/?slug=${encodeURIComponent(page.slug)}`;
+				const date = new Intl.DateTimeFormat(document.documentElement.lang || 'zh-CN', { dateStyle: 'medium' }).format(new Date(page.published_at));
+				return `<li class="card-surface card-interactive relative h-full">
+					<a href="${href}" data-astro-reload class="block h-full p-5 no-underline">
+						<p class="m-0 text-xs text-zinc-500 dark:text-zinc-400">${escapeHtml(date)} · HTML</p>
+						<h3 class="mt-2 text-lg font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">${escapeHtml(page.title)}</h3>
+						<p class="mt-2 font-serif text-sm leading-7 text-zinc-600 dark:text-zinc-300">${escapeHtml(page.summary || '')}</p>
+					</a>
+				</li>`;
+			}).join('');
+			status.hidden = true;
+			list.hidden = false;
+		} catch {
+			root.dataset.loaded = 'false';
+			status.textContent = '内容列表暂时无法读取，请稍后重试。';
+		}
+	};
+
+	const initialize = () => document.querySelectorAll<HTMLElement>('[data-universal-pages]').forEach((root) => void renderUniversalPages(root));
+	document.addEventListener('astro:page-load', initialize);
+	initialize();
+</script>

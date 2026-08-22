@@ -20,10 +20,13 @@ test('fresh database records the applied schema version', () => {
 	withTempDatabase((filename) => {
 		const db = createDatabase(filename);
 		try {
-			assert.equal(db.prepare('PRAGMA user_version').get().user_version, 5);
+			assert.equal(db.prepare('PRAGMA user_version').get().user_version, 7);
 			assert.equal(db.prepare("SELECT COUNT(*) AS count FROM sqlite_master WHERE type = 'table' AND name = 'users'").get().count, 1);
 			assert.equal(db.prepare("SELECT COUNT(*) AS count FROM sqlite_master WHERE type = 'table' AND name = 'user_permissions'").get().count, 1);
 			assert.equal(db.prepare("SELECT COUNT(*) AS count FROM sqlite_master WHERE type = 'table' AND name = 'article_drafts'").get().count, 1);
+			assert.equal(db.prepare("SELECT COUNT(*) AS count FROM sqlite_master WHERE type = 'table' AND name = 'pages'").get().count, 1);
+			assert.equal(db.prepare("SELECT COUNT(*) AS count FROM sqlite_master WHERE type = 'table' AND name = 'page_versions'").get().count, 1);
+			assert.equal(db.prepare("SELECT COUNT(*) AS count FROM pragma_table_info('page_versions') WHERE name = 'format_id'").get().count, 1);
 		} finally {
 			db.close();
 		}
@@ -42,7 +45,7 @@ test('migration runner upgrades an unversioned existing database without losing 
 
 		db = createDatabase(filename);
 		try {
-			assert.equal(db.prepare('PRAGMA user_version').get().user_version, 5);
+			assert.equal(db.prepare('PRAGMA user_version').get().user_version, 7);
 			assert.equal(db.prepare('SELECT login FROM users WHERE id = ?').get('existing-user').login, 'existing');
 		} finally {
 			db.close();
@@ -56,7 +59,7 @@ test('migration runner is idempotent after the current version is applied', () =
 		db.close();
 		db = createDatabase(filename);
 		try {
-			assert.equal(db.prepare('PRAGMA user_version').get().user_version, 5);
+			assert.equal(db.prepare('PRAGMA user_version').get().user_version, 7);
 		} finally {
 			db.close();
 		}
@@ -66,7 +69,7 @@ test('migration runner is idempotent after the current version is applied', () =
 test('startup rejects a database created by a newer schema version', () => {
 	withTempDatabase((filename) => {
 		const newer = createDatabase(filename);
-		newer.exec('PRAGMA user_version = 6');
+		newer.exec('PRAGMA user_version = 8');
 		newer.close();
 
 		assert.throws(
@@ -74,7 +77,7 @@ test('startup rejects a database created by a newer schema version', () => {
 				const unexpected = createDatabase(filename);
 				unexpected.close();
 			},
-			/unsupported database schema version 6/i,
+			/unsupported database schema version 8/i,
 		);
 	});
 });

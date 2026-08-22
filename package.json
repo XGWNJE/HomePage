@@ -11,6 +11,7 @@
   "scripts": {
     "dev": "astro dev",
     "api:dev": "npm --prefix server start",
+    "content:import-legacy": "node server/scripts/import-legacy-pages.mjs",
     "build": "astro build && node scripts/ensure-sitemap-xml.mjs",
     "content:check": "npm run test:content && npm run test:content-release && npm run build",
     "content:release:plan": "node scripts/publish-content.mjs --plan",
@@ -46,7 +47,6 @@
     "@astrojs/sitemap": "^3.7.3",
     "@tailwindcss/vite": "^4.3.2",
     "astro": "^7.0.7",
-    "easymde": "^2.21.0",
     "sharp": "^0.35.3",
     "tailwindcss": "^4.3.2"
   },

@@ -71,7 +71,6 @@ const shellPages = [
 	'src/pages/admin/index.astro',
 	'src/pages/blog/archive.astro',
 	'src/pages/blog/important.astro',
-	'src/pages/blog/index.astro',
 	'src/pages/blog/page/[...page].astro',
 	'src/pages/index.astro',
 	'src/pages/links/index.astro',
@@ -89,7 +88,6 @@ for (const file of shellPages) {
 const blogViewPages = [
 	'src/pages/blog/archive.astro',
 	'src/pages/blog/important.astro',
-	'src/pages/blog/index.astro',
 	'src/pages/blog/page/[...page].astro',
 ];
 
