@@ -19,6 +19,7 @@ test('full release preserves versioned frontend and API rollback boundaries', ()
 	assert.doesNotMatch(preflight, /SSH_PASSWORD/);
 	assert.match(fullPublisher, /deploy-frontend\.sh/);
 	assert.match(fullPublisher, /deploy-api\.sh/);
+	assert.doesNotMatch(fullPublisher, /--force-local/, 'Windows bsdtar does not support GNU tar --force-local');
 	assert.match(fullPublisher, /nginx -t >\/dev\/null 2>\/dev\/null/);
 	assert.match(fullPublisher, /frontendRelease=%s/);
 	assert.match(fullPublisher, /Unable to read the current frontend and API release identifiers/);
