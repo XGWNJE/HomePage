@@ -206,7 +206,7 @@ $frontendRollback = "bash $(ConvertTo-BashLiteral "$remoteStaging/deploy-fronten
 $apiPrepare = "bash $(ConvertTo-BashLiteral "$remoteStaging/deploy-api.sh") prepare $($apiArgs -join ' ')"
 $apiActivate = "bash $(ConvertTo-BashLiteral "$remoteStaging/deploy-api.sh") activate $($apiArgs -join ' ')"
 $escapedMaintainScript = $maintainScript.Replace("'", "''")
-$maintainCommand = "& '$escapedMaintainScript' -Mode AfterChange -Scope @('anytls','homepage','homepage-api','visionguard')"
+$maintainCommand = "Import-Module Microsoft.PowerShell.Utility -ErrorAction Stop; & '$escapedMaintainScript' -Mode AfterChange -Scope @('anytls','homepage','homepage-api','visionguard')"
 
 $apiActivated = $false
 $frontendActivated = $false

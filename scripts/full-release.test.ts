@@ -27,6 +27,7 @@ test('full release preserves versioned frontend and API rollback boundaries', ()
 	assert.match(fullPublisher, /Unable to read the current frontend and API release identifiers/);
 	assert.match(fullPublisher, /visionguard\.xgwnje\.cn\/' -ExpectedStatus 404/);
 	assert.match(fullPublisher, /-Command \$maintainCommand/);
+	assert.match(fullPublisher, /Import-Module Microsoft\.PowerShell\.Utility -ErrorAction Stop/);
 	assert.match(fullPublisher, /-Scope @\('anytls','homepage','homepage-api','visionguard'\)/);
 	assert.match(apiHelper, /better-sqlite3/);
 	assert.match(apiHelper, /migration-probe\.sqlite/);
