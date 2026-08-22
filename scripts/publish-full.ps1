@@ -43,6 +43,24 @@ function Invoke-Native {
     return @($output)
 }
 
+function Get-Sha256 {
+    param([Parameter(Mandatory)][string]$Path)
+
+    $stream = [System.IO.File]::OpenRead($Path)
+    try {
+        $sha256 = [System.Security.Cryptography.SHA256]::Create()
+        try {
+            return ([System.BitConverter]::ToString($sha256.ComputeHash($stream))).Replace('-', '').ToLowerInvariant()
+        }
+        finally {
+            $sha256.Dispose()
+        }
+    }
+    finally {
+        $stream.Dispose()
+    }
+}
+
 function ConvertTo-BashLiteral {
     param([Parameter(Mandatory)][string]$Value)
     $singleQuote = [char]39
@@ -156,9 +174,9 @@ Invoke-Native -FilePath 'tar.exe' -Arguments @('-czf', $apiArchivePath, '-C', (J
 $files = @(Get-ChildItem -LiteralPath $distRoot -Recurse -File)
 $fileCount = $files.Count
 $totalBytes = ($files | Measure-Object Length -Sum).Sum
-$indexSha = (Get-FileHash -LiteralPath (Join-Path $distRoot 'index.html') -Algorithm SHA256).Hash.ToLowerInvariant()
-$frontendSha = (Get-FileHash -LiteralPath $frontendArchivePath -Algorithm SHA256).Hash.ToLowerInvariant()
-$apiSha = (Get-FileHash -LiteralPath $apiArchivePath -Algorithm SHA256).Hash.ToLowerInvariant()
+$indexSha = Get-Sha256 -Path (Join-Path $distRoot 'index.html')
+$frontendSha = Get-Sha256 -Path $frontendArchivePath
+$apiSha = Get-Sha256 -Path $apiArchivePath
 $manifest = [ordered]@{
     releaseId = $releaseId
     scope = 'full-audit'
@@ -173,7 +191,7 @@ $manifest = [ordered]@{
 }
 $utf8NoBom = [System.Text.UTF8Encoding]::new($false)
 [System.IO.File]::WriteAllText($manifestPath, ($manifest | ConvertTo-Json -Depth 8), $utf8NoBom)
-$manifestSha = (Get-FileHash -LiteralPath $manifestPath -Algorithm SHA256).Hash.ToLowerInvariant()
+$manifestSha = Get-Sha256 -Path $manifestPath
 [System.IO.File]::WriteAllText($sumsPath, "$frontendSha  $frontendArchiveName`n$apiSha  $apiArchiveName`n$manifestSha  $manifestName`n", $utf8NoBom)
 
 $remoteStaging = "/tmp/homepage-release-$releaseId"
